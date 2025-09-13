@@ -1,3 +1,5 @@
+"use client"
+
 import type { Metadata } from "next"
 import { FileUpload } from "@/components/file-management/file-upload"
 import { DataExport } from "@/components/advanced/data-export"
@@ -5,11 +7,6 @@ import { AdvancedSearch } from "@/components/advanced/advanced-search"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FileText, Upload, Download, Search } from "lucide-react"
-
-export const metadata: Metadata = {
-  title: "Document Management | Hospital Management System",
-  description: "Manage patient documents, medical records, and file uploads",
-}
 
 // Mock data for demonstration
 const exportFields = [
