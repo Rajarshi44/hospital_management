@@ -41,7 +41,7 @@ export default function DocumentsPage() {
 
   const handleExport = async (format: string, fields: string[], dateRange?: any) => {
     // Simulate export process
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await new Promise(resolve => setTimeout(resolve, 2000))
     console.log("Exporting:", { format, fields, dateRange })
   }
 
