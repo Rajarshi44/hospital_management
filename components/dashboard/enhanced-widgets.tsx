@@ -56,15 +56,7 @@ interface MetricCardProps {
   className?: string
 }
 
-export function MetricCard({ 
-  title, 
-  value, 
-  description, 
-  icon: Icon, 
-  trend, 
-  badge,
-  className 
-}: MetricCardProps) {
+export function MetricCard({ title, value, description, icon: Icon, trend, badge, className }: MetricCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -74,12 +66,8 @@ export function MetricCard({
     >
       <Card className="h-full">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {title}
-          </CardTitle>
-          {Icon && (
-            <Icon className="h-4 w-4 text-muted-foreground" />
-          )}
+          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -91,11 +79,9 @@ export function MetricCard({
                 </Badge>
               )}
             </div>
-            
-            {description && (
-              <p className="text-xs text-muted-foreground">{description}</p>
-            )}
-            
+
+            {description && <p className="text-xs text-muted-foreground">{description}</p>}
+
             {trend && (
               <div className="flex items-center text-xs">
                 {trend.isPositive ? (
@@ -103,10 +89,7 @@ export function MetricCard({
                 ) : (
                   <TrendingDown className="h-3 w-3 text-red-500 mr-1" />
                 )}
-                <span className={cn(
-                  "font-medium",
-                  trend.isPositive ? "text-green-600" : "text-red-600"
-                )}>
+                <span className={cn("font-medium", trend.isPositive ? "text-green-600" : "text-red-600")}>
                   {trend.value}%
                 </span>
                 <span className="text-muted-foreground ml-1">vs last month</span>
@@ -176,11 +159,16 @@ interface AppointmentQueueProps {
 export function AppointmentQueue({ appointments }: AppointmentQueueProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "waiting": return "bg-yellow-100 text-yellow-800"
-      case "in-progress": return "bg-blue-100 text-blue-800"
-      case "completed": return "bg-green-100 text-green-800"
-      case "cancelled": return "bg-red-100 text-red-800"
-      default: return "bg-gray-100 text-gray-800"
+      case "waiting":
+        return "bg-yellow-100 text-yellow-800"
+      case "in-progress":
+        return "bg-blue-100 text-blue-800"
+      case "completed":
+        return "bg-green-100 text-green-800"
+      case "cancelled":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
     }
   }
 
@@ -200,7 +188,10 @@ export function AppointmentQueue({ appointments }: AppointmentQueueProps) {
               <Avatar className="h-8 w-8">
                 <AvatarImage src={appointment.avatar} />
                 <AvatarFallback>
-                  {appointment.patientName.split(" ").map(n => n[0]).join("")}
+                  {appointment.patientName
+                    .split(" ")
+                    .map(n => n[0])
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -208,10 +199,7 @@ export function AppointmentQueue({ appointments }: AppointmentQueueProps) {
                 <div className="text-xs text-muted-foreground">{appointment.time}</div>
               </div>
             </div>
-            <Badge 
-              variant="secondary" 
-              className={cn("text-xs", getStatusColor(appointment.status))}
-            >
+            <Badge variant="secondary" className={cn("text-xs", getStatusColor(appointment.status))}>
               {appointment.status}
             </Badge>
           </motion.div>
@@ -238,10 +226,14 @@ interface TaskListProps {
 export function TaskList({ tasks, onTaskToggle }: TaskListProps) {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "border-l-red-500"
-      case "medium": return "border-l-yellow-500"
-      case "low": return "border-l-green-500"
-      default: return "border-l-gray-300"
+      case "high":
+        return "border-l-red-500"
+      case "medium":
+        return "border-l-yellow-500"
+      case "low":
+        return "border-l-green-500"
+      default:
+        return "border-l-gray-300"
     }
   }
 
@@ -263,19 +255,16 @@ export function TaskList({ tasks, onTaskToggle }: TaskListProps) {
             onClick={() => onTaskToggle?.(task.id)}
           >
             <div className="flex items-center gap-2">
-              <div className={cn(
-                "w-3 h-3 rounded border",
-                task.completed ? "bg-green-500 border-green-500" : "border-gray-300"
-              )}>
-                {task.completed && (
-                  <CheckCircle className="w-3 h-3 text-white" />
+              <div
+                className={cn(
+                  "w-3 h-3 rounded border",
+                  task.completed ? "bg-green-500 border-green-500" : "border-gray-300"
                 )}
+              >
+                {task.completed && <CheckCircle className="w-3 h-3 text-white" />}
               </div>
               <div className="flex-1">
-                <div className={cn(
-                  "text-sm",
-                  task.completed && "line-through text-muted-foreground"
-                )}>
+                <div className={cn("text-sm", task.completed && "line-through text-muted-foreground")}>
                   {task.title}
                 </div>
                 {task.dueTime && (
@@ -324,7 +313,7 @@ export function MiniChart({ title, data, type, height = 150 }: MiniChartProps) {
             </BarChart>
           </ResponsiveContainer>
         )
-      
+
       case "line":
         return (
           <ResponsiveContainer width="100%" height={height}>
@@ -333,30 +322,22 @@ export function MiniChart({ title, data, type, height = 150 }: MiniChartProps) {
               <XAxis dataKey="name" hide />
               <YAxis hide />
               <Tooltip />
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#3b82f6" 
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#3b82f6"
                 strokeWidth={2}
                 dot={{ fill: "#3b82f6", strokeWidth: 2, r: 3 }}
               />
             </LineChart>
           </ResponsiveContainer>
         )
-      
+
       case "pie":
         return (
           <ResponsiveContainer width="100%" height={height}>
             <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={30}
-                outerRadius={60}
-                paddingAngle={2}
-                dataKey="value"
-              >
+              <Pie data={data} cx="50%" cy="50%" innerRadius={30} outerRadius={60} paddingAngle={2} dataKey="value">
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                 ))}
@@ -365,7 +346,7 @@ export function MiniChart({ title, data, type, height = 150 }: MiniChartProps) {
             </PieChart>
           </ResponsiveContainer>
         )
-      
+
       default:
         return null
     }
@@ -374,9 +355,7 @@ export function MiniChart({ title, data, type, height = 150 }: MiniChartProps) {
   return (
     <div className="h-full flex flex-col">
       <div className="text-sm font-medium mb-2">{title}</div>
-      <div className="flex-1">
-        {renderChart()}
-      </div>
+      <div className="flex-1">{renderChart()}</div>
     </div>
   )
 }
@@ -398,10 +377,14 @@ interface ActivityFeedProps {
 export function ActivityFeed({ activities }: ActivityFeedProps) {
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "success": return "bg-green-100 text-green-800"
-      case "warning": return "bg-yellow-100 text-yellow-800"
-      case "error": return "bg-red-100 text-red-800"
-      default: return "bg-blue-100 text-blue-800"
+      case "success":
+        return "bg-green-100 text-green-800"
+      case "warning":
+        return "bg-yellow-100 text-yellow-800"
+      case "error":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-blue-100 text-blue-800"
     }
   }
 
@@ -417,10 +400,12 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
             transition={{ delay: index * 0.1 }}
             className="flex gap-3"
           >
-            <div className={cn(
-              "w-2 h-2 rounded-full mt-2 flex-shrink-0",
-              getTypeColor(activity.type).replace("text-", "bg-").split(" ")[0]
-            )} />
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full mt-2 flex-shrink-0",
+                getTypeColor(activity.type).replace("text-", "bg-").split(" ")[0]
+              )}
+            />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium">{activity.title}</div>
               <div className="text-xs text-muted-foreground">{activity.description}</div>

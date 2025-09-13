@@ -59,7 +59,7 @@ export function OTPVerification({ email, onVerified, onBack }: OTPVerificationPr
     }
 
     // Auto-submit when all fields are filled
-    if (newOtp.every((digit) => digit !== "") && newOtp.join("").length === 6) {
+    if (newOtp.every(digit => digit !== "") && newOtp.join("").length === 6) {
       handleVerify(newOtp.join(""))
     }
   }
@@ -92,7 +92,7 @@ export function OTPVerification({ email, onVerified, onBack }: OTPVerificationPr
 
     try {
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
       // In a real app, this would verify the OTP with the backend
       if (otpCode === "123456") {
@@ -117,7 +117,7 @@ export function OTPVerification({ email, onVerified, onBack }: OTPVerificationPr
   const handleResendOtp = async () => {
     setIsLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise(resolve => setTimeout(resolve, 1000))
       setTimeLeft(300)
       setCanResend(false)
       setOtp(["", "", "", "", "", ""])
@@ -134,11 +134,7 @@ export function OTPVerification({ email, onVerified, onBack }: OTPVerificationPr
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-card p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <motion.div
@@ -148,18 +144,12 @@ export function OTPVerification({ email, onVerified, onBack }: OTPVerificationPr
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             >
               <div className="p-3 bg-primary/10 rounded-full">
-              <Shield className="h-8 w-8 text-primary" />
-            </div>
-          </motion.div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
+                <Shield className="h-8 w-8 text-primary" />
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
               <CardTitle className="text-2xl font-bold">Verify Your Email</CardTitle>
-              <CardDescription>
-                We've sent a 6-digit verification code to your email
-              </CardDescription>
+              <CardDescription>We've sent a 6-digit verification code to your email</CardDescription>
             </motion.div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -169,45 +159,45 @@ export function OTPVerification({ email, onVerified, onBack }: OTPVerificationPr
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-            <p className="text-sm text-muted-foreground">Code sent to:</p>
-            <p className="font-medium">{email}</p>
+              <p className="text-sm text-muted-foreground">Code sent to:</p>
+              <p className="font-medium">{email}</p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="space-y-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-            <div className="flex justify-center gap-2">
-              {otp.map((digit, index) => (
-                <Input
-                  key={index}
-                  ref={(el) => {
-                    inputRefs.current[index] = el
-                  }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  onPaste={handlePaste}
-                  className="w-12 h-12 text-center text-lg font-semibold"
-                  disabled={isLoading}
-                />
-              ))}
-            </div>
+              <div className="flex justify-center gap-2">
+                {otp.map((digit, index) => (
+                  <Input
+                    key={index}
+                    ref={el => {
+                      inputRefs.current[index] = el
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handleOtpChange(index, e.target.value)}
+                    onKeyDown={e => handleKeyDown(index, e)}
+                    onPaste={handlePaste}
+                    className="w-12 h-12 text-center text-lg font-semibold"
+                    disabled={isLoading}
+                  />
+                ))}
+              </div>
 
-            <div className="text-center">
-              {timeLeft > 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Code expires in <span className="font-medium text-primary">{formatTime(timeLeft)}</span>
-                </p>
-              ) : (
-                <p className="text-sm text-red-600">Code has expired</p>
-              )}
-            </div>
+              <div className="text-center">
+                {timeLeft > 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Code expires in <span className="font-medium text-primary">{formatTime(timeLeft)}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-red-600">Code has expired</p>
+                )}
+              </div>
             </motion.div>
 
             {error && (
@@ -216,53 +206,53 @@ export function OTPVerification({ email, onVerified, onBack }: OTPVerificationPr
               </Alert>
             )}
 
-            <motion.div 
+            <motion.div
               className="space-y-3"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
             >
-            <Button
-              onClick={() => handleVerify(otp.join(""))}
-              className="w-full"
-              disabled={isLoading || otp.some((digit) => !digit)}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                "Verify Code"
-              )}
-            </Button>
+              <Button
+                onClick={() => handleVerify(otp.join(""))}
+                className="w-full"
+                disabled={isLoading || otp.some(digit => !digit)}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify Code"
+                )}
+              </Button>
 
-            <Button
-              onClick={handleResendOtp}
-              variant="outline"
-              className="w-full bg-transparent"
-              disabled={!canResend || isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Resending...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Resend Code
-                </>
-              )}
-            </Button>
+              <Button
+                onClick={handleResendOtp}
+                variant="outline"
+                className="w-full bg-transparent"
+                disabled={!canResend || isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Resending...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Resend Code
+                  </>
+                )}
+              </Button>
 
-            <Button onClick={onBack} variant="ghost" className="w-full">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
+              <Button onClick={onBack} variant="ghost" className="w-full">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="p-4 bg-muted rounded-lg"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

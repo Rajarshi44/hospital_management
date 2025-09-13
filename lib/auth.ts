@@ -30,7 +30,7 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<User> {
     // Mock login - in real app, this would call an API
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     // Mock user data based on email
     const mockUsers: Record<string, User> = {
@@ -118,7 +118,7 @@ export class AuthService {
     }
 
     // Development mode: auto-login as admin for testing (only if not logged out)
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       const devUser: User = {
         id: "dev-admin",
         email: "admin@hospital.com",
@@ -137,7 +137,7 @@ export class AuthService {
 
   async register(userData: Omit<User, "id">): Promise<User> {
     // Mock registration
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     const user: User = {
       ...userData,

@@ -10,10 +10,10 @@ export default function LogoutPage() {
   useEffect(() => {
     // Clear all authentication data
     localStorage.removeItem("hospital_user")
-    
+
     // Clear any other session data
     localStorage.clear()
-    
+
     // Redirect to login page
     router.push("/")
   }, [router])

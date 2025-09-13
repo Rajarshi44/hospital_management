@@ -19,27 +19,27 @@ interface PasswordCriteria {
 const passwordCriteria: PasswordCriteria[] = [
   {
     label: "At least 8 characters",
-    test: (password) => password.length >= 8,
+    test: password => password.length >= 8,
     weight: 20,
   },
   {
     label: "Contains uppercase letter",
-    test: (password) => /[A-Z]/.test(password),
+    test: password => /[A-Z]/.test(password),
     weight: 20,
   },
   {
     label: "Contains lowercase letter",
-    test: (password) => /[a-z]/.test(password),
+    test: password => /[a-z]/.test(password),
     weight: 20,
   },
   {
     label: "Contains number",
-    test: (password) => /[0-9]/.test(password),
+    test: password => /[0-9]/.test(password),
     weight: 20,
   },
   {
     label: "Contains special character",
-    test: (password) => /[^A-Za-z0-9]/.test(password),
+    test: password => /[^A-Za-z0-9]/.test(password),
     weight: 20,
   },
 ]
@@ -81,11 +81,7 @@ export function PasswordStrength({ password, className }: PasswordStrengthProps)
                 isValid ? "text-green-600" : "text-muted-foreground"
               )}
             >
-              {isValid ? (
-                <Check className="h-3 w-3 text-green-500" />
-              ) : (
-                <X className="h-3 w-3 text-muted-foreground" />
-              )}
+              {isValid ? <Check className="h-3 w-3 text-green-500" /> : <X className="h-3 w-3 text-muted-foreground" />}
               <span>{criteria.label}</span>
             </div>
           )
