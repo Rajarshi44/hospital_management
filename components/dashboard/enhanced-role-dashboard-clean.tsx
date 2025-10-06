@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { DraggableDashboard, DashboardWidget } from "./draggable-dashboard"
 import { MetricCard, QuickActions, AppointmentQueue, TaskList, MiniChart, ActivityFeed } from "./enhanced-widgets"
@@ -23,19 +23,20 @@ import {
   Clipboard,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { PatientService, type Patient } from "@/lib/patient-service"
 
-// Mock data for different roles
-const mockData = {
+// Mock data for different roles (updated with real patient data)
+const getMockData = (stats: any) => ({
   admin: {
     metrics: [
-      { title: "Total Patients", value: "1,234", icon: Users, trend: { value: 12, isPositive: true } },
-      { title: "Staff Members", value: "156", icon: Building2, description: "Across 8 departments" },
-      { title: "Monthly Revenue", value: "$67,000", icon: DollarSign, trend: { value: 8, isPositive: true } },
+      { title: "Total Patients", value: stats.totalPatients.toString(), icon: Users, trend: { value: stats.recentPatients, isPositive: true }, description: `${stats.recentPatients} new this month` },
+      { title: "Active Patients", value: stats.activePatients.toString(), icon: UserCheck, description: `${stats.malePatients} male, ${stats.femalePatients} female` },
+      { title: "Average Age", value: `${stats.averageAge} yrs`, icon: Activity, description: "Patient demographics" },
       {
-        title: "Bed Occupancy",
-        value: "87%",
-        icon: Activity,
-        badge: { text: "High", variant: "destructive" as const },
+        title: "Patient Growth",
+        value: `+${stats.recentPatients}`,
+        icon: Building2,
+        badge: { text: "Last 30 days", variant: "outline" as const },
       },
     ],
     chartData: [
@@ -92,11 +93,59 @@ const mockData = {
       },
     ],
   },
-}
+})
 
 export function EnhancedRoleDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const patientService = PatientService.getInstance()
+
+  useEffect(() => {
+    loadPatients()
+  }, [])
+
+  const loadPatients = async () => {
+    try {
+      const data = await patientService.getAllPatients()
+      setPatients(data)
+    } catch (error) {
+      console.error("Failed to load patients:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Calculate real statistics from patient data
+  const getPatientStats = () => {
+    const totalPatients = patients.length
+    const activePatients = patients.filter(p => p.isActive).length
+    const malePatients = patients.filter(p => p.gender === 'MALE').length
+    const femalePatients = patients.filter(p => p.gender === 'FEMALE').length
+    const recentPatients = patients.filter(p => {
+      const createdDate = new Date(p.createdAt)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      return createdDate >= thirtyDaysAgo
+    }).length
+
+    // Get age distribution
+    const averageAge = patients.length > 0 
+      ? Math.round(patients.reduce((sum, p) => sum + patientService.calculateAge(p.dateOfBirth), 0) / patients.length)
+      : 0
+
+    return {
+      totalPatients,
+      activePatients,
+      malePatients,
+      femalePatients,
+      recentPatients,
+      averageAge
+    }
+  }
+
+  const stats = getPatientStats()
 
   if (!user) {
     return (
@@ -110,7 +159,8 @@ export function EnhancedRoleDashboard() {
   }
 
   // Ensure we have a valid role, fallback to 'doctor' if needed
-  const userRole = user.role && user.role in mockData ? user.role : "doctor"
+  const mockData = getMockData(stats)
+  const userRole = user.role && user.role.toLowerCase() in mockData ? user.role.toLowerCase() : "doctor"
   const roleData = mockData[userRole as keyof typeof mockData]
 
   // Generate widgets based on user role
@@ -236,7 +286,7 @@ export function EnhancedRoleDashboard() {
         <h1 className="text-3xl font-bold tracking-tight">
           {(user?.role || "User").charAt(0).toUpperCase() + (user?.role || "User").slice(1)} Dashboard
         </h1>
-        <p className="text-muted-foreground">Welcome back, {user?.name || "User"}. Here's what's happening today.</p>
+        <p className="text-muted-foreground">Welcome back, {user?.firstName ? `${user.firstName} ${user.lastName}` : "User"}. Here's what's happening today.</p>
       </div>
 
       <DraggableDashboard

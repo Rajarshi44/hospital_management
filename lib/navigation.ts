@@ -33,7 +33,7 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
   ]
 
   const roleSpecificNavigation: Record<UserRole, NavigationItem[]> = {
-    admin: [
+    ADMIN: [
       ...baseNavigation,
       {
         title: "Staff Management",
@@ -86,7 +86,7 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: Settings,
       },
     ],
-    doctor: [
+    DOCTOR: [
       ...baseNavigation,
       {
         title: "Appointments",
@@ -120,7 +120,7 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: FolderOpen,
       },
     ],
-    nurse: [
+    NURSE: [
       ...baseNavigation,
       {
         title: "Patients",
@@ -151,7 +151,7 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: FolderOpen,
       },
     ],
-    receptionist: [
+    RECEPTIONIST: [
       ...baseNavigation,
       {
         title: "Appointments",
@@ -181,7 +181,31 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: FolderOpen,
       },
     ],
-    pharmacist: [
+    LAB_TECHNICIAN: [
+      ...baseNavigation,
+      {
+        title: "Lab Tests",
+        url: "/lab",
+        icon: TestTube,
+        badge: "8",
+      },
+      {
+        title: "Patients",
+        url: "/patients",
+        icon: Users,
+      },
+      {
+        title: "Reports",
+        url: "/reports",
+        icon: FileText,
+      },
+      {
+        title: "Documents",
+        url: "/documents",
+        icon: FolderOpen,
+      },
+    ],
+    PHARMACIST: [
       ...baseNavigation,
       {
         title: "Prescriptions",
@@ -210,7 +234,7 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: FolderOpen,
       },
     ],
-    patient: [
+    PATIENT: [
       ...baseNavigation,
       {
         title: "Appointments",
@@ -246,4 +270,30 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
   }
 
   return roleSpecificNavigation[role] || baseNavigation
+}
+
+export const getRoleDisplayName = (role: UserRole): string => {
+  const roleNames: Record<UserRole, string> = {
+    ADMIN: "Administrator",
+    DOCTOR: "Doctor",
+    NURSE: "Nurse",
+    RECEPTIONIST: "Receptionist",
+    LAB_TECHNICIAN: "Lab Technician",
+    PHARMACIST: "Pharmacist",
+    PATIENT: "Patient",
+  }
+  return roleNames[role] || role.toLowerCase().replace('_', ' ')
+}
+
+export const getRoleColor = (role: UserRole): string => {
+  const roleColors: Record<UserRole, string> = {
+    ADMIN: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+    DOCTOR: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    NURSE: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    RECEPTIONIST: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    LAB_TECHNICIAN: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+    PHARMACIST: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    PATIENT: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+  }
+  return roleColors[role] || "bg-gray-100 text-gray-800"
 }

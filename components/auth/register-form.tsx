@@ -25,13 +25,15 @@ interface PasswordStrength {
 
 export function RegisterForm() {
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     confirmPassword: "",
-    role: "patient",
-    department: "",
+    role: "PATIENT" as "ADMIN" | "DOCTOR" | "NURSE" | "RECEPTIONIST" | "LAB_TECHNICIAN" | "PHARMACIST" | "PATIENT",
     phone: "",
+    address: "",
+    dateOfBirth: "",
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -72,10 +74,14 @@ export function RegisterForm() {
 
     try {
       const userData = {
-        name: formData.name,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         email: formData.email,
-        role: formData.role as any,
-        department: formData.department || undefined,
+        password: formData.password,
+        role: formData.role,
+        phone: formData.phone || undefined,
+        address: formData.address || undefined,
+        dateOfBirth: formData.dateOfBirth || undefined,
       }
       await register(userData)
       toast({
@@ -84,7 +90,7 @@ export function RegisterForm() {
       })
       router.push("/dashboard")
     } catch (err) {
-      setError("Failed to create account")
+      setError(err instanceof Error ? err.message : "Failed to create account")
     }
   }
 
@@ -121,12 +127,23 @@ export function RegisterForm() {
                 <h3 className="font-medium text-lg">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
+                    <Label htmlFor="firstName">First Name *</Label>
                     <Input
-                      id="name"
-                      placeholder="Enter your full name"
-                      value={formData.name}
-                      onChange={e => setFormData({ ...formData, name: e.target.value })}
+                      id="firstName"
+                      placeholder="Enter your first name"
+                      value={formData.firstName}
+                      onChange={e => setFormData({ ...formData, firstName: e.target.value })}
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input
+                      id="lastName"
+                      placeholder="Enter your last name"
+                      value={formData.lastName}
+                      onChange={e => setFormData({ ...formData, lastName: e.target.value })}
                       required
                       disabled={isLoading}
                     />
@@ -155,32 +172,42 @@ export function RegisterForm() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="role">Role *</Label>
-                    <Select value={formData.role} onValueChange={value => setFormData({ ...formData, role: value })}>
+                    <Select value={formData.role} onValueChange={value => setFormData({ ...formData, role: value as typeof formData.role })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="patient">Patient</SelectItem>
-                        <SelectItem value="doctor">Doctor</SelectItem>
-                        <SelectItem value="nurse">Nurse</SelectItem>
-                        <SelectItem value="receptionist">Receptionist</SelectItem>
-                        <SelectItem value="pharmacist">Pharmacist</SelectItem>
+                        <SelectItem value="PATIENT">Patient</SelectItem>
+                        <SelectItem value="DOCTOR">Doctor</SelectItem>
+                        <SelectItem value="NURSE">Nurse</SelectItem>
+                        <SelectItem value="RECEPTIONIST">Receptionist</SelectItem>
+                        <SelectItem value="LAB_TECHNICIAN">Lab Technician</SelectItem>
+                        <SelectItem value="PHARMACIST">Pharmacist</SelectItem>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                {(formData.role === "doctor" || formData.role === "nurse" || formData.role === "pharmacist") && (
                   <div className="space-y-2">
-                    <Label htmlFor="department">Department</Label>
+                    <Label htmlFor="dateOfBirth">Date of Birth</Label>
                     <Input
-                      id="department"
-                      placeholder="Enter your department"
-                      value={formData.department}
-                      onChange={e => setFormData({ ...formData, department: e.target.value })}
+                      id="dateOfBirth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={e => setFormData({ ...formData, dateOfBirth: e.target.value })}
                       disabled={isLoading}
                     />
                   </div>
-                )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    placeholder="Enter your address"
+                    value={formData.address}
+                    onChange={e => setFormData({ ...formData, address: e.target.value })}
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
 
               {/* Password Section */}

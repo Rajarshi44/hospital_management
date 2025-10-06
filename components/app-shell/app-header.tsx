@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { CommandPalette } from "@/components/command-palette/command-palette"
 import { NotificationCenter } from "@/components/notifications/notification-center"
 import { useRouter } from "next/navigation"
+import { getUserFullName, getUserInitials } from "@/lib/auth"
 
 export function AppHeader() {
   const { user, logout } = useAuth()
@@ -26,28 +27,32 @@ export function AppHeader() {
   if (!user) return null
 
   const getQuickActions = () => {
-    const actions = {
-      admin: [
+    const actions: Record<string, Array<{ label: string; action: () => void }>> = {
+      ADMIN: [
         { label: "Add Staff Member", action: () => console.log("Add staff") },
         { label: "Generate Report", action: () => console.log("Generate report") },
       ],
-      doctor: [
+      DOCTOR: [
         { label: "New Appointment", action: () => console.log("New appointment") },
         { label: "Add Prescription", action: () => console.log("Add prescription") },
       ],
-      nurse: [
+      NURSE: [
         { label: "Record Vitals", action: () => console.log("Record vitals") },
         { label: "Add Task", action: () => console.log("Add task") },
       ],
-      receptionist: [
+      RECEPTIONIST: [
         { label: "Schedule Appointment", action: () => console.log("Schedule appointment") },
         { label: "Check-in Patient", action: () => console.log("Check-in patient") },
       ],
-      pharmacist: [
+      LAB_TECHNICIAN: [
+        { label: "Process Lab Sample", action: () => console.log("Process sample") },
+        { label: "Add Lab Result", action: () => console.log("Add result") },
+      ],
+      PHARMACIST: [
         { label: "Process Prescription", action: () => console.log("Process prescription") },
         { label: "Update Inventory", action: () => console.log("Update inventory") },
       ],
-      patient: [
+      PATIENT: [
         { label: "Book Appointment", action: () => console.log("Book appointment") },
         { label: "Message Doctor", action: () => console.log("Message doctor") },
       ],
@@ -106,13 +111,9 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarImage src={user.avatar || undefined} alt={getUserFullName(user)} />
                   <AvatarFallback>
-                    {user.name
-                      .split(" ")
-                      .map(n => n[0])
-                      .join("")
-                      .toUpperCase()}
+                    {getUserInitials(user)}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -120,10 +121,10 @@ export function AppHeader() {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.name}</p>
+                  <p className="text-sm font-medium leading-none">{getUserFullName(user)}</p>
                   <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                   <p className="text-xs leading-none text-muted-foreground capitalize">
-                    {user.role} {user.department && `• ${user.department}`}
+                    {user.role.toLowerCase().replace('_', ' ')}
                   </p>
                 </div>
               </DropdownMenuLabel>

@@ -1,12 +1,14 @@
 "use client"
 
 import { useState, useEffect, createContext, useContext, type ReactNode } from "react"
-import { type User, type AuthState, AuthService } from "@/lib/auth"
+import { type User, type AuthState, type RegisterData, AuthService } from "@/lib/auth"
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
-  register: (userData: Omit<User, "id">) => Promise<void>
+  register: (userData: RegisterData) => Promise<void>
+  refreshToken: () => Promise<void>
+  updateProfile: (updateData: Partial<RegisterData>) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -21,12 +23,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authService = AuthService.getInstance()
 
   useEffect(() => {
-    const user = authService.getCurrentUser()
-    setAuthState({
-      user,
-      isLoading: false,
-      isAuthenticated: !!user,
-    })
+    // Check if user is already logged in
+    const initAuth = async () => {
+      const user = authService.getCurrentUser()
+      
+      if (user) {
+        // Verify token is still valid by fetching current user from API
+        try {
+          const freshUser = await authService.getCurrentUserFromAPI()
+          setAuthState({
+            user: freshUser,
+            isLoading: false,
+            isAuthenticated: true,
+          })
+        } catch (error) {
+          // Token is invalid or expired, try to refresh
+          try {
+            await authService.refreshToken()
+            const freshUser = authService.getCurrentUser()
+            setAuthState({
+              user: freshUser,
+              isLoading: false,
+              isAuthenticated: !!freshUser,
+            })
+          } catch (refreshError) {
+            // Refresh failed, logout user
+            await authService.logout()
+            setAuthState({
+              user: null,
+              isLoading: false,
+              isAuthenticated: false,
+            })
+          }
+        }
+      } else {
+        setAuthState({
+          user: null,
+          isLoading: false,
+          isAuthenticated: false,
+        })
+      }
+    }
+
+    initAuth()
   }, [])
 
   const login = async (email: string, password: string) => {
@@ -45,15 +84,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    await authService.logout()
-    setAuthState({
-      user: null,
-      isLoading: false,
-      isAuthenticated: false,
-    })
+    setAuthState((prev) => ({ ...prev, isLoading: true }))
+    try {
+      await authService.logout()
+      setAuthState({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+      })
+    } catch (error) {
+      // Even if logout fails on backend, clear local state
+      setAuthState({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+      })
+    }
   }
 
-  const register = async (userData: Omit<User, "id">) => {
+  const register = async (userData: RegisterData) => {
     setAuthState((prev) => ({ ...prev, isLoading: true }))
     try {
       const user = await authService.register(userData)
@@ -68,7 +117,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  return <AuthContext.Provider value={{ ...authState, login, logout, register }}>{children}</AuthContext.Provider>
+  const refreshToken = async () => {
+    try {
+      await authService.refreshToken()
+      const user = authService.getCurrentUser()
+      setAuthState((prev) => ({
+        ...prev,
+        user,
+        isAuthenticated: !!user,
+      }))
+    } catch (error) {
+      // If refresh fails, logout
+      await logout()
+      throw error
+    }
+  }
+
+  const updateProfile = async (updateData: Partial<RegisterData>) => {
+    try {
+      const user = await authService.updateProfile(updateData)
+      setAuthState((prev) => ({
+        ...prev,
+        user,
+      }))
+    } catch (error) {
+      throw error
+    }
+  }
+
+  return (
+    <AuthContext.Provider 
+      value={{ 
+        ...authState, 
+        login, 
+        logout, 
+        register, 
+        refreshToken, 
+        updateProfile 
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

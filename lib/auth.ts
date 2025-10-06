@@ -1,13 +1,32 @@
-export type UserRole = "admin" | "doctor" | "nurse" | "receptionist" | "pharmacist" | "patient"
+import { ApiClient } from './api-client'
+
+export type UserRole = "ADMIN" | "DOCTOR" | "NURSE" | "RECEPTIONIST" | "LAB_TECHNICIAN" | "PHARMACIST" | "PATIENT"
 
 export interface User {
   id: string
   email: string
-  name: string
+  firstName: string
+  lastName: string
   role: UserRole
-  avatar?: string
-  department?: string
-  specialization?: string
+  isActive: boolean
+  avatar?: string | null
+  phone?: string | null
+  address?: string | null
+  dateOfBirth?: Date | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Helper function to get full name from user
+export function getUserFullName(user: User | null): string {
+  if (!user) return ''
+  return `${user.firstName} ${user.lastName}`.trim()
+}
+
+// Helper function to get initials from user
+export function getUserInitials(user: User | null): string {
+  if (!user) return ''
+  return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase()
 }
 
 export interface AuthState {
@@ -16,7 +35,30 @@ export interface AuthState {
   isAuthenticated: boolean
 }
 
-// Mock authentication service
+export interface LoginCredentials {
+  email: string
+  password: string
+}
+
+export interface RegisterData {
+  email: string
+  password: string
+  firstName: string
+  lastName: string
+  role: UserRole
+  phone?: string
+  address?: string
+  dateOfBirth?: string
+}
+
+export interface AuthResponse {
+  accessToken: string
+  refreshToken: string
+  user: User
+  expiresIn: number
+}
+
+// Authentication service with backend API integration
 export class AuthService {
   private static instance: AuthService
   private currentUser: User | null = null
@@ -29,123 +71,117 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<User> {
-    // Mock login - in real app, this would call an API
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const response = await ApiClient.post<AuthResponse>('/auth/login', {
+        email,
+        password,
+      })
 
-    // Mock user data based on email
-    const mockUsers: Record<string, User> = {
-      "admin@hospital.com": {
-        id: "1",
-        email: "admin@hospital.com",
-        name: "Dr. Sarah Johnson",
-        role: "admin",
-        avatar: "/caring-doctor.png",
-        department: "Administration",
-      },
-      "doctor@hospital.com": {
-        id: "2",
-        email: "doctor@hospital.com",
-        name: "Dr. Michael Chen",
-        role: "doctor",
-        avatar: "/caring-doctor.png",
-        department: "Cardiology",
-        specialization: "Interventional Cardiology",
-      },
-      "nurse@hospital.com": {
-        id: "3",
-        email: "nurse@hospital.com",
-        name: "Emily Rodriguez",
-        role: "nurse",
-        avatar: "/diverse-nurses-team.png",
-        department: "Emergency",
-      },
-      "receptionist@hospital.com": {
-        id: "4",
-        email: "receptionist@hospital.com",
-        name: "Lisa Thompson",
-        role: "receptionist",
-        avatar: "/friendly-receptionist.png",
-        department: "Front Desk",
-      },
-      "pharmacist@hospital.com": {
-        id: "5",
-        email: "pharmacist@hospital.com",
-        name: "David Park",
-        role: "pharmacist",
-        avatar: "/pharmacist-consultation.png",
-        department: "Pharmacy",
-      },
-      "patient@hospital.com": {
-        id: "6",
-        email: "patient@hospital.com",
-        name: "John Smith",
-        role: "patient",
-        avatar: "/patient-consultation.png",
-      },
+      // Store tokens
+      localStorage.setItem('accessToken', response.accessToken)
+      localStorage.setItem('refreshToken', response.refreshToken)
+
+      // Store user data
+      this.currentUser = response.user
+      localStorage.setItem('user', JSON.stringify(response.user))
+
+      return response.user
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Login failed')
     }
-
-    const user = mockUsers[email]
-    if (!user) {
-      throw new Error("Invalid credentials")
-    }
-
-    this.currentUser = user
-    localStorage.setItem("hospital_user", JSON.stringify(user))
-    localStorage.removeItem("hospital_logout") // Clear logout flag
-    return user
   }
 
   async logout(): Promise<void> {
+    // Clear tokens and user data
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+    localStorage.removeItem('user')
     this.currentUser = null
-    localStorage.removeItem("hospital_user")
-    // Also remove auto-login flag
-    localStorage.setItem("hospital_logout", "true")
   }
 
   getCurrentUser(): User | null {
-    if (this.currentUser) return this.currentUser
-
-    const stored = localStorage.getItem("hospital_user")
-    if (stored) {
-      this.currentUser = JSON.parse(stored)
+    if (this.currentUser) {
       return this.currentUser
     }
 
-    // Check if user explicitly logged out
-    const hasLoggedOut = localStorage.getItem("hospital_logout")
-    if (hasLoggedOut) {
-      return null
-    }
-
-    // Development mode: auto-login as admin for testing (only if not logged out)
-    if (process.env.NODE_ENV === "development") {
-      const devUser: User = {
-        id: "dev-admin",
-        email: "admin@hospital.com",
-        name: "Dr. Sarah Johnson",
-        role: "admin",
-        avatar: "/caring-doctor.png",
-        department: "Administration",
+    // Try to get user from localStorage
+    if (typeof window !== 'undefined') {
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        try {
+          this.currentUser = JSON.parse(userStr)
+          return this.currentUser
+        } catch {
+          return null
+        }
       }
-      this.currentUser = devUser
-      localStorage.setItem("hospital_user", JSON.stringify(devUser))
-      return devUser
     }
 
     return null
   }
 
-  async register(userData: Omit<User, "id">): Promise<User> {
-    // Mock registration
-    await new Promise(resolve => setTimeout(resolve, 1000))
+  async register(userData: RegisterData): Promise<User> {
+    try {
+      const response = await ApiClient.post<AuthResponse>('/auth/register', userData)
 
-    const user: User = {
-      ...userData,
-      id: Math.random().toString(36).substr(2, 9),
+      // Store tokens
+      localStorage.setItem('accessToken', response.accessToken)
+      localStorage.setItem('refreshToken', response.refreshToken)
+
+      // Store user data
+      this.currentUser = response.user
+      localStorage.setItem('user', JSON.stringify(response.user))
+
+      return response.user
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Registration failed')
+    }
+  }
+
+  async refreshToken(): Promise<void> {
+    const refreshToken = localStorage.getItem('refreshToken')
+    if (!refreshToken) {
+      throw new Error('No refresh token available')
     }
 
-    this.currentUser = user
-    localStorage.setItem("hospital_user", JSON.stringify(user))
-    return user
+    try {
+      const response = await ApiClient.post<AuthResponse>('/auth/refresh', {
+        refreshToken,
+      })
+
+      // Update tokens
+      localStorage.setItem('accessToken', response.accessToken)
+      localStorage.setItem('refreshToken', response.refreshToken)
+
+      // Update user data
+      this.currentUser = response.user
+      localStorage.setItem('user', JSON.stringify(response.user))
+    } catch (error) {
+      // If refresh fails, logout user
+      await this.logout()
+      throw new Error('Session expired. Please login again.')
+    }
+  }
+
+  async getCurrentUserFromAPI(): Promise<User> {
+    try {
+      const user = await ApiClient.get<User>('/auth/me', true)
+      this.currentUser = user
+      localStorage.setItem('user', JSON.stringify(user))
+      return user
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to fetch user')
+    }
+  }
+
+  async updateProfile(updateData: Partial<RegisterData>): Promise<User> {
+    try {
+      const user = await ApiClient.put<User>('/auth/profile', updateData, true)
+      this.currentUser = user
+      localStorage.setItem('user', JSON.stringify(user))
+      return user
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to update profile')
+    }
   }
 }

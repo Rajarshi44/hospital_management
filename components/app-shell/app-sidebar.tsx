@@ -31,6 +31,7 @@ import { getNavigationForRole } from "@/lib/navigation"
 import { useTheme } from "next-themes"
 import { useRouter, usePathname } from "next/navigation"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { getUserFullName, getUserInitials } from "@/lib/auth"
 
 export function AppSidebar() {
   const { user, logout } = useAuth()
@@ -49,24 +50,26 @@ export function AppSidebar() {
 
   const getRoleDisplayName = (role: string) => {
     const roleNames = {
-      admin: "Administrator",
-      doctor: "Doctor",
-      nurse: "Nurse",
-      receptionist: "Receptionist",
-      pharmacist: "Pharmacist",
-      patient: "Patient",
+      ADMIN: "Administrator",
+      DOCTOR: "Doctor",
+      NURSE: "Nurse",
+      RECEPTIONIST: "Receptionist",
+      LAB_TECHNICIAN: "Lab Technician",
+      PHARMACIST: "Pharmacist",
+      PATIENT: "Patient",
     }
-    return roleNames[role as keyof typeof roleNames] || role
+    return roleNames[role as keyof typeof roleNames] || role.toLowerCase().replace('_', ' ')
   }
 
   const getRoleColor = (role: string) => {
     const roleColors = {
-      admin: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-      doctor: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      nurse: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      receptionist: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-      pharmacist: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
-      patient: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
+      ADMIN: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+      DOCTOR: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      NURSE: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      RECEPTIONIST: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+      LAB_TECHNICIAN: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+      PHARMACIST: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+      PATIENT: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
     }
     return roleColors[role as keyof typeof roleColors] || "bg-gray-100 text-gray-800"
   }
@@ -173,18 +176,15 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                    <AvatarImage src={user.avatar || "/placeholder.svg"} alt={getUserFullName(user)} />
                     <AvatarFallback className="rounded-lg">
-                      {user.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                      {getUserInitials(user)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">{user.name}</span>
+                    <span className="truncate font-semibold">{getUserFullName(user)}</span>
                     <span className="truncate text-xs text-muted-foreground">
-                      {user.department || getRoleDisplayName(user.role)}
+                      {getRoleDisplayName(user.role)}
                     </span>
                   </div>
                   <ChevronUp className="ml-auto size-4" />
@@ -199,16 +199,13 @@ export function AppSidebar() {
                 <div className="p-2">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                      <AvatarImage src={user.avatar || "/placeholder.svg"} alt={getUserFullName(user)} />
                       <AvatarFallback className="rounded-lg">
-                        {user.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
+                        {getUserInitials(user)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{user.name}</span>
+                      <span className="truncate font-semibold">{getUserFullName(user)}</span>
                       <span className="truncate text-xs text-muted-foreground">{user.email}</span>
                     </div>
                   </div>
