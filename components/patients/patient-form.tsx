@@ -9,7 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Save, X, User, FileText, Phone, Users, Building, Stethoscope, Calendar, AlertTriangle, Heart, Settings } from "lucide-react"
+import {
+  Loader2,
+  Save,
+  X,
+  User,
+  FileText,
+  Phone,
+  Users,
+  Building,
+  Stethoscope,
+  Calendar,
+  AlertTriangle,
+  Heart,
+  Settings,
+} from "lucide-react"
 import { PatientService, type Patient, type CreatePatientDto, type UpdatePatientDto } from "@/lib/patient-service"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
@@ -28,11 +42,10 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
   const { toast } = useToast()
   const { user } = useAuth()
   const patientService = PatientService.getInstance()
-  
+
   // Get current user from auth context
-  const currentUser = user?.firstName && user?.lastName 
-    ? `${user.firstName} ${user.lastName}`
-    : user?.email || "System Admin"
+  const currentUser =
+    user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email || "System Admin"
 
   const [formData, setFormData] = useState({
     // Basic Patient Information
@@ -40,10 +53,10 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
     firstName: patient?.firstName || "",
     lastName: patient?.lastName || "",
     patientAccount: (patient as any)?.patientAccount || "",
-    dateOfBirth: patient?.dateOfBirth 
-      ? (typeof patient.dateOfBirth === 'string' 
-          ? patient.dateOfBirth.split('T')[0] 
-          : new Date(patient.dateOfBirth).toISOString().split('T')[0])
+    dateOfBirth: patient?.dateOfBirth
+      ? typeof patient.dateOfBirth === "string"
+        ? patient.dateOfBirth.split("T")[0]
+        : new Date(patient.dateOfBirth).toISOString().split("T")[0]
       : "",
     age: (patient as any)?.age || "",
     gender: patient?.gender || "MALE",
@@ -57,66 +70,66 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
     zipCode: patient?.zipCode || "",
     country: (patient as any)?.country || "",
     religion: (patient as any)?.religion || "",
-    
+
     // Guardian Information
     guardianName: (patient as any)?.guardianName || "",
     guardianRelation: (patient as any)?.guardianRelation || "",
     guardianAddress: (patient as any)?.guardianAddress || "",
     sameAsPatientAddress: (patient as any)?.sameAsPatientAddress || false,
-    
+
     // Corporate/Insurance Information
     isCorporatePatient: (patient as any)?.isCorporatePatient || false,
     insuranceCompany: (patient as any)?.insuranceCompany || "",
     insuranceAddress: (patient as any)?.insuranceAddress || "",
-    
+
     // Billing Information
     billNo: (patient as any)?.billNo || "",
     estimatePackageAmount: (patient as any)?.estimatePackageAmount || "",
     estimateDoctorAmount: (patient as any)?.estimateDoctorAmount || "",
     depositAmount: (patient as any)?.depositAmount || "0.00",
-    
+
     // Medical Staff Information
     doctorInCharge1: (patient as any)?.doctorInCharge1 || "",
     doctorInCharge2: (patient as any)?.doctorInCharge2 || "",
     doctorInCharge3: (patient as any)?.doctorInCharge3 || "",
     case: (patient as any)?.case || "",
-    
+
     // Admission Information
-    admissionDate: (patient as any)?.admissionDate 
-      ? (typeof (patient as any).admissionDate === 'string' 
-          ? (patient as any).admissionDate.split('T')[0] 
-          : new Date((patient as any).admissionDate).toISOString().split('T')[0])
+    admissionDate: (patient as any)?.admissionDate
+      ? typeof (patient as any).admissionDate === "string"
+        ? (patient as any).admissionDate.split("T")[0]
+        : new Date((patient as any).admissionDate).toISOString().split("T")[0]
       : "",
-    dischargeDate: (patient as any)?.dischargeDate 
-      ? (typeof (patient as any).dischargeDate === 'string' 
-          ? (patient as any).dischargeDate.split('T')[0] 
-          : new Date((patient as any).dischargeDate).toISOString().split('T')[0])
+    dischargeDate: (patient as any)?.dischargeDate
+      ? typeof (patient as any).dischargeDate === "string"
+        ? (patient as any).dischargeDate.split("T")[0]
+        : new Date((patient as any).dischargeDate).toISOString().split("T")[0]
       : "",
-    transferDate: (patient as any)?.transferDate 
-      ? (typeof (patient as any).transferDate === 'string' 
-          ? (patient as any).transferDate.split('T')[0] 
-          : new Date((patient as any).transferDate).toISOString().split('T')[0])
+    transferDate: (patient as any)?.transferDate
+      ? typeof (patient as any).transferDate === "string"
+        ? (patient as any).transferDate.split("T")[0]
+        : new Date((patient as any).transferDate).toISOString().split("T")[0]
       : "",
     discOnRiskBond: (patient as any)?.discOnRiskBond || false,
-    expiredDate: (patient as any)?.expiredDate 
-      ? (typeof (patient as any).expiredDate === 'string' 
-          ? (patient as any).expiredDate.split('T')[0] 
-          : new Date((patient as any).expiredDate).toISOString().split('T')[0])
+    expiredDate: (patient as any)?.expiredDate
+      ? typeof (patient as any).expiredDate === "string"
+        ? (patient as any).expiredDate.split("T")[0]
+        : new Date((patient as any).expiredDate).toISOString().split("T")[0]
       : "",
     caseHistory: (patient as any)?.caseHistory || "",
     isBPL: (patient as any)?.isBPL || false,
-    
+
     // Emergency Contact
     emergencyContactName: patient?.emergencyContactName || "",
     emergencyContactPhone: patient?.emergencyContactPhone || "",
     emergencyContactRelationship: patient?.emergencyContactRelationship || "",
-    
+
     // Medical Information
     bloodGroup: patient?.bloodGroup || "",
     allergies: patient?.allergies || "",
     chronicConditions: patient?.chronicConditions || "",
     currentMedications: patient?.currentMedications || "",
-    
+
     // System Information - Auto-populate with current user
     createdBy: (patient as any)?.createdBy || (isEditMode ? "" : currentUser),
     modifiedBy: currentUser,
@@ -169,7 +182,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
           firstName: formData.firstName,
           lastName: formData.lastName,
           dateOfBirth: formData.dateOfBirth,
-          gender: formData.gender as 'MALE' | 'FEMALE' | 'OTHER',
+          gender: formData.gender as "MALE" | "FEMALE" | "OTHER",
           phone: formData.phone,
           email: formData.email,
           address: formData.address,
@@ -194,7 +207,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
           firstName: formData.firstName,
           lastName: formData.lastName,
           dateOfBirth: formData.dateOfBirth,
-          gender: formData.gender as 'MALE' | 'FEMALE' | 'OTHER',
+          gender: formData.gender as "MALE" | "FEMALE" | "OTHER",
           phone: formData.phone,
           email: formData.email,
           password: formData.password,
@@ -232,15 +245,13 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
   }
 
   const handleChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ 
-      ...prev, 
-      [field]: typeof value === 'boolean' ? value : value 
+    setFormData(prev => ({
+      ...prev,
+      [field]: typeof value === "boolean" ? value : value,
     }))
   }
 
-  const tabs = [
-    "registration", "personal", "medical", "system"
-  ]
+  const tabs = ["registration", "personal", "medical", "system"]
 
   const getTabNavigation = () => {
     const currentIndex = tabs.indexOf(activeTab)
@@ -280,7 +291,9 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
       <CardHeader>
         <CardTitle>{isEditMode ? "Edit Patient Admission" : "Patient Admission Form"}</CardTitle>
         <CardDescription>
-          {isEditMode ? "Update patient admission information" : "Complete patient admission details including personal, medical, and billing information"}
+          {isEditMode
+            ? "Update patient admission information"
+            : "Complete patient admission details including personal, medical, and billing information"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -295,16 +308,21 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
             {/* Progress Indicator */}
             <div className="mb-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-                <span>Step {tabs.indexOf(activeTab) + 1} of {tabs.length}</span>
+                <span>
+                  Step {tabs.indexOf(activeTab) + 1} of {tabs.length}
+                </span>
                 <span>{Math.round(((tabs.indexOf(activeTab) + 1) / tabs.length) * 100)}% Complete</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2 relative overflow-hidden">
-                <div 
+                <div
                   className={`bg-primary h-2 rounded-full transition-all duration-300 ease-in-out absolute top-0 left-0 ${
-                    tabs.indexOf(activeTab) + 1 === 1 ? 'w-[25%]' :
-                    tabs.indexOf(activeTab) + 1 === 2 ? 'w-[50%]' :
-                    tabs.indexOf(activeTab) + 1 === 3 ? 'w-[75%]' :
-                    'w-full'
+                    tabs.indexOf(activeTab) + 1 === 1
+                      ? "w-[25%]"
+                      : tabs.indexOf(activeTab) + 1 === 2
+                        ? "w-[50%]"
+                        : tabs.indexOf(activeTab) + 1 === 3
+                          ? "w-[75%]"
+                          : "w-full"
                   }`}
                 ></div>
               </div>
@@ -344,7 +362,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="regNo"
                       placeholder="REG001"
                       value={formData.regNo}
-                      onChange={(e) => handleChange("regNo", e.target.value)}
+                      onChange={e => handleChange("regNo", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -356,7 +374,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="patientAccount"
                       placeholder="Patient Account Number"
                       value={formData.patientAccount}
-                      onChange={(e) => handleChange("patientAccount", e.target.value)}
+                      onChange={e => handleChange("patientAccount", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -367,7 +385,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="billNo"
                       placeholder="BILL001"
                       value={formData.billNo}
-                      onChange={(e) => handleChange("billNo", e.target.value)}
+                      onChange={e => handleChange("billNo", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -384,7 +402,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="isCorporatePatient"
                       title="Corporate Patient"
                       checked={formData.isCorporatePatient}
-                      onChange={(e) => handleChange("isCorporatePatient", e.target.checked)}
+                      onChange={e => handleChange("isCorporatePatient", e.target.checked)}
                       disabled={isLoading}
                       className="h-4 w-4"
                     />
@@ -400,7 +418,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                         id="insuranceCompany"
                         placeholder="Insurance company name"
                         value={formData.insuranceCompany}
-                        onChange={(e) => handleChange("insuranceCompany", e.target.value)}
+                        onChange={e => handleChange("insuranceCompany", e.target.value)}
                         disabled={isLoading}
                       />
                     </div>
@@ -411,7 +429,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                         id="insuranceAddress"
                         placeholder="Insurance company address"
                         value={formData.insuranceAddress}
-                        onChange={(e) => handleChange("insuranceAddress", e.target.value)}
+                        onChange={e => handleChange("insuranceAddress", e.target.value)}
                         disabled={isLoading}
                         rows={2}
                       />
@@ -430,7 +448,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                         step="0.01"
                         placeholder="0.00"
                         value={formData.estimatePackageAmount}
-                        onChange={(e) => handleChange("estimatePackageAmount", e.target.value)}
+                        onChange={e => handleChange("estimatePackageAmount", e.target.value)}
                         disabled={isLoading}
                       />
                     </div>
@@ -443,7 +461,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                         step="0.01"
                         placeholder="0.00"
                         value={formData.estimateDoctorAmount}
-                        onChange={(e) => handleChange("estimateDoctorAmount", e.target.value)}
+                        onChange={e => handleChange("estimateDoctorAmount", e.target.value)}
                         disabled={isLoading}
                       />
                     </div>
@@ -455,7 +473,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                         type="number"
                         step="0.01"
                         value={formData.depositAmount}
-                        onChange={(e) => handleChange("depositAmount", e.target.value)}
+                        onChange={e => handleChange("depositAmount", e.target.value)}
                         disabled={isLoading}
                       />
                     </div>
@@ -474,7 +492,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                     <Input
                       id="firstName"
                       value={formData.firstName}
-                      onChange={(e) => handleChange("firstName", e.target.value)}
+                      onChange={e => handleChange("firstName", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -485,7 +503,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                     <Input
                       id="lastName"
                       value={formData.lastName}
-                      onChange={(e) => handleChange("lastName", e.target.value)}
+                      onChange={e => handleChange("lastName", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -497,7 +515,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="dateOfBirth"
                       type="date"
                       value={formData.dateOfBirth}
-                      onChange={(e) => handleChange("dateOfBirth", e.target.value)}
+                      onChange={e => handleChange("dateOfBirth", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -510,7 +528,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       type="number"
                       placeholder="25"
                       value={formData.age}
-                      onChange={(e) => handleChange("age", e.target.value)}
+                      onChange={e => handleChange("age", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -519,7 +537,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                     <Label htmlFor="gender">Sex *</Label>
                     <Select
                       value={formData.gender}
-                      onValueChange={(value) => handleChange("gender", value)}
+                      onValueChange={value => handleChange("gender", value)}
                       disabled={isLoading}
                     >
                       <SelectTrigger>
@@ -539,7 +557,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="religion"
                       placeholder="e.g., Hindu, Christian, Muslim"
                       value={formData.religion}
-                      onChange={(e) => handleChange("religion", e.target.value)}
+                      onChange={e => handleChange("religion", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -550,7 +568,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="bloodGroup"
                       placeholder="e.g., A+, O-, B+"
                       value={formData.bloodGroup}
-                      onChange={(e) => handleChange("bloodGroup", e.target.value)}
+                      onChange={e => handleChange("bloodGroup", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -568,7 +586,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       type="tel"
                       placeholder="(555) 123-4567"
                       value={formData.phone}
-                      onChange={(e) => handleChange("phone", e.target.value)}
+                      onChange={e => handleChange("phone", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -581,7 +599,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       type="email"
                       placeholder="patient@email.com"
                       value={formData.email}
-                      onChange={(e) => handleChange("email", e.target.value)}
+                      onChange={e => handleChange("email", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -596,7 +614,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                         type="password"
                         placeholder="Minimum 6 characters"
                         value={formData.password}
-                        onChange={(e) => handleChange("password", e.target.value)}
+                        onChange={e => handleChange("password", e.target.value)}
                         required={!isEditMode}
                         disabled={isLoading}
                         minLength={6}
@@ -611,7 +629,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                         type="password"
                         placeholder="Re-enter password"
                         value={formData.confirmPassword}
-                        onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                        onChange={e => handleChange("confirmPassword", e.target.value)}
                         required={!isEditMode}
                         disabled={isLoading}
                       />
@@ -625,7 +643,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                     id="address"
                     placeholder="Complete address"
                     value={formData.address}
-                    onChange={(e) => handleChange("address", e.target.value)}
+                    onChange={e => handleChange("address", e.target.value)}
                     required
                     disabled={isLoading}
                     rows={2}
@@ -639,7 +657,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="city"
                       placeholder="Springfield"
                       value={formData.city}
-                      onChange={(e) => handleChange("city", e.target.value)}
+                      onChange={e => handleChange("city", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -651,7 +669,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="state"
                       placeholder="IL"
                       value={formData.state}
-                      onChange={(e) => handleChange("state", e.target.value)}
+                      onChange={e => handleChange("state", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -663,7 +681,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="country"
                       placeholder="USA"
                       value={formData.country}
-                      onChange={(e) => handleChange("country", e.target.value)}
+                      onChange={e => handleChange("country", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -676,7 +694,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                     id="zipCode"
                     placeholder="62701"
                     value={formData.zipCode}
-                    onChange={(e) => handleChange("zipCode", e.target.value)}
+                    onChange={e => handleChange("zipCode", e.target.value)}
                     disabled={isLoading}
                   />
                 </div>
@@ -688,7 +706,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="isBPL"
                       title="Below Poverty Line"
                       checked={formData.isBPL}
-                      onChange={(e) => handleChange("isBPL", e.target.checked)}
+                      onChange={e => handleChange("isBPL", e.target.checked)}
                       disabled={isLoading}
                       className="h-4 w-4"
                     />
@@ -707,7 +725,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="guardianName"
                       placeholder="Guardian's full name"
                       value={formData.guardianName}
-                      onChange={(e) => handleChange("guardianName", e.target.value)}
+                      onChange={e => handleChange("guardianName", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -719,7 +737,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="guardianRelation"
                       placeholder="Father, Mother, Spouse, etc."
                       value={formData.guardianRelation}
-                      onChange={(e) => handleChange("guardianRelation", e.target.value)}
+                      onChange={e => handleChange("guardianRelation", e.target.value)}
                       required
                       disabled={isLoading}
                     />
@@ -733,13 +751,13 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="sameAsPatientAddress"
                       title="Same as patient address"
                       checked={formData.sameAsPatientAddress}
-                      onChange={(e) => {
-                        const isChecked = e.target.checked;
-                        handleChange("sameAsPatientAddress", isChecked);
+                      onChange={e => {
+                        const isChecked = e.target.checked
+                        handleChange("sameAsPatientAddress", isChecked)
                         if (isChecked) {
-                          handleChange("guardianAddress", "SAME AS ABOVE");
+                          handleChange("guardianAddress", "SAME AS ABOVE")
                         } else {
-                          handleChange("guardianAddress", "");
+                          handleChange("guardianAddress", "")
                         }
                       }}
                       disabled={isLoading}
@@ -752,7 +770,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                     id="guardianAddress"
                     placeholder={formData.sameAsPatientAddress ? "SAME AS ABOVE" : "Guardian's complete address"}
                     value={formData.guardianAddress}
-                    onChange={(e) => handleChange("guardianAddress", e.target.value)}
+                    onChange={e => handleChange("guardianAddress", e.target.value)}
                     required
                     disabled={isLoading || formData.sameAsPatientAddress}
                     rows={2}
@@ -770,7 +788,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="emergencyContactName"
                       placeholder="Jane Doe"
                       value={formData.emergencyContactName}
-                      onChange={(e) => handleChange("emergencyContactName", e.target.value)}
+                      onChange={e => handleChange("emergencyContactName", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -782,7 +800,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       type="tel"
                       placeholder="(555) 123-4567"
                       value={formData.emergencyContactPhone}
-                      onChange={(e) => handleChange("emergencyContactPhone", e.target.value)}
+                      onChange={e => handleChange("emergencyContactPhone", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -793,21 +811,13 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="emergencyContactRelationship"
                       placeholder="Spouse, Parent, etc."
                       value={formData.emergencyContactRelationship}
-                      onChange={(e) => handleChange("emergencyContactRelationship", e.target.value)}
+                      onChange={e => handleChange("emergencyContactRelationship", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
                 </div>
               </div>
             </TabsContent>
-
-
-
-
-
-
-
-
 
             <TabsContent value="medical" className="space-y-6">
               {/* Medical Information */}
@@ -820,7 +830,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="allergies"
                       placeholder="List any allergies (comma-separated)"
                       value={formData.allergies}
-                      onChange={(e) => handleChange("allergies", e.target.value)}
+                      onChange={e => handleChange("allergies", e.target.value)}
                       disabled={isLoading}
                       rows={2}
                     />
@@ -832,7 +842,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="chronicConditions"
                       placeholder="List any chronic conditions"
                       value={formData.chronicConditions}
-                      onChange={(e) => handleChange("chronicConditions", e.target.value)}
+                      onChange={e => handleChange("chronicConditions", e.target.value)}
                       disabled={isLoading}
                       rows={2}
                     />
@@ -844,7 +854,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="currentMedications"
                       placeholder="List current medications (comma-separated)"
                       value={formData.currentMedications}
-                      onChange={(e) => handleChange("currentMedications", e.target.value)}
+                      onChange={e => handleChange("currentMedications", e.target.value)}
                       disabled={isLoading}
                       rows={2}
                     />
@@ -862,7 +872,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="doctorInCharge1"
                       placeholder="Dr. John Smith"
                       value={formData.doctorInCharge1}
-                      onChange={(e) => handleChange("doctorInCharge1", e.target.value)}
+                      onChange={e => handleChange("doctorInCharge1", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -873,7 +883,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="doctorInCharge2"
                       placeholder="Dr. Jane Doe"
                       value={formData.doctorInCharge2}
-                      onChange={(e) => handleChange("doctorInCharge2", e.target.value)}
+                      onChange={e => handleChange("doctorInCharge2", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -884,7 +894,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="doctorInCharge3"
                       placeholder="Dr. Bob Johnson"
                       value={formData.doctorInCharge3}
-                      onChange={(e) => handleChange("doctorInCharge3", e.target.value)}
+                      onChange={e => handleChange("doctorInCharge3", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -896,7 +906,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                     id="case"
                     placeholder="Brief description of the case"
                     value={formData.case}
-                    onChange={(e) => handleChange("case", e.target.value)}
+                    onChange={e => handleChange("case", e.target.value)}
                     disabled={isLoading}
                     rows={2}
                   />
@@ -913,7 +923,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="admissionDate"
                       type="date"
                       value={formData.admissionDate}
-                      onChange={(e) => handleChange("admissionDate", e.target.value)}
+                      onChange={e => handleChange("admissionDate", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -924,7 +934,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="dischargeDate"
                       type="date"
                       value={formData.dischargeDate}
-                      onChange={(e) => handleChange("dischargeDate", e.target.value)}
+                      onChange={e => handleChange("dischargeDate", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -935,7 +945,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="transferDate"
                       type="date"
                       value={formData.transferDate}
-                      onChange={(e) => handleChange("transferDate", e.target.value)}
+                      onChange={e => handleChange("transferDate", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -946,7 +956,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="expiredDate"
                       type="date"
                       value={formData.expiredDate}
-                      onChange={(e) => handleChange("expiredDate", e.target.value)}
+                      onChange={e => handleChange("expiredDate", e.target.value)}
                       disabled={isLoading}
                     />
                   </div>
@@ -959,7 +969,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                       id="discOnRiskBond"
                       title="Discharge on Risk Bond"
                       checked={formData.discOnRiskBond}
-                      onChange={(e) => handleChange("discOnRiskBond", e.target.checked)}
+                      onChange={e => handleChange("discOnRiskBond", e.target.checked)}
                       disabled={isLoading}
                       className="h-4 w-4"
                     />
@@ -973,7 +983,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                     id="caseHistory"
                     placeholder="Detailed case history"
                     value={formData.caseHistory}
-                    onChange={(e) => handleChange("caseHistory", e.target.value)}
+                    onChange={e => handleChange("caseHistory", e.target.value)}
                     disabled={isLoading}
                     rows={4}
                   />
@@ -987,20 +997,12 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Created By</Label>
-                    <Input
-                      value={formData.createdBy}
-                      disabled
-                      className="bg-muted"
-                    />
+                    <Input value={formData.createdBy} disabled className="bg-muted" />
                   </div>
 
                   <div className="space-y-2">
                     <Label>Modified By</Label>
-                    <Input
-                      value={formData.modifiedBy}
-                      disabled
-                      className="bg-muted"
-                    />
+                    <Input value={formData.modifiedBy} disabled className="bg-muted" />
                   </div>
                 </div>
 
@@ -1013,9 +1015,7 @@ export function PatientForm({ patient, onSuccess, onCancel }: PatientFormProps) 
 
           {/* Tab Navigation and Form Actions */}
           <div className="flex justify-between items-center gap-4 pt-6 border-t">
-            <div className="flex gap-2">
-              {getTabNavigation()}
-            </div>
+            <div className="flex gap-2">{getTabNavigation()}</div>
             <div className="flex gap-4">
               <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
                 <X className="h-4 w-4 mr-2" />
