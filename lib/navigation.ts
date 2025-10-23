@@ -12,6 +12,16 @@ import {
   FileText,
   Activity,
   FolderOpen,
+  Bed,
+  UserCog,
+  Shield,
+  Bell,
+  Heart,
+  Stethoscope,
+  MapPin,
+  CreditCard,
+  TrendingUp,
+  Clock,
 } from "lucide-react"
 import type { UserRole } from "./auth"
 
@@ -36,13 +46,33 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
     ADMIN: [
       ...baseNavigation,
       {
-        title: "Staff Management",
-        url: "/staff",
-        icon: Users,
+        title: "Doctor Management",
+        url: "/doctors",
+        icon: Stethoscope,
         items: [
-          { title: "All Staff", url: "/staff", icon: Users },
-          { title: "Departments", url: "/staff/departments", icon: Building2 },
-          { title: "Schedules", url: "/staff/schedules", icon: Calendar },
+          { title: "All Doctors", url: "/doctors", icon: Users },
+          { title: "Register Doctor", url: "/doctors/register", icon: UserCheck },
+          { title: "Departments", url: "/doctors/departments", icon: Building2 },
+          { title: "Schedules", url: "/doctors/schedules", icon: Calendar },
+        ],
+      },
+      {
+        title: "Patient Management",
+        url: "/patients",
+        icon: Heart,
+        items: [
+          { title: "OPD Patients", url: "/patients", icon: Users },
+          { 
+            title: "IPD Management", 
+            url: "/admin/ipd", 
+            icon: Bed,
+            items: [
+              { title: "Admission", url: "/admin/ipd/admission", icon: UserCheck },
+              { title: "Inpatient List", url: "/admin/ipd/inpatient", icon: Activity },
+              { title: "Discharge", url: "/admin/ipd/discharge", icon: FileText },
+            ]
+          },
+          { title: "Patient History", url: "/patients/history", icon: FileText },
         ],
       },
       {
@@ -51,9 +81,44 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: Calendar,
       },
       {
-        title: "Patients",
-        url: "/patients",
-        icon: UserCheck,
+        title: "Lab Management",
+        url: "/lab",
+        icon: TestTube,
+        items: [
+          { title: "Tests", url: "/lab", icon: TestTube },
+          { title: "Reports", url: "/lab/reports", icon: FileText },
+        ],
+      },
+      {
+        title: "Pharmacy / Inventory",
+        url: "/pharmacy",
+        icon: Pill,
+      },
+      {
+        title: "Billing & Payments",
+        url: "/billing",
+        icon: CreditCard,
+      },
+      {
+        title: "Ward/Bed Management",
+        url: "/wards",
+        icon: Bed,
+      },
+      {
+        title: "Staff/HR Management",
+        url: "/staff",
+        icon: UserCog,
+        items: [
+          { title: "Nurses", url: "/staff/nurses", icon: Users },
+          { title: "Receptionists", url: "/staff/receptionists", icon: Users },
+          { title: "Technicians", url: "/staff/technicians", icon: Users },
+          { title: "Duty Roster", url: "/staff/roster", icon: Clock },
+        ],
+      },
+      {
+        title: "Insurance / TPA",
+        url: "/insurance",
+        icon: Shield,
       },
       {
         title: "Documents",
@@ -61,24 +126,19 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: FolderOpen,
       },
       {
-        title: "Lab Management",
-        url: "/lab",
-        icon: TestTube,
-      },
-      {
-        title: "Billing",
-        url: "/billing",
-        icon: Receipt,
-      },
-      {
         title: "Reports",
         url: "/reports",
-        icon: FileText,
+        icon: TrendingUp,
         items: [
           { title: "Revenue", url: "/reports/revenue", icon: Receipt },
           { title: "Operations", url: "/reports/operations", icon: Activity },
           { title: "Staff Performance", url: "/reports/staff", icon: Users },
         ],
+      },
+      {
+        title: "Notifications / Alerts",
+        url: "/notifications",
+        icon: Bell,
       },
       {
         title: "Settings",

@@ -36,7 +36,7 @@ export default function PatientsPage() {
     setSelectedPatient(patient)
     setViewMode("details")
     // Trigger refresh of patient list
-    setRefreshTrigger((prev) => prev + 1)
+    setRefreshTrigger(prev => prev + 1)
   }
 
   const handleFormCancel = () => {
@@ -50,7 +50,7 @@ export default function PatientsPage() {
   const handleBack = () => {
     setSelectedPatient(null)
     setViewMode("search")
-    setRefreshTrigger((prev) => prev + 1)
+    setRefreshTrigger(prev => prev + 1)
   }
 
   return (
@@ -94,11 +94,7 @@ export default function PatientsPage() {
           )}
 
           {viewMode === "details" && selectedPatient && (
-            <PatientDetails
-              patient={selectedPatient}
-              onEdit={handleEditPatient}
-              onClose={handleBack}
-            />
+            <PatientDetails patient={selectedPatient} onEdit={handleEditPatient} onClose={handleBack} />
           )}
         </div>
       </AppLayout>

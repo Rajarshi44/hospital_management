@@ -91,9 +91,7 @@ export function PatientDetails({ patient, onEdit, onClose }: PatientDetailsProps
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-bold">
-                    {patientService.getFullName(currentPatient)}
-                  </h2>
+                  <h2 className="text-2xl font-bold">{patientService.getFullName(currentPatient)}</h2>
                   <Badge
                     className={
                       currentPatient.isActive
@@ -128,12 +126,8 @@ export function PatientDetails({ patient, onEdit, onClose }: PatientDetailsProps
 
                 <div className="text-sm text-muted-foreground">
                   <span>Patient ID: {currentPatient.id}</span>
-                  <span className="ml-4">
-                    Registered: {format(new Date(currentPatient.createdAt), "MMM d, yyyy")}
-                  </span>
-                  <span className="ml-4">
-                    Updated: {format(new Date(currentPatient.updatedAt), "MMM d, yyyy")}
-                  </span>
+                  <span className="ml-4">Registered: {format(new Date(currentPatient.createdAt), "MMM d, yyyy")}</span>
+                  <span className="ml-4">Updated: {format(new Date(currentPatient.updatedAt), "MMM d, yyyy")}</span>
                 </div>
               </div>
             </div>
@@ -143,11 +137,7 @@ export function PatientDetails({ patient, onEdit, onClose }: PatientDetailsProps
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
-              <Button
-                onClick={handleToggleStatus}
-                variant="outline"
-                disabled={isTogglingStatus}
-              >
+              <Button onClick={handleToggleStatus} variant="outline" disabled={isTogglingStatus}>
                 {isTogglingStatus ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
@@ -330,9 +320,7 @@ export function PatientDetails({ patient, onEdit, onClose }: PatientDetailsProps
             <CardContent className="space-y-4">
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Contact this person in case of emergency
-                </AlertDescription>
+                <AlertDescription>Contact this person in case of emergency</AlertDescription>
               </Alert>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

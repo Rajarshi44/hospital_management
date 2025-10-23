@@ -162,6 +162,75 @@ export interface InventoryItem {
   updatedAt: Date
 }
 
+// Doctor Types
+export interface Doctor {
+  id: string
+  employeeId: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  dateOfBirth: Date
+  gender: "Male" | "Female" | "Other"
+  address: string
+  specialization: string
+  subSpecialty?: string
+  department: string
+  licenseNumber: string
+  licenseExpiry: Date
+  medicalDegree: string
+  medicalSchool: string
+  graduationYear: number
+  residency?: {
+    hospital: string
+    specialty: string
+    startYear: number
+    endYear: number
+  }
+  fellowship?: {
+    hospital: string
+    specialty: string
+    startYear: number
+    endYear: number
+  }
+  boardCertifications: {
+    board: string
+    specialty: string
+    certificationDate: Date
+    expiryDate: Date
+  }[]
+  experience: number // years of experience
+  languagesSpoken: string[]
+  consultationFee: number
+  emergencyContact: {
+    name: string
+    relationship: string
+    phone: string
+  }
+  schedule: {
+    monday: { start: string; end: string; isWorking: boolean }
+    tuesday: { start: string; end: string; isWorking: boolean }
+    wednesday: { start: string; end: string; isWorking: boolean }
+    thursday: { start: string; end: string; isWorking: boolean }
+    friday: { start: string; end: string; isWorking: boolean }
+    saturday: { start: string; end: string; isWorking: boolean }
+    sunday: { start: string; end: string; isWorking: boolean }
+  }
+  isActive: boolean
+  joinDate: Date
+  profileImage?: string
+  biography?: string
+  achievements?: string[]
+  publications?: {
+    title: string
+    journal: string
+    publicationDate: Date
+    doi?: string
+  }[]
+  createdAt: Date
+  updatedAt: Date
+}
+
 // Dashboard Types
 export interface DashboardStats {
   [key: string]: any
