@@ -23,7 +23,7 @@ const vitalsSchema = z.object({
   bloodSugar: z.number().min(30).max(500, "Blood sugar must be between 30-500 mg/dL").optional(),
   weight: z.number().min(1).max(300, "Weight must be between 1-300 kg").optional(),
   height: z.number().min(30).max(250, "Height must be between 30-250 cm").optional(),
-  nursingNotes: z.string().optional()
+  nursingNotes: z.string().optional(),
 })
 
 interface VitalsFormProps {
@@ -45,8 +45,8 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
       bloodSugar: undefined,
       weight: undefined,
       height: undefined,
-      nursingNotes: ""
-    }
+      nursingNotes: "",
+    },
   })
 
   const onSubmit = async (data: z.infer<typeof vitalsSchema>) => {
@@ -54,14 +54,14 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       console.log("Vitals recorded:", {
         admissionId,
         ...data,
         recordedAt: new Date().toISOString(),
-        recordedBy: "Current User" // This would come from auth context
+        recordedBy: "Current User", // This would come from auth context
       })
-      
+
       alert("Vitals recorded successfully!")
       form.reset()
     } catch (error) {
@@ -71,7 +71,7 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
     }
   }
 
-  const getVitalStatus = (value: number, ranges: { normal: [number, number], warning: [number, number] }) => {
+  const getVitalStatus = (value: number, ranges: { normal: [number, number]; warning: [number, number] }) => {
     if (value >= ranges.normal[0] && value <= ranges.normal[1]) return "normal"
     if (value >= ranges.warning[0] && value <= ranges.warning[1]) return "warning"
     return "critical"
@@ -79,10 +79,14 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
 
   const getBadgeVariant = (status: string) => {
     switch (status) {
-      case "normal": return "default"
-      case "warning": return "secondary"
-      case "critical": return "destructive"
-      default: return "outline"
+      case "normal":
+        return "default"
+      case "warning":
+        return "secondary"
+      case "critical":
+        return "destructive"
+      default:
+        return "outline"
     }
   }
 
@@ -110,15 +114,19 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                     </FormLabel>
                     <div className="flex items-center gap-2">
                       <FormControl>
-                        <Input 
-                          type="number" 
+                        <Input
+                          type="number"
                           step="0.1"
                           placeholder="98.6"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
-                      <Badge variant={getBadgeVariant(getVitalStatus(field.value, { normal: [97, 99.5], warning: [96, 101] }))}>
+                      <Badge
+                        variant={getBadgeVariant(
+                          getVitalStatus(field.value, { normal: [97, 99.5], warning: [96, 101] })
+                        )}
+                      >
                         {getVitalStatus(field.value, { normal: [97, 99.5], warning: [96, 101] })}
                       </Badge>
                     </div>
@@ -138,14 +146,18 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                     </FormLabel>
                     <div className="flex items-center gap-2">
                       <FormControl>
-                        <Input 
+                        <Input
                           type="number"
                           placeholder="72"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
-                      <Badge variant={getBadgeVariant(getVitalStatus(field.value, { normal: [60, 100], warning: [50, 120] }))}>
+                      <Badge
+                        variant={getBadgeVariant(
+                          getVitalStatus(field.value, { normal: [60, 100], warning: [50, 120] })
+                        )}
+                      >
                         {getVitalStatus(field.value, { normal: [60, 100], warning: [50, 120] })}
                       </Badge>
                     </div>
@@ -165,11 +177,11 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormControl>
-                          <Input 
+                          <Input
                             type="number"
                             placeholder="120"
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -183,18 +195,22 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormControl>
-                          <Input 
+                          <Input
                             type="number"
                             placeholder="80"
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <Badge variant={getBadgeVariant(getVitalStatus(form.watch("systolic"), { normal: [110, 140], warning: [90, 160] }))}>
+                  <Badge
+                    variant={getBadgeVariant(
+                      getVitalStatus(form.watch("systolic"), { normal: [110, 140], warning: [90, 160] })
+                    )}
+                  >
                     {getVitalStatus(form.watch("systolic"), { normal: [110, 140], warning: [90, 160] })}
                   </Badge>
                 </div>
@@ -208,14 +224,16 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                     <FormLabel>Respiratory Rate (breaths/min) *</FormLabel>
                     <div className="flex items-center gap-2">
                       <FormControl>
-                        <Input 
+                        <Input
                           type="number"
                           placeholder="16"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
-                      <Badge variant={getBadgeVariant(getVitalStatus(field.value, { normal: [12, 20], warning: [8, 25] }))}>
+                      <Badge
+                        variant={getBadgeVariant(getVitalStatus(field.value, { normal: [12, 20], warning: [8, 25] }))}
+                      >
                         {getVitalStatus(field.value, { normal: [12, 20], warning: [8, 25] })}
                       </Badge>
                     </div>
@@ -234,14 +252,16 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                     <FormLabel>Oxygen Saturation (%) *</FormLabel>
                     <div className="flex items-center gap-2">
                       <FormControl>
-                        <Input 
+                        <Input
                           type="number"
                           placeholder="98"
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
-                      <Badge variant={getBadgeVariant(getVitalStatus(field.value, { normal: [95, 100], warning: [90, 94] }))}>
+                      <Badge
+                        variant={getBadgeVariant(getVitalStatus(field.value, { normal: [95, 100], warning: [90, 94] }))}
+                      >
                         {getVitalStatus(field.value, { normal: [95, 100], warning: [90, 94] })}
                       </Badge>
                     </div>
@@ -257,11 +277,11 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                   <FormItem>
                     <FormLabel>Blood Sugar (mg/dL)</FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         type="number"
                         placeholder="100"
                         {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                        onChange={e => field.onChange(parseFloat(e.target.value) || undefined)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -286,12 +306,12 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                   <FormItem>
                     <FormLabel>Weight (kg)</FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         type="number"
                         step="0.1"
                         placeholder="70.0"
                         {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
+                        onChange={e => field.onChange(parseFloat(e.target.value) || undefined)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -306,11 +326,11 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                   <FormItem>
                     <FormLabel>Height (cm)</FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         type="number"
                         placeholder="170"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                        onChange={e => field.onChange(parseInt(e.target.value) || undefined)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -334,10 +354,10 @@ export function VitalsForm({ admissionId }: VitalsFormProps) {
                 <FormItem>
                   <FormLabel>Observations & Notes</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Patient observations, behavior, response to treatment..."
                       className="min-h-[100px]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

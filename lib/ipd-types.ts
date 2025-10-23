@@ -5,7 +5,7 @@ export interface Patient {
   uhid: string
   name: string
   age: number
-  gender: 'male' | 'female' | 'other'
+  gender: "male" | "female" | "other"
   phone: string
   email?: string
   address: string
@@ -22,7 +22,7 @@ export interface Patient {
 export interface Ward {
   id: string
   name: string
-  type: 'general' | 'private' | 'semi-private' | 'icu' | 'emergency'
+  type: "general" | "private" | "semi-private" | "icu" | "emergency"
   totalBeds: number
   occupiedBeds: number
   chargesPerDay: number
@@ -33,7 +33,7 @@ export interface Bed {
   wardId: string
   wardName: string
   bedNumber: string
-  type: 'general' | 'private' | 'semi-private' | 'icu' | 'emergency'
+  type: "general" | "private" | "semi-private" | "icu" | "emergency"
   isOccupied: boolean
   chargesPerDay: number
   amenities: string[]
@@ -57,7 +57,7 @@ export interface Admission {
   admissionTime: string
   reasonForAdmission: string
   tentativeDiagnosis: string
-  status: 'stable' | 'critical' | 'observation' | 'discharged'
+  status: "stable" | "critical" | "observation" | "discharged"
   initialDeposit?: number
   attendantDetails: {
     name: string
@@ -91,7 +91,7 @@ export interface Vitals {
 export interface Treatment {
   id: string
   admissionId: string
-  type: 'medication' | 'procedure' | 'lab_order' | 'investigation'
+  type: "medication" | "procedure" | "lab_order" | "investigation"
   description: string
   prescribedBy: string
   prescribedAt: string
@@ -99,7 +99,7 @@ export interface Treatment {
   frequency?: string
   duration?: string
   instructions?: string
-  status: 'active' | 'completed' | 'discontinued'
+  status: "active" | "completed" | "discontinued"
 }
 
 export interface DischargeRecord {
@@ -175,7 +175,7 @@ export interface VitalsFormData {
 }
 
 export interface TreatmentFormData {
-  type: 'medication' | 'procedure' | 'lab_order' | 'investigation'
+  type: "medication" | "procedure" | "lab_order" | "investigation"
   description: string
   dosage?: string
   frequency?: string

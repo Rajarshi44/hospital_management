@@ -19,16 +19,18 @@ import { Admission } from "@/lib/ipd-types"
 const dischargeSchema = z.object({
   finalDiagnosis: z.string().min(10, "Final diagnosis must be at least 10 characters"),
   treatmentSummary: z.string().min(20, "Treatment summary must be at least 20 characters"),
-  dischargeMedications: z.array(z.object({
-    name: z.string().min(1, "Medication name is required"),
-    dosage: z.string().min(1, "Dosage is required"),
-    frequency: z.string().min(1, "Frequency is required"),
-    duration: z.string().min(1, "Duration is required"),
-    instructions: z.string().optional()
-  })),
+  dischargeMedications: z.array(
+    z.object({
+      name: z.string().min(1, "Medication name is required"),
+      dosage: z.string().min(1, "Dosage is required"),
+      frequency: z.string().min(1, "Frequency is required"),
+      duration: z.string().min(1, "Duration is required"),
+      instructions: z.string().optional(),
+    })
+  ),
   followUpInstructions: z.string().min(10, "Follow-up instructions must be at least 10 characters"),
   followUpDate: z.string().optional(),
-  attachedDocuments: z.array(z.string()).optional()
+  attachedDocuments: z.array(z.string()).optional(),
 })
 
 interface DischargeFormProps {
@@ -53,13 +55,13 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
       dischargeMedications: [],
       followUpInstructions: "",
       followUpDate: "",
-      attachedDocuments: []
-    }
+      attachedDocuments: [],
+    },
   })
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "dischargeMedications"
+    name: "dischargeMedications",
   })
 
   const onSubmit = async (data: z.infer<typeof dischargeSchema>) => {
@@ -67,27 +69,26 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000))
-      
+
       const dischargeData = {
         admissionId: admission.admissionId,
-        dischargeDate: new Date().toISOString().split('T')[0],
-        dischargeTime: new Date().toTimeString().split(' ')[0].substring(0, 5),
+        dischargeDate: new Date().toISOString().split("T")[0],
+        dischargeTime: new Date().toTimeString().split(" ")[0].substring(0, 5),
         ...data,
         billingAmount: estimatedCharges.totalCharges,
         dischargedBy: "Current User", // This would come from auth context
         approvedBy: "Department Head", // This would be set based on approval workflow
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       }
-      
+
       console.log("Discharge completed:", dischargeData)
       alert("Patient discharged successfully!")
-      
+
       // Here you would typically:
       // 1. Update the admission status
       // 2. Free up the bed
       // 3. Generate PDF discharge summary
       // 4. Send notifications
-      
     } catch (error) {
       console.error("Discharge failed:", error)
     } finally {
@@ -106,7 +107,7 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
       dosage: "",
       frequency: "",
       duration: "",
-      instructions: ""
+      instructions: "",
     })
   }
 
@@ -114,7 +115,7 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
     { name: "Paracetamol 500mg", dosage: "1 tablet", frequency: "Twice daily", duration: "5 days" },
     { name: "Amoxicillin 250mg", dosage: "1 capsule", frequency: "Three times daily", duration: "7 days" },
     { name: "Ibuprofen 400mg", dosage: "1 tablet", frequency: "As needed", duration: "3 days" },
-    { name: "Omeprazole 20mg", dosage: "1 capsule", frequency: "Once daily", duration: "14 days" }
+    { name: "Omeprazole 20mg", dosage: "1 capsule", frequency: "Once daily", duration: "14 days" },
   ]
 
   return (
@@ -150,7 +151,9 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm font-medium text-blue-800">Ward & Bed</Label>
-                <div className="text-blue-700">{admission.wardName} - Bed {admission.bedNumber}</div>
+                <div className="text-blue-700">
+                  {admission.wardName} - Bed {admission.bedNumber}
+                </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-blue-800">Consulting Doctor</Label>
@@ -167,7 +170,7 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
             <TabsTrigger value="followup">Follow-up</TabsTrigger>
             <TabsTrigger value="billing">Billing</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="diagnosis" className="space-y-4">
             <Card>
               <CardHeader>
@@ -184,10 +187,10 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
                     <FormItem>
                       <FormLabel>Final Diagnosis *</FormLabel>
                       <FormControl>
-                        <Textarea 
+                        <Textarea
                           placeholder="Provide the confirmed final diagnosis..."
                           className="min-h-[100px]"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -202,10 +205,10 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
                     <FormItem>
                       <FormLabel>Treatment Summary *</FormLabel>
                       <FormControl>
-                        <Textarea 
+                        <Textarea
                           placeholder="Describe all treatments provided during admission, procedures performed, response to treatment..."
                           className="min-h-[150px]"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -238,16 +241,11 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
                     <CardContent className="pt-4">
                       <div className="flex items-center justify-between mb-3">
                         <Label className="font-medium">Medication {index + 1}</Label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => remove(index)}
-                        >
+                        <Button type="button" variant="ghost" size="sm" onClick={() => remove(index)}>
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <FormField
                           control={form.control}
@@ -313,10 +311,10 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
                           <FormItem className="mt-3">
                             <FormLabel>Special Instructions</FormLabel>
                             <FormControl>
-                              <Textarea 
+                              <Textarea
                                 placeholder="e.g., Take with food, avoid alcohol"
                                 className="min-h-[60px]"
-                                {...field} 
+                                {...field}
                               />
                             </FormControl>
                             <FormMessage />
@@ -332,10 +330,10 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
                     <Plus className="mr-2 h-4 w-4" />
                     Add Medication
                   </Button>
-                  
+
                   {commonMedications.length > 0 && (
                     <div className="text-sm text-muted-foreground">
-                      Quick add: 
+                      Quick add:
                       {commonMedications.slice(0, 2).map((med, index) => (
                         <Button
                           key={index}
@@ -371,10 +369,10 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
                     <FormItem>
                       <FormLabel>Follow-up Instructions *</FormLabel>
                       <FormControl>
-                        <Textarea 
+                        <Textarea
                           placeholder="Provide detailed follow-up instructions, lifestyle recommendations, warning signs to watch for..."
                           className="min-h-[120px]"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -456,7 +454,7 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
               Save as Draft
             </Button>
           </div>
-          
+
           <Button type="submit" disabled={isSubmitting} className="min-w-[200px]">
             {isSubmitting ? (
               <>

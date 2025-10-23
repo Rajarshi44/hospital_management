@@ -32,7 +32,7 @@ const admissionSchema = z.object({
   attendantName: z.string().min(1, "Attendant name is required"),
   attendantRelation: z.string().min(1, "Attendant relation is required"),
   attendantPhone: z.string().min(10, "Valid phone number is required"),
-  attendantAddress: z.string().min(10, "Attendant address is required")
+  attendantAddress: z.string().min(10, "Attendant address is required"),
 })
 
 interface AdmissionFormProps {
@@ -52,16 +52,16 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
       bedId: "",
       consultingDoctorId: "",
       departmentId: "",
-      admissionDate: new Date().toISOString().split('T')[0],
-      admissionTime: new Date().toTimeString().split(' ')[0].substring(0, 5),
+      admissionDate: new Date().toISOString().split("T")[0],
+      admissionTime: new Date().toTimeString().split(" ")[0].substring(0, 5),
       reasonForAdmission: "",
       tentativeDiagnosis: "",
       initialDeposit: 0,
       attendantName: patient.emergencyContact?.name || "",
       attendantRelation: patient.emergencyContact?.relation || "",
       attendantPhone: patient.emergencyContact?.phone || "",
-      attendantAddress: patient.address || ""
-    }
+      attendantAddress: patient.address || "",
+    },
   })
 
   const handleWardChange = (wardId: string) => {
@@ -75,16 +75,16 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000))
-      
+
       const admissionId = `ADM${Date.now().toString().slice(-6)}`
-      
+
       console.log("Admission created:", {
         admissionId,
         patientId: patient.id,
         patientName: patient.name,
-        ...data
+        ...data,
       })
-      
+
       // Show success message or redirect
       alert(`Admission successful! Admission ID: ${admissionId}`)
       form.reset()
@@ -124,16 +124,14 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
             </div>
             <div>
               <Label className="text-sm font-medium text-blue-800">Blood Group</Label>
-              <div className="text-blue-700">
-                {patient.bloodGroup || 'Not specified'}
-              </div>
+              <div className="text-blue-700">{patient.bloodGroup || "Not specified"}</div>
             </div>
           </div>
           {patient.allergies && patient.allergies.length > 0 && (
             <Alert className="mt-3">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <span className="font-medium">Allergies:</span> {patient.allergies.join(', ')}
+                <span className="font-medium">Allergies:</span> {patient.allergies.join(", ")}
               </AlertDescription>
             </Alert>
           )}
@@ -165,7 +163,7 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {mockDepartments.map((dept) => (
+                          {mockDepartments.map(dept => (
                             <SelectItem key={dept.id} value={dept.id}>
                               {dept.name}
                             </SelectItem>
@@ -190,7 +188,7 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {mockDoctors.map((doctor) => (
+                          {mockDoctors.map(doctor => (
                             <SelectItem key={doctor.id} value={doctor.id}>
                               <div className="flex flex-col items-start">
                                 <span>{doctor.name}</span>
@@ -226,17 +224,20 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Ward *</FormLabel>
-                      <Select onValueChange={(value) => {
-                        field.onChange(value)
-                        handleWardChange(value)
-                      }} defaultValue={field.value}>
+                      <Select
+                        onValueChange={value => {
+                          field.onChange(value)
+                          handleWardChange(value)
+                        }}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select ward" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {mockWards.map((ward) => (
+                          {mockWards.map(ward => (
                             <SelectItem key={ward.id} value={ward.id}>
                               <div className="flex flex-col items-start">
                                 <span>{ward.name}</span>
@@ -266,16 +267,18 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {availableBeds.filter(bed => bed.wardId === selectedWard).map((bed) => (
-                            <SelectItem key={bed.id} value={bed.id}>
-                              <div className="flex flex-col items-start">
-                                <span>Bed {bed.bedNumber}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  ${bed.chargesPerDay}/day • {bed.amenities.join(', ')}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
+                          {availableBeds
+                            .filter(bed => bed.wardId === selectedWard)
+                            .map(bed => (
+                              <SelectItem key={bed.id} value={bed.id}>
+                                <div className="flex flex-col items-start">
+                                  <span>Bed {bed.bedNumber}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    ${bed.chargesPerDay}/day • {bed.amenities.join(", ")}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -290,9 +293,7 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
                   <span className="text-sm">
                     Occupancy: {selectedWardData.occupiedBeds}/{selectedWardData.totalBeds} beds
                   </span>
-                  <Badge variant="secondary">
-                    ${selectedWardData.chargesPerDay}/day
-                  </Badge>
+                  <Badge variant="secondary">${selectedWardData.chargesPerDay}/day</Badge>
                 </div>
               )}
             </CardContent>
@@ -344,10 +345,10 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
                   <FormItem>
                     <FormLabel>Reason for Admission *</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Describe the reason for admission..."
                         className="min-h-[80px]"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -362,10 +363,10 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
                   <FormItem>
                     <FormLabel>Tentative Diagnosis *</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Initial diagnosis or suspected condition..."
                         className="min-h-[80px]"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -380,11 +381,11 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
                   <FormItem>
                     <FormLabel>Initial Deposit (Optional)</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="0.00" 
+                      <Input
+                        type="number"
+                        placeholder="0.00"
                         {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -467,11 +468,7 @@ export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
                   <FormItem>
                     <FormLabel>Attendant Address *</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Complete address of attendant..."
-                        className="min-h-[60px]"
-                        {...field} 
-                      />
+                      <Textarea placeholder="Complete address of attendant..." className="min-h-[60px]" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

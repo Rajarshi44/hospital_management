@@ -15,14 +15,12 @@ interface FiltersBarProps {
 }
 
 export function FiltersBar({ filters, onFiltersChange, onClearFilters }: FiltersBarProps) {
-  const activeFiltersCount = Object.values(filters).filter(value => 
-    value && value !== 'all'
-  ).length
+  const activeFiltersCount = Object.values(filters).filter(value => value && value !== "all").length
 
   const handleFilterChange = (key: keyof ScheduleFilters, value: string) => {
     onFiltersChange({
       ...filters,
-      [key]: value
+      [key]: value,
     })
   }
 
@@ -49,16 +47,13 @@ export function FiltersBar({ filters, onFiltersChange, onClearFilters }: Filters
         {/* Doctor Filter */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Doctor</label>
-          <Select
-            value={filters.doctorId}
-            onValueChange={(value) => handleFilterChange('doctorId', value)}
-          >
+          <Select value={filters.doctorId} onValueChange={value => handleFilterChange("doctorId", value)}>
             <SelectTrigger>
               <SelectValue placeholder="All doctors" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All doctors</SelectItem>
-              {mockDoctors.map((doctor) => (
+              {mockDoctors.map(doctor => (
                 <SelectItem key={doctor.id} value={doctor.id}>
                   {doctor.name}
                 </SelectItem>
@@ -70,16 +65,13 @@ export function FiltersBar({ filters, onFiltersChange, onClearFilters }: Filters
         {/* Department Filter */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Department</label>
-          <Select
-            value={filters.departmentId}
-            onValueChange={(value) => handleFilterChange('departmentId', value)}
-          >
+          <Select value={filters.departmentId} onValueChange={value => handleFilterChange("departmentId", value)}>
             <SelectTrigger>
               <SelectValue placeholder="All departments" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All departments</SelectItem>
-              {mockDepartments.map((department) => (
+              {mockDepartments.map(department => (
                 <SelectItem key={department.id} value={department.id}>
                   {department.name}
                 </SelectItem>
@@ -91,16 +83,13 @@ export function FiltersBar({ filters, onFiltersChange, onClearFilters }: Filters
         {/* Day of Week Filter */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Day of Week</label>
-          <Select
-            value={filters.dayOfWeek}
-            onValueChange={(value) => handleFilterChange('dayOfWeek', value)}
-          >
+          <Select value={filters.dayOfWeek} onValueChange={value => handleFilterChange("dayOfWeek", value)}>
             <SelectTrigger>
               <SelectValue placeholder="All days" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All days</SelectItem>
-              {DAYS_OF_WEEK.map((day) => (
+              {DAYS_OF_WEEK.map(day => (
                 <SelectItem key={day.value} value={day.value}>
                   {day.label}
                 </SelectItem>
@@ -114,7 +103,7 @@ export function FiltersBar({ filters, onFiltersChange, onClearFilters }: Filters
           <label className="text-sm font-medium text-gray-700">Status</label>
           <Select
             value={filters.status}
-            onValueChange={(value: 'all' | 'active' | 'inactive') => handleFilterChange('status', value)}
+            onValueChange={(value: "all" | "active" | "inactive") => handleFilterChange("status", value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="All statuses" />

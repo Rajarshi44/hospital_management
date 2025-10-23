@@ -22,62 +22,62 @@ export function DoctorScheduleTable({ schedules, onEdit, onDelete, onAddLeave }:
   const [selectedScheduleForLeave, setSelectedScheduleForLeave] = useState<Schedule | null>(null)
 
   const formatWorkingDays = (days: string[]) => {
-    if (days.length === 0) return 'No days'
-    
-    const dayLabels = days.map(day => 
-      DAYS_OF_WEEK.find(d => d.value === day)?.short || day
-    )
-    
+    if (days.length === 0) return "No days"
+
+    const dayLabels = days.map(day => DAYS_OF_WEEK.find(d => d.value === day)?.short || day)
+
     // Try to create ranges for consecutive days
     const sortedDays = days.sort((a, b) => {
       const aIndex = DAYS_OF_WEEK.findIndex(d => d.value === a)
       const bIndex = DAYS_OF_WEEK.findIndex(d => d.value === b)
       return aIndex - bIndex
     })
-    
-    if (sortedDays.length >= 5 && 
-        sortedDays.includes('monday') && 
-        sortedDays.includes('tuesday') && 
-        sortedDays.includes('wednesday') && 
-        sortedDays.includes('thursday') && 
-        sortedDays.includes('friday')) {
-      return 'Mon-Fri'
+
+    if (
+      sortedDays.length >= 5 &&
+      sortedDays.includes("monday") &&
+      sortedDays.includes("tuesday") &&
+      sortedDays.includes("wednesday") &&
+      sortedDays.includes("thursday") &&
+      sortedDays.includes("friday")
+    ) {
+      return "Mon-Fri"
     }
-    
-    return dayLabels.join(', ')
+
+    return dayLabels.join(", ")
   }
 
   const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':')
+    const [hours, minutes] = time.split(":")
     const hour24 = parseInt(hours)
     const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
-    const ampm = hour24 >= 12 ? 'PM' : 'AM'
+    const ampm = hour24 >= 12 ? "PM" : "AM"
     return `${hour12}:${minutes} ${ampm}`
   }
 
   const getStatusBadge = (status: string) => {
     return (
-      <Badge variant={status === 'active' ? 'default' : 'secondary'}>
-        {status === 'active' ? 'Active' : 'Inactive'}
+      <Badge variant={status === "active" ? "default" : "secondary"}>
+        {status === "active" ? "Active" : "Inactive"}
       </Badge>
     )
   }
 
   const getModeBadge = (mode: string) => {
     const variants = {
-      'in-person': 'default',
-      'online': 'secondary',
-      'both': 'outline'
+      "in-person": "default",
+      online: "secondary",
+      both: "outline",
     } as const
 
     const labels = {
-      'in-person': 'In-person',
-      'online': 'Online',
-      'both': 'Both'
+      "in-person": "In-person",
+      online: "Online",
+      both: "Both",
     } as const
 
     return (
-      <Badge variant={variants[mode as keyof typeof variants] || 'default'}>
+      <Badge variant={variants[mode as keyof typeof variants] || "default"}>
         {labels[mode as keyof typeof labels] || mode}
       </Badge>
     )
@@ -110,7 +110,7 @@ export function DoctorScheduleTable({ schedules, onEdit, onDelete, onAddLeave }:
             </TableRow>
           </TableHeader>
           <TableBody>
-            {schedules.map((schedule) => (
+            {schedules.map(schedule => (
               <TableRow key={schedule.id}>
                 <TableCell>
                   <div>
@@ -132,18 +132,14 @@ export function DoctorScheduleTable({ schedules, onEdit, onDelete, onAddLeave }:
                     {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
                   </div>
                 </TableCell>
-                <TableCell>
-                  {getModeBadge(schedule.consultationMode)}
-                </TableCell>
+                <TableCell>{getModeBadge(schedule.consultationMode)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1 text-sm">
                     <MapPin className="h-3 w-3" />
-                    {schedule.roomNumber || 'N/A'}
+                    {schedule.roomNumber || "N/A"}
                   </div>
                 </TableCell>
-                <TableCell>
-                  {getStatusBadge(schedule.status)}
-                </TableCell>
+                <TableCell>{getStatusBadge(schedule.status)}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -156,16 +152,11 @@ export function DoctorScheduleTable({ schedules, onEdit, onDelete, onAddLeave }:
                         <Edit className="mr-2 h-4 w-4" />
                         Edit Schedule
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => setSelectedScheduleForLeave(schedule)}
-                      >
+                      <DropdownMenuItem onClick={() => setSelectedScheduleForLeave(schedule)}>
                         <Calendar className="mr-2 h-4 w-4" />
                         Mark Leave/Holiday
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => onDelete(schedule.id)}
-                        className="text-destructive"
-                      >
+                      <DropdownMenuItem onClick={() => onDelete(schedule.id)} className="text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Schedule
                       </DropdownMenuItem>

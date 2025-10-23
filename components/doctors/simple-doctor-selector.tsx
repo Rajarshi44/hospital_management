@@ -18,7 +18,12 @@ interface SimpleDoctorSelectorProps {
   error?: string
 }
 
-export function SimpleDoctorSelector({ value, onValueChange, placeholder = "Choose a doctor", error }: SimpleDoctorSelectorProps) {
+export function SimpleDoctorSelector({
+  value,
+  onValueChange,
+  placeholder = "Choose a doctor",
+  error,
+}: SimpleDoctorSelectorProps) {
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -26,12 +31,13 @@ export function SimpleDoctorSelector({ value, onValueChange, placeholder = "Choo
 
   const filteredDoctors = useMemo(() => {
     if (!searchQuery) return mockDoctors
-    
+
     const query = searchQuery.toLowerCase()
-    return mockDoctors.filter(doctor => 
-      doctor.name.toLowerCase().includes(query) ||
-      doctor.departmentName.toLowerCase().includes(query) ||
-      doctor.specialization.toLowerCase().includes(query)
+    return mockDoctors.filter(
+      doctor =>
+        doctor.name.toLowerCase().includes(query) ||
+        doctor.departmentName.toLowerCase().includes(query) ||
+        doctor.specialization.toLowerCase().includes(query)
     )
   }, [searchQuery])
 
@@ -69,27 +75,25 @@ export function SimpleDoctorSelector({ value, onValueChange, placeholder = "Choo
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        
-        <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+
+        <PopoverContent className="w-full p-0" style={{ width: "var(--radix-popover-trigger-width)" }}>
           <div className="p-3 border-b">
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search doctors..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
           </div>
-          
+
           <div className="max-h-[300px] overflow-y-auto p-1">
             {filteredDoctors.length === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                No doctors found.
-              </div>
+              <div className="py-6 text-center text-sm text-muted-foreground">No doctors found.</div>
             ) : (
-              filteredDoctors.map((doctor) => (
+              filteredDoctors.map(doctor => (
                 <div
                   key={doctor.id}
                   onClick={() => handleSelect(doctor)}
@@ -105,28 +109,24 @@ export function SimpleDoctorSelector({ value, onValueChange, placeholder = "Choo
                         {doctor.departmentName}
                       </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {doctor.specialization}
-                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">{doctor.specialization}</div>
                   </div>
-                  {value === doctor.id && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
+                  {value === doctor.id && <Check className="h-4 w-4 text-primary" />}
                 </div>
               ))
             )}
           </div>
         </PopoverContent>
       </Popover>
-      
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
-      
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
       {selectedDoctor && (
         <div className="mt-3 p-3 bg-muted/50 rounded-lg">
           <div className="text-sm font-medium">{selectedDoctor.name}</div>
-          <div className="text-sm text-muted-foreground">{selectedDoctor.departmentName} • {selectedDoctor.specialization}</div>
+          <div className="text-sm text-muted-foreground">
+            {selectedDoctor.departmentName} • {selectedDoctor.specialization}
+          </div>
         </div>
       )}
     </div>

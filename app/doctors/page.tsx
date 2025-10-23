@@ -58,12 +58,13 @@ export default function DoctorsPage() {
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(doctor =>
-        doctor.firstName.toLowerCase().includes(query) ||
-        doctor.lastName.toLowerCase().includes(query) ||
-        doctor.specialization.toLowerCase().includes(query) ||
-        doctor.department.toLowerCase().includes(query) ||
-        doctor.employeeId.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        doctor =>
+          doctor.firstName.toLowerCase().includes(query) ||
+          doctor.lastName.toLowerCase().includes(query) ||
+          doctor.specialization.toLowerCase().includes(query) ||
+          doctor.department.toLowerCase().includes(query) ||
+          doctor.employeeId.toLowerCase().includes(query)
       )
     }
 
@@ -127,223 +128,211 @@ export default function DoctorsPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Doctor Management</h1>
-            <p className="text-muted-foreground">
-              Manage and oversee all registered doctors in the hospital
-            </p>
+            <p className="text-muted-foreground">Manage and oversee all registered doctors in the hospital</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => window.location.href = "/doctors/register"}
-              className="gap-2"
-            >
+            <Button onClick={() => (window.location.href = "/doctors/register")} className="gap-2">
               <Plus className="h-4 w-4" />
               Register New Doctor
             </Button>
           </div>
         </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Doctors</CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              Registered doctors
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Doctors</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-            <p className="text-xs text-muted-foreground">
-              Currently working
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive Doctors</CardTitle>
-            <UserCheck className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.inactive}</div>
-            <p className="text-xs text-muted-foreground">
-              Not currently working
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Departments</CardTitle>
-            <Filter className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{departments.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Active departments
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Doctors</CardTitle>
+              <UserCheck className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+              <p className="text-xs text-muted-foreground">Registered doctors</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Doctors</CardTitle>
+              <UserCheck className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
+              <p className="text-xs text-muted-foreground">Currently working</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Inactive Doctors</CardTitle>
+              <UserCheck className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{stats.inactive}</div>
+              <p className="text-xs text-muted-foreground">Not currently working</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Departments</CardTitle>
+              <Filter className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{departments.length}</div>
+              <p className="text-xs text-muted-foreground">Active departments</p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>
-            Search and filter doctors by various criteria
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-5">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search doctors..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <Select value={selectedDepartment || undefined} onValueChange={(value) => setSelectedDepartment(value || "")}>
-              <SelectTrigger>
-                <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept} value={dept}>
-                    {dept}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedSpecialization || undefined} onValueChange={(value) => setSelectedSpecialization(value || "")}>
-              <SelectTrigger>
-                <SelectValue placeholder="Specialization" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Specializations</SelectItem>
-                {specializations.map((spec) => (
-                  <SelectItem key={spec} value={spec}>
-                    {spec}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter || undefined} onValueChange={(value) => setStatusFilter(value || "")}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={clearFilters}>
-              Clear Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Doctors List */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Doctors ({filteredDoctors.length})</CardTitle>
-              <CardDescription>
-                Complete list of registered doctors
-              </CardDescription>
-            </div>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            {filteredDoctors.map((doctor) => (
-              <div
-                key={doctor.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Filters</CardTitle>
+            <CardDescription>Search and filter doctors by various criteria</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-5">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search doctors..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              <Select
+                value={selectedDepartment || undefined}
+                onValueChange={value => setSelectedDepartment(value || "")}
               >
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={doctor.profileImage} alt={`${doctor.firstName} ${doctor.lastName}`} />
-                    <AvatarFallback>
-                      {doctor.firstName[0]}{doctor.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">
-                        Dr. {doctor.firstName} {doctor.lastName}
-                      </h3>
-                      <Badge variant={doctor.isActive ? "default" : "secondary"}>
-                        {doctor.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{doctor.employeeId}</span>
-                      <span>{doctor.specialization}</span>
-                      <span>{doctor.department}</span>
-                      <span>{doctor.experience} years exp.</span>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {doctor.phone} • {doctor.email}
+                <SelectTrigger>
+                  <SelectValue placeholder="Department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {departments.map(dept => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedSpecialization || undefined}
+                onValueChange={value => setSelectedSpecialization(value || "")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Specialization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Specializations</SelectItem>
+                  {specializations.map(spec => (
+                    <SelectItem key={spec} value={spec}>
+                      {spec}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter || undefined} onValueChange={value => setStatusFilter(value || "")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={clearFilters}>
+                Clear Filters
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Doctors List */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Doctors ({filteredDoctors.length})</CardTitle>
+                <CardDescription>Complete list of registered doctors</CardDescription>
+              </div>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4">
+              {filteredDoctors.map(doctor => (
+                <div
+                  key={doctor.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={doctor.profileImage} alt={`${doctor.firstName} ${doctor.lastName}`} />
+                      <AvatarFallback>
+                        {doctor.firstName[0]}
+                        {doctor.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">
+                          Dr. {doctor.firstName} {doctor.lastName}
+                        </h3>
+                        <Badge variant={doctor.isActive ? "default" : "secondary"}>
+                          {doctor.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span>{doctor.employeeId}</span>
+                        <span>{doctor.specialization}</span>
+                        <span>{doctor.department}</span>
+                        <span>{doctor.experience} years exp.</span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {doctor.phone} • {doctor.email}
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        toast({
+                          title: "View Details",
+                          description: `Viewing details for Dr. ${doctor.firstName} ${doctor.lastName}`,
+                        })
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to delete Dr. ${doctor.firstName} ${doctor.lastName}?`)) {
+                          handleDeleteDoctor(doctor.id)
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      toast({
-                        title: "View Details",
-                        description: `Viewing details for Dr. ${doctor.firstName} ${doctor.lastName}`,
-                      })
-                    }}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      if (confirm(`Are you sure you want to delete Dr. ${doctor.firstName} ${doctor.lastName}?`)) {
-                        handleDeleteDoctor(doctor.id)
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {filteredDoctors.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No doctors found matching your criteria.
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+              {filteredDoctors.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">No doctors found matching your criteria.</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   )

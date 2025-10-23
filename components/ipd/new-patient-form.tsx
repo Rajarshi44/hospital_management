@@ -19,7 +19,7 @@ import { Patient } from "@/lib/ipd-types"
 const patientSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   age: z.number().min(1, "Age must be at least 1").max(150, "Age must be less than 150"),
-  gender: z.enum(['male', 'female', 'other']),
+  gender: z.enum(["male", "female", "other"]),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
   address: z.string().min(10, "Address must be at least 10 characters"),
@@ -28,7 +28,7 @@ const patientSchema = z.object({
   medicalHistory: z.string().optional(),
   emergencyContactName: z.string().min(2, "Emergency contact name is required"),
   emergencyContactRelation: z.string().min(1, "Emergency contact relation is required"),
-  emergencyContactPhone: z.string().min(10, "Emergency contact phone is required")
+  emergencyContactPhone: z.string().min(10, "Emergency contact phone is required"),
 })
 
 interface NewPatientFormProps {
@@ -52,8 +52,8 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
       medicalHistory: "",
       emergencyContactName: "",
       emergencyContactRelation: "",
-      emergencyContactPhone: ""
-    }
+      emergencyContactPhone: "",
+    },
   })
 
   const onSubmit = async (data: z.infer<typeof patientSchema>) => {
@@ -61,10 +61,10 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500))
-      
+
       const newPatient: Patient = {
         id: `patient_${Date.now()}`,
-        uhid: `PAT${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`,
+        uhid: `PAT${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
         name: data.name,
         age: data.age,
         gender: data.gender,
@@ -72,15 +72,15 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
         email: data.email || undefined,
         address: data.address,
         bloodGroup: data.bloodGroup || undefined,
-        allergies: data.allergies ? data.allergies.split(',').map(a => a.trim()) : [],
+        allergies: data.allergies ? data.allergies.split(",").map(a => a.trim()) : [],
         medicalHistory: data.medicalHistory || undefined,
         emergencyContact: {
           name: data.emergencyContactName,
           relation: data.emergencyContactRelation,
-          phone: data.emergencyContactPhone
-        }
+          phone: data.emergencyContactPhone,
+        },
       }
-      
+
       console.log("New patient created:", newPatient)
       onPatientCreated(newPatient)
       form.reset()
@@ -125,11 +125,11 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
                   <FormItem>
                     <FormLabel>Age *</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
+                      <Input
+                        type="number"
                         placeholder="Enter age"
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -198,10 +198,10 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
                 <FormItem>
                   <FormLabel>Address *</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Complete address with city, state, and zip code"
                       className="min-h-[80px]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -255,10 +255,7 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
                 <FormItem>
                   <FormLabel>Known Allergies (Optional)</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="e.g., Penicillin, Shellfish (separate with commas)"
-                      {...field} 
-                    />
+                    <Input placeholder="e.g., Penicillin, Shellfish (separate with commas)" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -272,10 +269,10 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
                 <FormItem>
                   <FormLabel>Medical History (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Previous medical conditions, surgeries, medications..."
                       className="min-h-[100px]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

@@ -22,11 +22,11 @@ export interface Schedule {
   endTime: string // '14:00'
   slotDuration: number // 15, 30, 45 minutes
   maxPatientsPerSession: number
-  consultationMode: 'in-person' | 'online' | 'both'
+  consultationMode: "in-person" | "online" | "both"
   roomNumber: string
   validFrom: string // ISO date
   validTo: string // ISO date or 'always'
-  status: 'active' | 'inactive'
+  status: "active" | "inactive"
   createdAt: string
 }
 
@@ -47,7 +47,7 @@ export interface ScheduleFilters {
   doctorId: string
   departmentId: string
   dayOfWeek: string
-  status: 'all' | 'active' | 'inactive'
+  status: "all" | "active" | "inactive"
 }
 
 export interface ScheduleFormData {
@@ -57,9 +57,9 @@ export interface ScheduleFormData {
   endTime: string
   slotDuration: number
   maxPatientsPerSession: number
-  consultationMode: 'in-person' | 'online' | 'both'
+  consultationMode: "in-person" | "online" | "both"
   roomNumber: string
   validFrom: string
   validTo: string
-  status: 'active' | 'inactive'
+  status: "active" | "inactive"
 }

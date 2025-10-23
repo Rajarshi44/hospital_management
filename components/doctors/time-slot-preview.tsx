@@ -12,35 +12,30 @@ interface TimeSlotPreviewProps {
   maxPatientsPerSession: number
 }
 
-export function TimeSlotPreview({ 
-  startTime, 
-  endTime, 
-  slotDuration, 
-  maxPatientsPerSession 
-}: TimeSlotPreviewProps) {
+export function TimeSlotPreview({ startTime, endTime, slotDuration, maxPatientsPerSession }: TimeSlotPreviewProps) {
   const generateTimeSlots = (): TimeSlot[] => {
     if (!startTime || !endTime || !slotDuration) return []
 
     const slots: TimeSlot[] = []
     const start = new Date(`2000-01-01T${startTime}:00`)
     const end = new Date(`2000-01-01T${endTime}:00`)
-    
+
     let current = new Date(start)
-    
+
     while (current < end) {
       const slotStart = current.toTimeString().substring(0, 5)
       current.setMinutes(current.getMinutes() + slotDuration)
       const slotEnd = current.toTimeString().substring(0, 5)
-      
+
       if (current <= end) {
         slots.push({
           startTime: slotStart,
           endTime: slotEnd,
-          isAvailable: true
+          isAvailable: true,
         })
       }
     }
-    
+
     return slots
   }
 
@@ -74,21 +69,14 @@ export function TimeSlotPreview({
           Time Slot Preview
         </CardTitle>
         <div className="flex gap-2 mt-2">
-          <Badge variant="outline">
-            {totalSlots} slots
-          </Badge>
-          <Badge variant="outline">
-            {totalCapacity} max patients
-          </Badge>
+          <Badge variant="outline">{totalSlots} slots</Badge>
+          <Badge variant="outline">{totalCapacity} max patients</Badge>
         </div>
       </CardHeader>
       <CardContent>
         <div className="max-h-48 overflow-y-auto space-y-1">
           {timeSlots.map((slot, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-2 bg-muted rounded-sm text-sm"
-            >
+            <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-sm text-sm">
               <span className="font-mono">
                 {slot.startTime} - {slot.endTime}
               </span>
@@ -98,7 +86,7 @@ export function TimeSlotPreview({
             </div>
           ))}
         </div>
-        
+
         <div className="mt-3 pt-3 border-t">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>

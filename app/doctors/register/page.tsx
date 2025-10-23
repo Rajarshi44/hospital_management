@@ -23,12 +23,7 @@ export default function RegisterDoctorPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="gap-2"
-          >
+          <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back
           </Button>
@@ -42,10 +37,7 @@ export default function RegisterDoctorPage() {
 
         {/* Registration Form */}
         <div className="max-w-5xl mx-auto">
-          <DoctorRegistrationForm 
-            onSuccess={handleSuccess} 
-            onCancel={handleCancel} 
-          />
+          <DoctorRegistrationForm onSuccess={handleSuccess} onCancel={handleCancel} />
         </div>
       </div>
     </AppLayout>

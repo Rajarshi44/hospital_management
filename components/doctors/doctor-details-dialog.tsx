@@ -8,20 +8,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Doctor } from "@/lib/types"
-import { 
-  Calendar, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  GraduationCap, 
-  Award, 
-  Languages, 
+import {
+  Calendar,
+  Phone,
+  Mail,
+  MapPin,
+  GraduationCap,
+  Award,
+  Languages,
   DollarSign,
   Clock,
   Building,
   User,
   FileText,
-  Briefcase
+  Briefcase,
 } from "lucide-react"
 import { format } from "date-fns"
 
@@ -37,7 +37,7 @@ export function DoctorDetailsDialog({ doctor, open, onOpenChange }: DoctorDetail
       .filter(([_, schedule]) => schedule.isWorking)
       .map(([day, schedule]) => ({
         day: day.charAt(0).toUpperCase() + day.slice(1),
-        time: `${schedule.start} - ${schedule.end}`
+        time: `${schedule.start} - ${schedule.end}`,
       }))
     return workingDays
   }
@@ -50,7 +50,8 @@ export function DoctorDetailsDialog({ doctor, open, onOpenChange }: DoctorDetail
             <Avatar className="h-12 w-12">
               <AvatarImage src={doctor.profileImage} alt={`${doctor.firstName} ${doctor.lastName}`} />
               <AvatarFallback>
-                {doctor.firstName[0]}{doctor.lastName[0]}
+                {doctor.firstName[0]}
+                {doctor.lastName[0]}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -162,9 +163,7 @@ export function DoctorDetailsDialog({ doctor, open, onOpenChange }: DoctorDetail
                   <CardTitle>Biography</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {doctor.biography}
-                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{doctor.biography}</p>
                 </CardContent>
               </Card>
             )}
@@ -178,7 +177,7 @@ export function DoctorDetailsDialog({ doctor, open, onOpenChange }: DoctorDetail
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {doctor.languagesSpoken.map((language) => (
+                  {doctor.languagesSpoken.map(language => (
                     <Badge key={language} variant="outline">
                       {language}
                     </Badge>
@@ -194,9 +193,7 @@ export function DoctorDetailsDialog({ doctor, open, onOpenChange }: DoctorDetail
               <CardContent className="space-y-2">
                 <div className="text-sm">
                   <strong>{doctor.emergencyContact.name}</strong>
-                  <span className="text-muted-foreground ml-2">
-                    ({doctor.emergencyContact.relationship})
-                  </span>
+                  <span className="text-muted-foreground ml-2">({doctor.emergencyContact.relationship})</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
@@ -284,8 +281,8 @@ export function DoctorDetailsDialog({ doctor, open, onOpenChange }: DoctorDetail
                           <Badge variant="outline">{cert.board}</Badge>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          Certified: {format(new Date(cert.certificationDate), "MMM yyyy")} • 
-                          Expires: {format(new Date(cert.expiryDate), "MMM yyyy")}
+                          Certified: {format(new Date(cert.certificationDate), "MMM yyyy")} • Expires:{" "}
+                          {format(new Date(cert.expiryDate), "MMM yyyy")}
                         </div>
                         {index < doctor.boardCertifications.length - 1 && <Separator />}
                       </div>
@@ -303,9 +300,7 @@ export function DoctorDetailsDialog({ doctor, open, onOpenChange }: DoctorDetail
                   <Clock className="h-4 w-4" />
                   Weekly Schedule
                 </CardTitle>
-                <CardDescription>
-                  Regular working hours and availability
-                </CardDescription>
+                <CardDescription>Regular working hours and availability</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -335,7 +330,7 @@ export function DoctorDetailsDialog({ doctor, open, onOpenChange }: DoctorDetail
               </CardHeader>
               <CardContent>
                 <div className="grid gap-2">
-                  {getWorkingDays().map((workDay) => (
+                  {getWorkingDays().map(workDay => (
                     <div key={workDay.day} className="flex items-center justify-between text-sm">
                       <span>{workDay.day}</span>
                       <span className="text-muted-foreground">{workDay.time}</span>
@@ -392,11 +387,7 @@ export function DoctorDetailsDialog({ doctor, open, onOpenChange }: DoctorDetail
                         <div className="text-sm text-muted-foreground">
                           {publication.journal} • {format(new Date(publication.publicationDate), "MMM yyyy")}
                         </div>
-                        {publication.doi && (
-                          <div className="text-xs text-muted-foreground">
-                            DOI: {publication.doi}
-                          </div>
-                        )}
+                        {publication.doi && <div className="text-xs text-muted-foreground">DOI: {publication.doi}</div>}
                         {index < (doctor.publications?.length || 0) - 1 && <Separator />}
                       </div>
                     ))}

@@ -62,15 +62,15 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: Heart,
         items: [
           { title: "OPD Patients", url: "/patients", icon: Users },
-          { 
-            title: "IPD Management", 
-            url: "/admin/ipd", 
+          {
+            title: "IPD Management",
+            url: "/admin/ipd",
             icon: Bed,
             items: [
               { title: "Admission", url: "/admin/ipd/admission", icon: UserCheck },
               { title: "Inpatient List", url: "/admin/ipd/inpatient", icon: Activity },
               { title: "Discharge", url: "/admin/ipd/discharge", icon: FileText },
-            ]
+            ],
           },
           { title: "Patient History", url: "/patients/history", icon: FileText },
         ],
@@ -342,7 +342,7 @@ export const getRoleDisplayName = (role: UserRole): string => {
     PHARMACIST: "Pharmacist",
     PATIENT: "Patient",
   }
-  return roleNames[role] || role.toLowerCase().replace('_', ' ')
+  return roleNames[role] || role.toLowerCase().replace("_", " ")
 }
 
 export const getRoleColor = (role: UserRole): string => {

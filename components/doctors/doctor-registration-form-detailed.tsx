@@ -26,64 +26,66 @@ import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 
 // Comprehensive form schema with all steps
-const formSchema = z.object({
-  // Step 1: Personal Information
-  profilePhoto: z.string().optional(),
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  gender: z.enum(["Male", "Female", "Other"]),
-  dateOfBirth: z.date({ required_error: "Date of birth is required" }),
-  mobileNumber: z.string().min(10, "Mobile number must be 10 digits"),
-  otpVerified: z.boolean().default(false),
-  emailAddress: z.string().email("Invalid email address"),
-  emergencyContact: z.string().min(10, "Emergency contact must be 10 digits"),
-  residentialAddress: z.string().min(10, "Address must be at least 10 characters"),
-  
-  // Step 2: Professional Information
-  specialization: z.string().min(1, "Specialization is required"),
-  subSpecialization: z.string().optional(),
-  highestQualification: z.string().min(1, "Qualification is required"),
-  universityName: z.string().min(1, "University/College name is required"),
-  yearOfPassing: z.number().min(1950).max(new Date().getFullYear()),
-  totalExperience: z.number().min(0),
-  previousHospitals: z.string().optional(),
-  resumeCV: z.string().optional(),
-  
-  // Step 3: Medical License & Verification
-  medicalCouncilRegNo: z.string().min(1, "Registration number is required"),
-  issuingCouncil: z.string().min(1, "Issuing council is required"),
-  licenseIssueDate: z.date({ required_error: "License issue date is required" }),
-  licenseExpiryDate: z.date({ required_error: "License expiry date is required" }),
-  licenseDocument: z.string().optional(),
-  idProofDocument: z.string().optional(),
-  
-  // Step 4: Hospital Role & Availability
-  department: z.string().min(1, "Department is required"),
-  roleDesignation: z.string().min(1, "Role/Designation is required"),
-  shiftType: z.string().min(1, "Shift type is required"),
-  workingDays: z.array(z.string()).min(1, "At least one working day is required"),
-  opdStartTime: z.string().min(1, "OPD start time is required"),
-  opdEndTime: z.string().min(1, "OPD end time is required"),
-  maxPatientsPerDay: z.number().min(1, "Maximum patients per day must be at least 1"),
-  
-  // Step 5: Payment & Banking Details
-  paymentMode: z.string().min(1, "Payment mode is required"),
-  bankAccountNumber: z.string().min(1, "Bank account number is required"),
-  ifscCode: z.string().min(11, "IFSC code must be 11 characters").max(11),
-  bankName: z.string().min(1, "Bank name is required"),
-  branchName: z.string().min(1, "Branch name is required"),
-  upiId: z.string().optional(),
-  
-  // Step 6: Portal Login & Digital Consent
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string(),
-  twoFactorAuth: z.boolean().default(false),
-  digitalSignature: z.string().optional(),
-  declarationAccepted: z.boolean().refine(val => val === true, "Declaration must be accepted"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-})
+const formSchema = z
+  .object({
+    // Step 1: Personal Information
+    profilePhoto: z.string().optional(),
+    fullName: z.string().min(2, "Full name must be at least 2 characters"),
+    gender: z.enum(["Male", "Female", "Other"]),
+    dateOfBirth: z.date({ required_error: "Date of birth is required" }),
+    mobileNumber: z.string().min(10, "Mobile number must be 10 digits"),
+    otpVerified: z.boolean().default(false),
+    emailAddress: z.string().email("Invalid email address"),
+    emergencyContact: z.string().min(10, "Emergency contact must be 10 digits"),
+    residentialAddress: z.string().min(10, "Address must be at least 10 characters"),
+
+    // Step 2: Professional Information
+    specialization: z.string().min(1, "Specialization is required"),
+    subSpecialization: z.string().optional(),
+    highestQualification: z.string().min(1, "Qualification is required"),
+    universityName: z.string().min(1, "University/College name is required"),
+    yearOfPassing: z.number().min(1950).max(new Date().getFullYear()),
+    totalExperience: z.number().min(0),
+    previousHospitals: z.string().optional(),
+    resumeCV: z.string().optional(),
+
+    // Step 3: Medical License & Verification
+    medicalCouncilRegNo: z.string().min(1, "Registration number is required"),
+    issuingCouncil: z.string().min(1, "Issuing council is required"),
+    licenseIssueDate: z.date({ required_error: "License issue date is required" }),
+    licenseExpiryDate: z.date({ required_error: "License expiry date is required" }),
+    licenseDocument: z.string().optional(),
+    idProofDocument: z.string().optional(),
+
+    // Step 4: Hospital Role & Availability
+    department: z.string().min(1, "Department is required"),
+    roleDesignation: z.string().min(1, "Role/Designation is required"),
+    shiftType: z.string().min(1, "Shift type is required"),
+    workingDays: z.array(z.string()).min(1, "At least one working day is required"),
+    opdStartTime: z.string().min(1, "OPD start time is required"),
+    opdEndTime: z.string().min(1, "OPD end time is required"),
+    maxPatientsPerDay: z.number().min(1, "Maximum patients per day must be at least 1"),
+
+    // Step 5: Payment & Banking Details
+    paymentMode: z.string().min(1, "Payment mode is required"),
+    bankAccountNumber: z.string().min(1, "Bank account number is required"),
+    ifscCode: z.string().min(11, "IFSC code must be 11 characters").max(11),
+    bankName: z.string().min(1, "Bank name is required"),
+    branchName: z.string().min(1, "Branch name is required"),
+    upiId: z.string().optional(),
+
+    // Step 6: Portal Login & Digital Consent
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+    twoFactorAuth: z.boolean().default(false),
+    digitalSignature: z.string().optional(),
+    declarationAccepted: z.boolean().refine(val => val === true, "Declaration must be accepted"),
+  })
+  .refine(data => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  })
 
 type FormData = z.infer<typeof formSchema>
 
@@ -93,33 +95,75 @@ interface DoctorRegistrationFormProps {
 }
 
 const departments = [
-  "Cardiology", "Dermatology", "Neurology", "Pediatrics", "Orthopedics", 
-  "Psychiatry", "Radiology", "Anesthesiology", "Emergency Medicine", "Internal Medicine",
-  "Surgery", "Oncology", "Gynecology", "Urology", "Ophthalmology"
+  "Cardiology",
+  "Dermatology",
+  "Neurology",
+  "Pediatrics",
+  "Orthopedics",
+  "Psychiatry",
+  "Radiology",
+  "Anesthesiology",
+  "Emergency Medicine",
+  "Internal Medicine",
+  "Surgery",
+  "Oncology",
+  "Gynecology",
+  "Urology",
+  "Ophthalmology",
 ]
 
 const specializations = [
-  "Cardiology", "Interventional Cardiology", "Neurology", "Pediatric Neurology",
-  "Dermatology", "Cosmetic Dermatology", "Pediatrics", "Neonatology",
-  "Orthopedic Surgery", "Spine Surgery", "Psychiatry", "Child Psychiatry",
-  "Radiology", "Interventional Radiology", "Anesthesiology", "Critical Care",
-  "Emergency Medicine", "Trauma Surgery", "Internal Medicine", "Endocrinology",
-  "General Surgery", "Laparoscopic Surgery", "Oncology", "Medical Oncology",
-  "Gynecology", "Obstetrics", "Urology", "Pediatric Urology", "Ophthalmology", "Retina"
+  "Cardiology",
+  "Interventional Cardiology",
+  "Neurology",
+  "Pediatric Neurology",
+  "Dermatology",
+  "Cosmetic Dermatology",
+  "Pediatrics",
+  "Neonatology",
+  "Orthopedic Surgery",
+  "Spine Surgery",
+  "Psychiatry",
+  "Child Psychiatry",
+  "Radiology",
+  "Interventional Radiology",
+  "Anesthesiology",
+  "Critical Care",
+  "Emergency Medicine",
+  "Trauma Surgery",
+  "Internal Medicine",
+  "Endocrinology",
+  "General Surgery",
+  "Laparoscopic Surgery",
+  "Oncology",
+  "Medical Oncology",
+  "Gynecology",
+  "Obstetrics",
+  "Urology",
+  "Pediatric Urology",
+  "Ophthalmology",
+  "Retina",
 ]
 
-const qualifications = [
-  "MBBS", "MD", "MS", "DM", "MCh", "DNB", "FRCS", "MRCP", "PhD"
-]
+const qualifications = ["MBBS", "MD", "MS", "DM", "MCh", "DNB", "FRCS", "MRCP", "PhD"]
 
 const councils = [
-  "Medical Council of India (MCI)", "National Medical Commission (NMC)", 
-  "State Medical Council", "Dental Council of India", "Indian Medical Association"
+  "Medical Council of India (MCI)",
+  "National Medical Commission (NMC)",
+  "State Medical Council",
+  "Dental Council of India",
+  "Indian Medical Association",
 ]
 
 const roles = [
-  "Consultant", "Senior Consultant", "Surgeon", "Senior Surgeon", 
-  "Resident Doctor", "Visiting Doctor", "Emergency Physician", "Specialist"
+  "Consultant",
+  "Senior Consultant",
+  "Surgeon",
+  "Senior Surgeon",
+  "Resident Doctor",
+  "Visiting Doctor",
+  "Emergency Physician",
+  "Specialist",
 ]
 
 const shifts = ["Morning", "Evening", "Night", "Rotational", "On-Call"]
@@ -131,7 +175,7 @@ const workingDaysOptions = [
   { id: "thursday", label: "Thursday" },
   { id: "friday", label: "Friday" },
   { id: "saturday", label: "Saturday" },
-  { id: "sunday", label: "Sunday" }
+  { id: "sunday", label: "Sunday" },
 ]
 
 const paymentModes = ["Monthly Salary", "Per Consultation", "Commission Based", "Contract Based"]
@@ -162,12 +206,12 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
   const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true)
-      
+
       // Transform form data to Doctor interface
-      const [firstName, ...lastNameParts] = data.fullName.split(' ')
-      const lastName = lastNameParts.join(' ') || 'Doctor'
-      
-      const doctorData: Omit<Doctor, 'id' | 'createdAt' | 'updatedAt'> = {
+      const [firstName, ...lastNameParts] = data.fullName.split(" ")
+      const lastName = lastNameParts.join(" ") || "Doctor"
+
+      const doctorData: Omit<Doctor, "id" | "createdAt" | "updatedAt"> = {
         employeeId: `DOC${Date.now()}`,
         firstName,
         lastName,
@@ -195,10 +239,22 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
         schedule: {
           monday: { start: data.opdStartTime, end: data.opdEndTime, isWorking: data.workingDays.includes("monday") },
           tuesday: { start: data.opdStartTime, end: data.opdEndTime, isWorking: data.workingDays.includes("tuesday") },
-          wednesday: { start: data.opdStartTime, end: data.opdEndTime, isWorking: data.workingDays.includes("wednesday") },
-          thursday: { start: data.opdStartTime, end: data.opdEndTime, isWorking: data.workingDays.includes("thursday") },
+          wednesday: {
+            start: data.opdStartTime,
+            end: data.opdEndTime,
+            isWorking: data.workingDays.includes("wednesday"),
+          },
+          thursday: {
+            start: data.opdStartTime,
+            end: data.opdEndTime,
+            isWorking: data.workingDays.includes("thursday"),
+          },
           friday: { start: data.opdStartTime, end: data.opdEndTime, isWorking: data.workingDays.includes("friday") },
-          saturday: { start: data.opdStartTime, end: data.opdEndTime, isWorking: data.workingDays.includes("saturday") },
+          saturday: {
+            start: data.opdStartTime,
+            end: data.opdEndTime,
+            isWorking: data.workingDays.includes("saturday"),
+          },
           sunday: { start: data.opdStartTime, end: data.opdEndTime, isWorking: data.workingDays.includes("sunday") },
         },
         isActive: true,
@@ -209,12 +265,12 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
       }
 
       await createDoctor(doctorData)
-      
+
       toast({
         title: "Success",
         description: "Doctor registered successfully and submitted for verification",
       })
-      
+
       onSuccess()
     } catch (error) {
       toast({
@@ -245,28 +301,53 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
 
   const validateStep = (step: string): boolean => {
     const values = form.getValues()
-    
+
     switch (step) {
       case "step1":
-        return !!(values.fullName && values.gender && values.dateOfBirth && 
-                 values.mobileNumber && values.emailAddress && values.emergencyContact && 
-                 values.residentialAddress)
+        return !!(
+          values.fullName &&
+          values.gender &&
+          values.dateOfBirth &&
+          values.mobileNumber &&
+          values.emailAddress &&
+          values.emergencyContact &&
+          values.residentialAddress
+        )
       case "step2":
-        return !!(values.specialization && values.highestQualification && 
-                 values.universityName && values.yearOfPassing && values.totalExperience !== undefined)
+        return !!(
+          values.specialization &&
+          values.highestQualification &&
+          values.universityName &&
+          values.yearOfPassing &&
+          values.totalExperience !== undefined
+        )
       case "step3":
-        return !!(values.medicalCouncilRegNo && values.issuingCouncil && 
-                 values.licenseIssueDate && values.licenseExpiryDate)
+        return !!(
+          values.medicalCouncilRegNo &&
+          values.issuingCouncil &&
+          values.licenseIssueDate &&
+          values.licenseExpiryDate
+        )
       case "step4":
-        return !!(values.department && values.roleDesignation && values.shiftType && 
-                 values.workingDays.length > 0 && values.opdStartTime && values.opdEndTime && 
-                 values.maxPatientsPerDay)
+        return !!(
+          values.department &&
+          values.roleDesignation &&
+          values.shiftType &&
+          values.workingDays.length > 0 &&
+          values.opdStartTime &&
+          values.opdEndTime &&
+          values.maxPatientsPerDay
+        )
       case "step5":
-        return !!(values.paymentMode && values.bankAccountNumber && values.ifscCode && 
-                 values.bankName && values.branchName)
+        return !!(
+          values.paymentMode &&
+          values.bankAccountNumber &&
+          values.ifscCode &&
+          values.bankName &&
+          values.branchName
+        )
       case "step6":
-        return !!(values.username && values.password && values.confirmPassword && 
-                 values.declarationAccepted)
+        return !!(values.username && values.password && values.confirmPassword && values.declarationAccepted)
       default:
         return false
     }
@@ -274,11 +355,11 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
 
   const handleStepChange = (newStep: string) => {
     const currentStepValid = validateStep(currentStep)
-    
+
     if (currentStepValid && !completedSteps.includes(currentStep)) {
       setCompletedSteps([...completedSteps, currentStep])
     }
-    
+
     setCurrentStep(newStep)
   }
 
@@ -343,12 +424,8 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
           <TabsContent value="step1" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🔹 Step 1: Personal Information
-                </CardTitle>
-                <CardDescription>
-                  Basic personal details and contact information
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">🔹 Step 1: Personal Information</CardTitle>
+                <CardDescription>Basic personal details and contact information</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Profile Photo */}
@@ -369,9 +446,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           </Button>
                         </div>
                       </FormControl>
-                      <FormDescription>
-                        Upload a professional photo (JPG, PNG - Max 2MB)
-                      </FormDescription>
+                      <FormDescription>Upload a professional photo (JPG, PNG - Max 2MB)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -441,11 +516,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
+                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
@@ -455,9 +526,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
+                            disabled={date => date > new Date() || date < new Date("1900-01-01")}
                             initialFocus
                           />
                         </PopoverContent>
@@ -477,14 +546,10 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                         <FormLabel>Mobile Number *</FormLabel>
                         <FormControl>
                           <div className="flex gap-2">
-                            <Input 
-                              placeholder="+91 98765 43210" 
-                              {...field} 
-                              className="flex-1"
-                            />
-                            <Button 
-                              type="button" 
-                              variant="outline" 
+                            <Input placeholder="+91 98765 43210" {...field} className="flex-1" />
+                            <Button
+                              type="button"
+                              variant="outline"
                               onClick={sendOTP}
                               disabled={!field.value || field.value.length < 10}
                             >
@@ -496,20 +561,16 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                       </FormItem>
                     )}
                   />
-                  
+
                   {otpSent && (
                     <div className="flex gap-2">
                       <Input placeholder="Enter 6-digit OTP" className="flex-1" />
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={verifyOTP}
-                      >
+                      <Button type="button" variant="outline" onClick={verifyOTP}>
                         Verify
                       </Button>
                     </div>
                   )}
-                  
+
                   {form.watch("otpVerified") && (
                     <div className="flex items-center gap-2 text-green-600">
                       <CheckCircle className="h-4 w-4" />
@@ -526,11 +587,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                     <FormItem>
                       <FormLabel>Email Address *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="email" 
-                          placeholder="doctor@hospital.com" 
-                          {...field} 
-                        />
+                        <Input type="email" placeholder="doctor@hospital.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -545,14 +602,9 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                     <FormItem>
                       <FormLabel>Emergency Contact *</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="+91 98765 43211" 
-                          {...field} 
-                        />
+                        <Input placeholder="+91 98765 43211" {...field} />
                       </FormControl>
-                      <FormDescription>
-                        Contact number for emergencies
-                      </FormDescription>
+                      <FormDescription>Contact number for emergencies</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -585,12 +637,8 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
           <TabsContent value="step2" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🔹 Step 2: Professional Information
-                </CardTitle>
-                <CardDescription>
-                  Educational qualifications and professional experience
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">🔹 Step 2: Professional Information</CardTitle>
+                <CardDescription>Educational qualifications and professional experience</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Specialization */}
@@ -607,7 +655,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {specializations.map((spec) => (
+                          {specializations.map(spec => (
                             <SelectItem key={spec} value={spec}>
                               {spec}
                             </SelectItem>
@@ -629,9 +677,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                       <FormControl>
                         <Input placeholder="e.g., Interventional Cardiology" {...field} />
                       </FormControl>
-                      <FormDescription>
-                        Optional - specific area of expertise
-                      </FormDescription>
+                      <FormDescription>Optional - specific area of expertise</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -651,7 +697,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {qualifications.map((qual) => (
+                          {qualifications.map(qual => (
                             <SelectItem key={qual} value={qual}>
                               {qual}
                             </SelectItem>
@@ -686,13 +732,13 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                     <FormItem>
                       <FormLabel>Year of Passing *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="2020" 
+                        <Input
+                          type="number"
+                          placeholder="2020"
                           min={1950}
                           max={new Date().getFullYear()}
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -708,12 +754,12 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                     <FormItem>
                       <FormLabel>Total Experience (Years) *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="5" 
+                        <Input
+                          type="number"
+                          placeholder="5"
                           min={0}
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -736,9 +782,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Optional - Previous work experience
-                      </FormDescription>
+                      <FormDescription>Optional - Previous work experience</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -757,9 +801,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                             <Upload className="h-4 w-4 mr-2" />
                             Choose File
                           </Button>
-                          <span className="text-sm text-muted-foreground">
-                            PDF, DOC, DOCX (Max 5MB)
-                          </span>
+                          <span className="text-sm text-muted-foreground">PDF, DOC, DOCX (Max 5MB)</span>
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -774,12 +816,8 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
           <TabsContent value="step3" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🔹 Step 3: Medical License & Verification
-                </CardTitle>
-                <CardDescription>
-                  Medical registration and identification documents
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">🔹 Step 3: Medical License & Verification</CardTitle>
+                <CardDescription>Medical registration and identification documents</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Medical Council Registration No. */}
@@ -811,7 +849,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {councils.map((council) => (
+                          {councils.map(council => (
                             <SelectItem key={council} value={council}>
                               {council}
                             </SelectItem>
@@ -840,11 +878,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
+                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
@@ -854,7 +888,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date > new Date()}
+                            disabled={date => date > new Date()}
                             initialFocus
                           />
                         </PopoverContent>
@@ -881,11 +915,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                                 !field.value && "text-muted-foreground"
                               )}
                             >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
+                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                           </FormControl>
@@ -895,7 +925,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
+                            disabled={date => date < new Date()}
                             initialFocus
                           />
                         </PopoverContent>
@@ -918,9 +948,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                             <Upload className="h-4 w-4 mr-2" />
                             Choose File
                           </Button>
-                          <span className="text-sm text-muted-foreground">
-                            PDF, JPG, PNG (Max 5MB)
-                          </span>
+                          <span className="text-sm text-muted-foreground">PDF, JPG, PNG (Max 5MB)</span>
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -941,9 +969,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                             <Upload className="h-4 w-4 mr-2" />
                             Choose File
                           </Button>
-                          <span className="text-sm text-muted-foreground">
-                            PDF, JPG, PNG (Max 5MB)
-                          </span>
+                          <span className="text-sm text-muted-foreground">PDF, JPG, PNG (Max 5MB)</span>
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -958,12 +984,8 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
           <TabsContent value="step4" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🔹 Step 4: Hospital Role & Availability
-                </CardTitle>
-                <CardDescription>
-                  Department assignment and working schedule
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">🔹 Step 4: Hospital Role & Availability</CardTitle>
+                <CardDescription>Department assignment and working schedule</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Department */}
@@ -980,7 +1002,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {departments.map((dept) => (
+                          {departments.map(dept => (
                             <SelectItem key={dept} value={dept}>
                               {dept}
                             </SelectItem>
@@ -1006,7 +1028,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {roles.map((role) => (
+                          {roles.map(role => (
                             <SelectItem key={role} value={role}>
                               {role}
                             </SelectItem>
@@ -1032,7 +1054,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {shifts.map((shift) => (
+                          {shifts.map(shift => (
                             <SelectItem key={shift} value={shift}>
                               {shift}
                             </SelectItem>
@@ -1052,39 +1074,28 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                     <FormItem>
                       <div className="mb-4">
                         <FormLabel className="text-base">Working Days *</FormLabel>
-                        <FormDescription>
-                          Select the days you will be available
-                        </FormDescription>
+                        <FormDescription>Select the days you will be available</FormDescription>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        {workingDaysOptions.map((item) => (
+                        {workingDaysOptions.map(item => (
                           <FormField
                             key={item.id}
                             control={form.control}
                             name="workingDays"
                             render={({ field }) => {
                               return (
-                                <FormItem
-                                  key={item.id}
-                                  className="flex flex-row items-start space-x-3 space-y-0"
-                                >
+                                <FormItem key={item.id} className="flex flex-row items-start space-x-3 space-y-0">
                                   <FormControl>
                                     <Checkbox
                                       checked={field.value?.includes(item.id)}
-                                      onCheckedChange={(checked) => {
+                                      onCheckedChange={checked => {
                                         return checked
                                           ? field.onChange([...field.value, item.id])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== item.id
-                                              )
-                                            )
+                                          : field.onChange(field.value?.filter(value => value !== item.id))
                                       }}
                                     />
                                   </FormControl>
-                                  <FormLabel className="text-sm font-normal">
-                                    {item.label}
-                                  </FormLabel>
+                                  <FormLabel className="text-sm font-normal">{item.label}</FormLabel>
                                 </FormItem>
                               )
                             }}
@@ -1106,10 +1117,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                         <FormLabel>OPD Start Time *</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Input 
-                              type="time" 
-                              {...field} 
-                            />
+                            <Input type="time" {...field} />
                             <Clock className="absolute right-3 top-2.5 h-4 w-4 opacity-50" />
                           </div>
                         </FormControl>
@@ -1126,10 +1134,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                         <FormLabel>OPD End Time *</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Input 
-                              type="time" 
-                              {...field} 
-                            />
+                            <Input type="time" {...field} />
                             <Clock className="absolute right-3 top-2.5 h-4 w-4 opacity-50" />
                           </div>
                         </FormControl>
@@ -1147,18 +1152,16 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                     <FormItem>
                       <FormLabel>Max Patients per Day *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="20" 
+                        <Input
+                          type="number"
+                          placeholder="20"
                           min={1}
                           max={100}
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          onChange={e => field.onChange(parseInt(e.target.value) || 0)}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Maximum number of patients you can see per day
-                      </FormDescription>
+                      <FormDescription>Maximum number of patients you can see per day</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1171,12 +1174,8 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
           <TabsContent value="step5" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🔹 Step 5: Payment & Banking Details
-                </CardTitle>
-                <CardDescription>
-                  Salary and banking information for payments
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">🔹 Step 5: Payment & Banking Details</CardTitle>
+                <CardDescription>Salary and banking information for payments</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Payment Mode */}
@@ -1193,7 +1192,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {paymentModes.map((mode) => (
+                          {paymentModes.map(mode => (
                             <SelectItem key={mode} value={mode}>
                               {mode}
                             </SelectItem>
@@ -1228,11 +1227,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                     <FormItem>
                       <FormLabel>IFSC Code *</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="SBIN0001234" 
-                          {...field} 
-                          style={{ textTransform: 'uppercase' }}
-                        />
+                        <Input placeholder="SBIN0001234" {...field} style={{ textTransform: "uppercase" }} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1279,9 +1274,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                       <FormControl>
                         <Input placeholder="doctor@paytm" {...field} />
                       </FormControl>
-                      <FormDescription>
-                        For quick payments and consultations
-                      </FormDescription>
+                      <FormDescription>For quick payments and consultations</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1294,12 +1287,8 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
           <TabsContent value="step6" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🔹 Step 6: Portal Login & Digital Consent
-                </CardTitle>
-                <CardDescription>
-                  Create login credentials and digital authorization
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">🔹 Step 6: Portal Login & Digital Consent</CardTitle>
+                <CardDescription>Create login credentials and digital authorization</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Username */}
@@ -1312,9 +1301,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                       <FormControl>
                         <Input placeholder="dr.johnsmith" {...field} />
                       </FormControl>
-                      <FormDescription>
-                        Unique username for portal login
-                      </FormDescription>
+                      <FormDescription>Unique username for portal login</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1329,10 +1316,10 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                       <FormLabel>Password *</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Input 
+                          <Input
                             type={showPassword ? "text" : "password"}
                             placeholder="Create strong password"
-                            {...field} 
+                            {...field}
                           />
                           <Button
                             type="button"
@@ -1341,17 +1328,11 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                             className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                             onClick={() => setShowPassword(!showPassword)}
                           >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </Button>
                         </div>
                       </FormControl>
-                      <FormDescription>
-                        Minimum 8 characters with letters, numbers and symbols
-                      </FormDescription>
+                      <FormDescription>Minimum 8 characters with letters, numbers and symbols</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1366,10 +1347,10 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                       <FormLabel>Confirm Password *</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Input 
+                          <Input
                             type={showConfirmPassword ? "text" : "password"}
                             placeholder="Confirm your password"
-                            {...field} 
+                            {...field}
                           />
                           <Button
                             type="button"
@@ -1378,11 +1359,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                             className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                           >
-                            {showConfirmPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </Button>
                         </div>
                       </FormControl>
@@ -1398,18 +1375,11 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Enable Two-Factor Authentication
-                        </FormLabel>
-                        <FormDescription>
-                          Add extra security to your account with SMS verification
-                        </FormDescription>
+                        <FormLabel className="text-base">Enable Two-Factor Authentication</FormLabel>
+                        <FormDescription>Add extra security to your account with SMS verification</FormDescription>
                       </div>
                       <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
                     </FormItem>
                   )}
@@ -1433,9 +1403,7 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                           </span>
                         </div>
                       </FormControl>
-                      <FormDescription>
-                        Digital signature for electronic prescriptions and documents
-                      </FormDescription>
+                      <FormDescription>Digital signature for electronic prescriptions and documents</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1448,19 +1416,15 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                       <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
                       <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          Declaration & Consent *
-                        </FormLabel>
+                        <FormLabel>Declaration & Consent *</FormLabel>
                         <FormDescription className="text-sm">
-                          I hereby confirm that all the information provided is true and accurate to the best of my knowledge. 
-                          I understand that any false information may lead to rejection of my application or termination of services. 
-                          I consent to the processing of my personal data for registration and hospital management purposes.
+                          I hereby confirm that all the information provided is true and accurate to the best of my
+                          knowledge. I understand that any false information may lead to rejection of my application or
+                          termination of services. I consent to the processing of my personal data for registration and
+                          hospital management purposes.
                         </FormDescription>
                       </div>
                       <FormMessage />
@@ -1475,31 +1439,22 @@ export function DoctorRegistrationForm({ onSuccess, onCancel }: DoctorRegistrati
         {/* Action Buttons Footer */}
         <div className="flex justify-between items-center pt-6 border-t">
           <div className="flex gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={goToPreviousStep}
-              disabled={currentStep === "step1"}
-            >
+            <Button type="button" variant="outline" onClick={goToPreviousStep} disabled={currentStep === "step1"}>
               Back
             </Button>
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel / Reset
             </Button>
           </div>
-          
+
           <div className="flex gap-2">
             {currentStep !== "step6" ? (
-              <Button 
-                type="button" 
-                onClick={goToNextStep}
-                disabled={!validateStep(currentStep)}
-              >
+              <Button type="button" onClick={goToNextStep} disabled={!validateStep(currentStep)}>
                 Save & Continue
               </Button>
             ) : (
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting || !form.watch("declarationAccepted")}
                 className="bg-green-600 hover:bg-green-700"
               >

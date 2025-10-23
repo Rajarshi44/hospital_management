@@ -19,7 +19,7 @@ import { Admission } from "@/lib/ipd-types"
 const transferSchema = z.object({
   toWardId: z.string().min(1, "Please select a ward"),
   toBedId: z.string().min(1, "Please select a bed"),
-  reason: z.string().min(10, "Please provide reason for transfer (minimum 10 characters)")
+  reason: z.string().min(10, "Please provide reason for transfer (minimum 10 characters)"),
 })
 
 interface BedTransferFormProps {
@@ -36,8 +36,8 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
     defaultValues: {
       toWardId: "",
       toBedId: "",
-      reason: ""
-    }
+      reason: "",
+    },
   })
 
   const handleWardChange = (wardId: string) => {
@@ -51,7 +51,7 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500))
-      
+
       const transferData = {
         admissionId: admission.admissionId,
         fromWardId: admission.wardId,
@@ -59,12 +59,12 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
         toWardId: data.toWardId,
         toBedId: data.toBedId,
         reason: data.reason,
-        transferDate: new Date().toISOString().split('T')[0],
-        transferTime: new Date().toTimeString().split(' ')[0].substring(0, 5),
+        transferDate: new Date().toISOString().split("T")[0],
+        transferTime: new Date().toTimeString().split(" ")[0].substring(0, 5),
         transferredBy: "Current User", // This would come from auth context
-        approvedBy: "Admin" // This would be set based on approval workflow
+        approvedBy: "Admin", // This would be set based on approval workflow
       }
-      
+
       console.log("Bed transfer completed:", transferData)
       alert("Patient transferred successfully!")
       form.reset()
@@ -139,17 +139,20 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Target Ward *</FormLabel>
-                    <Select onValueChange={(value) => {
-                      field.onChange(value)
-                      handleWardChange(value)
-                    }} defaultValue={field.value}>
+                    <Select
+                      onValueChange={value => {
+                        field.onChange(value)
+                        handleWardChange(value)
+                      }}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select new ward" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {availableWards.map((ward) => (
+                        {availableWards.map(ward => (
                           <SelectItem key={ward.id} value={ward.id}>
                             <div className="flex flex-col items-start">
                               <span>{ward.name}</span>
@@ -179,16 +182,18 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {availableBeds.filter(bed => bed.wardId === selectedWard).map((bed) => (
-                          <SelectItem key={bed.id} value={bed.id}>
-                            <div className="flex flex-col items-start">
-                              <span>Bed {bed.bedNumber}</span>
-                              <span className="text-xs text-muted-foreground">
-                                ${bed.chargesPerDay}/day • {bed.amenities.join(', ')}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                        {availableBeds
+                          .filter(bed => bed.wardId === selectedWard)
+                          .map(bed => (
+                            <SelectItem key={bed.id} value={bed.id}>
+                              <div className="flex flex-col items-start">
+                                <span>Bed {bed.bedNumber}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ${bed.chargesPerDay}/day • {bed.amenities.join(", ")}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -202,16 +207,25 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
                   <div className="space-y-1">
-                    <div><strong>New Location:</strong> {targetWard.name} - Bed {targetBed.bedNumber}</div>
-                    <div><strong>Cost Change:</strong> 
+                    <div>
+                      <strong>New Location:</strong> {targetWard.name} - Bed {targetBed.bedNumber}
+                    </div>
+                    <div>
+                      <strong>Cost Change:</strong>
                       {currentWard && (
-                        <span className={targetWard.chargesPerDay > currentWard.chargesPerDay ? "text-red-600" : "text-green-600"}>
-                          {targetWard.chargesPerDay > currentWard.chargesPerDay ? "+" : ""}
-                          ${targetWard.chargesPerDay - currentWard.chargesPerDay}/day
+                        <span
+                          className={
+                            targetWard.chargesPerDay > currentWard.chargesPerDay ? "text-red-600" : "text-green-600"
+                          }
+                        >
+                          {targetWard.chargesPerDay > currentWard.chargesPerDay ? "+" : ""}$
+                          {targetWard.chargesPerDay - currentWard.chargesPerDay}/day
                         </span>
                       )}
                     </div>
-                    <div><strong>Amenities:</strong> {targetBed.amenities.join(', ')}</div>
+                    <div>
+                      <strong>Amenities:</strong> {targetBed.amenities.join(", ")}
+                    </div>
                   </div>
                 </AlertDescription>
               </Alert>
@@ -232,10 +246,10 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
                 <FormItem>
                   <FormLabel>Reason for Transfer *</FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder="Provide detailed reason for transfer (e.g., medical condition improvement, patient request, bed availability...)"
                       className="min-h-[100px]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -259,17 +273,27 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
                 </div>
                 <div className="flex items-center justify-between">
                   <span>From:</span>
-                  <Badge variant="outline">{currentWard.name} - Bed {currentBed.bedNumber}</Badge>
+                  <Badge variant="outline">
+                    {currentWard.name} - Bed {currentBed.bedNumber}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>To:</span>
-                  <Badge variant="default">{targetWard.name} - Bed {targetBed.bedNumber}</Badge>
+                  <Badge variant="default">
+                    {targetWard.name} - Bed {targetBed.bedNumber}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Cost Impact:</span>
-                  <span className={targetWard.chargesPerDay > currentWard.chargesPerDay ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
-                    {targetWard.chargesPerDay > currentWard.chargesPerDay ? "+" : ""}
-                    ${targetWard.chargesPerDay - currentWard.chargesPerDay}/day
+                  <span
+                    className={
+                      targetWard.chargesPerDay > currentWard.chargesPerDay
+                        ? "text-red-600 font-medium"
+                        : "text-green-600 font-medium"
+                    }
+                  >
+                    {targetWard.chargesPerDay > currentWard.chargesPerDay ? "+" : ""}$
+                    {targetWard.chargesPerDay - currentWard.chargesPerDay}/day
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

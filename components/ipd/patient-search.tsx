@@ -20,13 +20,14 @@ export function PatientSearch({ onPatientSelect, selectedPatient }: PatientSearc
 
   const filteredPatients = useMemo(() => {
     if (!searchQuery.trim()) return mockOPDPatients.slice(0, 5) // Show first 5 by default
-    
+
     const query = searchQuery.toLowerCase()
-    return mockOPDPatients.filter(patient => 
-      patient.name.toLowerCase().includes(query) ||
-      patient.uhid.toLowerCase().includes(query) ||
-      patient.phone.includes(query) ||
-      patient.email?.toLowerCase().includes(query)
+    return mockOPDPatients.filter(
+      patient =>
+        patient.name.toLowerCase().includes(query) ||
+        patient.uhid.toLowerCase().includes(query) ||
+        patient.phone.includes(query) ||
+        patient.email?.toLowerCase().includes(query)
     )
   }, [searchQuery])
 
@@ -40,7 +41,7 @@ export function PatientSearch({ onPatientSelect, selectedPatient }: PatientSearc
             id="patient-search"
             placeholder="Search by name, UHID, phone, or email..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
@@ -75,8 +76,8 @@ export function PatientSearch({ onPatientSelect, selectedPatient }: PatientSearc
                   </div>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={() => onPatientSelect(null)}
                 className="text-green-700 hover:text-green-800"
@@ -91,7 +92,7 @@ export function PatientSearch({ onPatientSelect, selectedPatient }: PatientSearc
       {!selectedPatient && (
         <div className="space-y-2">
           <Label className="text-sm font-medium">
-            {searchQuery ? `Found ${filteredPatients.length} patient(s)` : 'Recent Patients'}
+            {searchQuery ? `Found ${filteredPatients.length} patient(s)` : "Recent Patients"}
           </Label>
           <div className="max-h-60 overflow-y-auto space-y-2">
             {filteredPatients.length === 0 ? (
@@ -99,9 +100,9 @@ export function PatientSearch({ onPatientSelect, selectedPatient }: PatientSearc
                 <p>No patients found matching your search.</p>
               </Card>
             ) : (
-              filteredPatients.map((patient) => (
-                <Card 
-                  key={patient.id} 
+              filteredPatients.map(patient => (
+                <Card
+                  key={patient.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => onPatientSelect(patient)}
                 >
@@ -134,9 +135,7 @@ export function PatientSearch({ onPatientSelect, selectedPatient }: PatientSearc
                           </Badge>
                         )}
                         {patient.allergies && patient.allergies.length > 0 && (
-                          <div className="text-xs text-orange-600">
-                            Allergies: {patient.allergies.join(', ')}
-                          </div>
+                          <div className="text-xs text-orange-600">Allergies: {patient.allergies.join(", ")}</div>
                         )}
                       </div>
                     </div>

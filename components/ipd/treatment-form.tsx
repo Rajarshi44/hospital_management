@@ -16,12 +16,12 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const treatmentSchema = z.object({
-  type: z.enum(['medication', 'procedure', 'lab_order', 'investigation']),
+  type: z.enum(["medication", "procedure", "lab_order", "investigation"]),
   description: z.string().min(3, "Description must be at least 3 characters"),
   dosage: z.string().optional(),
   frequency: z.string().optional(),
   duration: z.string().optional(),
-  instructions: z.string().optional()
+  instructions: z.string().optional(),
 })
 
 interface TreatmentFormProps {
@@ -40,8 +40,8 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
       dosage: "",
       frequency: "",
       duration: "",
-      instructions: ""
-    }
+      instructions: "",
+    },
   })
 
   const onSubmit = async (data: z.infer<typeof treatmentSchema>) => {
@@ -49,15 +49,15 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       console.log("Treatment added:", {
         admissionId,
         ...data,
         prescribedAt: new Date().toISOString(),
         prescribedBy: "Current User", // This would come from auth context
-        status: "active"
+        status: "active",
       })
-      
+
       alert("Treatment added successfully!")
       form.reset()
     } catch (error) {
@@ -75,7 +75,7 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
     "Metformin 500mg",
     "Omeprazole 20mg",
     "Atorvastatin 20mg",
-    "Amlodipine 5mg"
+    "Amlodipine 5mg",
   ]
 
   const commonProcedures = [
@@ -86,7 +86,7 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
     "Nebulization",
     "Physical Therapy",
     "Chest Physiotherapy",
-    "Oxygen Therapy"
+    "Oxygen Therapy",
   ]
 
   const commonLabTests = [
@@ -97,7 +97,7 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
     "Kidney Function Tests",
     "Thyroid Function Tests",
     "Blood Sugar (Fasting)",
-    "Urine Analysis"
+    "Urine Analysis",
   ]
 
   const commonInvestigations = [
@@ -108,26 +108,36 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
     "MRI Scan",
     "Ultrasound",
     "Endoscopy",
-    "Colonoscopy"
+    "Colonoscopy",
   ]
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'medication': return <Pill className="h-4 w-4" />
-      case 'procedure': return <Stethoscope className="h-4 w-4" />
-      case 'lab_order': return <FlaskConical className="h-4 w-4" />
-      case 'investigation': return <FileText className="h-4 w-4" />
-      default: return null
+      case "medication":
+        return <Pill className="h-4 w-4" />
+      case "procedure":
+        return <Stethoscope className="h-4 w-4" />
+      case "lab_order":
+        return <FlaskConical className="h-4 w-4" />
+      case "investigation":
+        return <FileText className="h-4 w-4" />
+      default:
+        return null
     }
   }
 
   const getCommonOptions = (type: string) => {
     switch (type) {
-      case 'medication': return commonMedications
-      case 'procedure': return commonProcedures
-      case 'lab_order': return commonLabTests
-      case 'investigation': return commonInvestigations
-      default: return []
+      case "medication":
+        return commonMedications
+      case "procedure":
+        return commonProcedures
+      case "lab_order":
+        return commonLabTests
+      case "investigation":
+        return commonInvestigations
+      default:
+        return []
     }
   }
 
@@ -146,11 +156,14 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Select Treatment Type *</FormLabel>
-                  <Select onValueChange={(value) => {
-                    field.onChange(value)
-                    setTreatmentType(value)
-                    form.setValue("description", "") // Reset description when type changes
-                  }} defaultValue={field.value}>
+                  <Select
+                    onValueChange={value => {
+                      field.onChange(value)
+                      setTreatmentType(value)
+                      form.setValue("description", "") // Reset description when type changes
+                    }}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select treatment type" />
@@ -195,16 +208,16 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               {getTypeIcon(treatmentType)}
-              {treatmentType.charAt(0).toUpperCase() + treatmentType.slice(1).replace('_', ' ')} Details
+              {treatmentType.charAt(0).toUpperCase() + treatmentType.slice(1).replace("_", " ")} Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Tabs defaultValue="manual" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="manual">Manual Entry</TabsTrigger>
-                <TabsTrigger value="common">Common {treatmentType.replace('_', ' ')}s</TabsTrigger>
+                <TabsTrigger value="common">Common {treatmentType.replace("_", " ")}s</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="manual" className="space-y-4">
                 <FormField
                   control={form.control}
@@ -212,20 +225,27 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {treatmentType === 'medication' ? 'Medication Name & Strength' : 
-                         treatmentType === 'procedure' ? 'Procedure Name' :
-                         treatmentType === 'lab_order' ? 'Lab Tests' :
-                         'Investigation Details'} *
+                        {treatmentType === "medication"
+                          ? "Medication Name & Strength"
+                          : treatmentType === "procedure"
+                            ? "Procedure Name"
+                            : treatmentType === "lab_order"
+                              ? "Lab Tests"
+                              : "Investigation Details"}{" "}
+                        *
                       </FormLabel>
                       <FormControl>
-                        <Input 
+                        <Input
                           placeholder={
-                            treatmentType === 'medication' ? 'e.g., Paracetamol 500mg' :
-                            treatmentType === 'procedure' ? 'e.g., Blood Pressure Monitoring' :
-                            treatmentType === 'lab_order' ? 'e.g., Complete Blood Count' :
-                            'e.g., Chest X-Ray'
+                            treatmentType === "medication"
+                              ? "e.g., Paracetamol 500mg"
+                              : treatmentType === "procedure"
+                                ? "e.g., Blood Pressure Monitoring"
+                                : treatmentType === "lab_order"
+                                  ? "e.g., Complete Blood Count"
+                                  : "e.g., Chest X-Ray"
                           }
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -233,12 +253,12 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
                   )}
                 />
               </TabsContent>
-              
+
               <TabsContent value="common" className="space-y-4">
                 <div>
-                  <Label>Select from Common {treatmentType.replace('_', ' ')}s</Label>
+                  <Label>Select from Common {treatmentType.replace("_", " ")}s</Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                    {getCommonOptions(treatmentType).map((option) => (
+                    {getCommonOptions(treatmentType).map(option => (
                       <Button
                         key={option}
                         type="button"
@@ -256,23 +276,16 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
             </Tabs>
 
             {/* Medication/Procedure Specific Fields */}
-            {(treatmentType === 'medication' || treatmentType === 'procedure') && (
+            {(treatmentType === "medication" || treatmentType === "procedure") && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="dosage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>
-                        {treatmentType === 'medication' ? 'Dosage' : 'Quantity/Units'}
-                      </FormLabel>
+                      <FormLabel>{treatmentType === "medication" ? "Dosage" : "Quantity/Units"}</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder={
-                            treatmentType === 'medication' ? '1 tablet' : '1 session'
-                          }
-                          {...field} 
-                        />
+                        <Input placeholder={treatmentType === "medication" ? "1 tablet" : "1 session"} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -330,20 +343,25 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {treatmentType === 'medication' ? 'Instructions & Precautions' :
-                     treatmentType === 'procedure' ? 'Procedure Instructions' :
-                     'Special Instructions'}
+                    {treatmentType === "medication"
+                      ? "Instructions & Precautions"
+                      : treatmentType === "procedure"
+                        ? "Procedure Instructions"
+                        : "Special Instructions"}
                   </FormLabel>
                   <FormControl>
-                    <Textarea 
+                    <Textarea
                       placeholder={
-                        treatmentType === 'medication' ? 'e.g., Take with food, avoid alcohol' :
-                        treatmentType === 'procedure' ? 'e.g., Monitor for complications' :
-                        treatmentType === 'lab_order' ? 'e.g., Fasting required, collect morning sample' :
-                        'e.g., Patient preparation required'
+                        treatmentType === "medication"
+                          ? "e.g., Take with food, avoid alcohol"
+                          : treatmentType === "procedure"
+                            ? "e.g., Monitor for complications"
+                            : treatmentType === "lab_order"
+                              ? "e.g., Fasting required, collect morning sample"
+                              : "e.g., Patient preparation required"
                       }
                       className="min-h-[80px]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -364,7 +382,7 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="flex items-center gap-1">
                     {getTypeIcon(treatmentType)}
-                    {treatmentType.replace('_', ' ')}
+                    {treatmentType.replace("_", " ")}
                   </Badge>
                   <span className="font-medium">{form.watch("description")}</span>
                 </div>
@@ -375,7 +393,7 @@ export function TreatmentForm({ admissionId }: TreatmentFormProps) {
                 )}
                 {form.watch("frequency") && (
                   <div className="text-sm text-green-700">
-                    <strong>Frequency:</strong> {form.watch("frequency")?.replace('_', ' ')}
+                    <strong>Frequency:</strong> {form.watch("frequency")?.replace("_", " ")}
                   </div>
                 )}
                 {form.watch("duration") && (

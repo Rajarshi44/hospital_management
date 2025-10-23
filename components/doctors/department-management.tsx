@@ -7,7 +7,14 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -34,7 +41,7 @@ const mockDepartments: Department[] = [
     location: "Building A, Floor 3",
     established: "2015",
     status: "active",
-    subDepartments: ["Interventional Cardiology", "Pediatric Cardiology", "Cardiac Surgery"]
+    subDepartments: ["Interventional Cardiology", "Pediatric Cardiology", "Cardiac Surgery"],
   },
   {
     id: "2",
@@ -45,7 +52,7 @@ const mockDepartments: Department[] = [
     location: "Building B, Floor 2",
     established: "2018",
     status: "active",
-    subDepartments: ["Neurosurgery", "Pediatric Neurology"]
+    subDepartments: ["Neurosurgery", "Pediatric Neurology"],
   },
   {
     id: "3",
@@ -56,7 +63,7 @@ const mockDepartments: Department[] = [
     location: "Building C, Floor 1",
     established: "2012",
     status: "active",
-    subDepartments: ["Sports Medicine", "Spine Surgery", "Joint Replacement"]
+    subDepartments: ["Sports Medicine", "Spine Surgery", "Joint Replacement"],
   },
   {
     id: "4",
@@ -67,7 +74,7 @@ const mockDepartments: Department[] = [
     location: "Building A, Floor 2",
     established: "2010",
     status: "active",
-    subDepartments: ["Neonatology", "Pediatric Emergency"]
+    subDepartments: ["Neonatology", "Pediatric Emergency"],
   },
   {
     id: "5",
@@ -78,8 +85,8 @@ const mockDepartments: Department[] = [
     location: "Ground Floor, Wing A",
     established: "2008",
     status: "active",
-    subDepartments: ["Trauma Center", "Critical Care"]
-  }
+    subDepartments: ["Trauma Center", "Critical Care"],
+  },
 ]
 
 export function DepartmentManagement() {
@@ -88,9 +95,10 @@ export function DepartmentManagement() {
   const [selectedTab, setSelectedTab] = useState("overview")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
-  const filteredDepartments = departments.filter(dept =>
-    dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dept.head.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredDepartments = departments.filter(
+    dept =>
+      dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      dept.head.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const totalDoctors = departments.reduce((sum, dept) => sum + dept.doctorCount, 0)
@@ -116,9 +124,7 @@ export function DepartmentManagement() {
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Add New Department</DialogTitle>
-              <DialogDescription>
-                Create a new department in the hospital system.
-              </DialogDescription>
+              <DialogDescription>Create a new department in the hospital system.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
@@ -151,9 +157,7 @@ export function DepartmentManagement() {
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => setIsAddDialogOpen(false)}>
-                Create Department
-              </Button>
+              <Button onClick={() => setIsAddDialogOpen(false)}>Create Department</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -168,9 +172,7 @@ export function DepartmentManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{departments.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {activeDepartments} active
-            </p>
+            <p className="text-xs text-muted-foreground">{activeDepartments} active</p>
           </CardContent>
         </Card>
         <Card>
@@ -180,9 +182,7 @@ export function DepartmentManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalDoctors}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all departments
-            </p>
+            <p className="text-xs text-muted-foreground">Across all departments</p>
           </CardContent>
         </Card>
         <Card>
@@ -191,9 +191,7 @@ export function DepartmentManagement() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {Math.max(...departments.map(d => d.doctorCount))}
-            </div>
+            <div className="text-2xl font-bold">{Math.max(...departments.map(d => d.doctorCount))}</div>
             <p className="text-xs text-muted-foreground">
               {departments.find(d => d.doctorCount === Math.max(...departments.map(d => d.doctorCount)))?.name}
             </p>
@@ -205,12 +203,8 @@ export function DepartmentManagement() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {Math.min(...departments.map(d => parseInt(d.established)))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Oldest department
-            </p>
+            <div className="text-2xl font-bold">{Math.min(...departments.map(d => parseInt(d.established)))}</div>
+            <p className="text-xs text-muted-foreground">Oldest department</p>
           </CardContent>
         </Card>
       </div>
@@ -222,7 +216,7 @@ export function DepartmentManagement() {
           <Input
             placeholder="Search departments..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
             className="pl-8"
           />
         </div>
@@ -238,15 +232,13 @@ export function DepartmentManagement() {
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredDepartments.map((department) => (
+            {filteredDepartments.map(department => (
               <Card key={department.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-lg">{department.name}</CardTitle>
-                      <CardDescription className="mt-1">
-                        {department.description}
-                      </CardDescription>
+                      <CardDescription className="mt-1">{department.description}</CardDescription>
                     </div>
                     <Badge variant={department.status === "active" ? "default" : "secondary"}>
                       {department.status}
@@ -272,7 +264,7 @@ export function DepartmentManagement() {
                       <span className="font-medium">{department.established}</span>
                     </div>
                   </div>
-                  
+
                   {department.subDepartments.length > 0 && (
                     <div>
                       <p className="text-sm font-medium mb-2">Sub-departments:</p>
@@ -285,7 +277,7 @@ export function DepartmentManagement() {
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="flex gap-2 pt-2">
                     <Button variant="outline" size="sm" className="flex-1">
                       View Details
@@ -304,21 +296,17 @@ export function DepartmentManagement() {
           <Card>
             <CardHeader>
               <CardTitle>Department Hierarchy</CardTitle>
-              <CardDescription>
-                Organizational structure and reporting relationships
-              </CardDescription>
+              <CardDescription>Organizational structure and reporting relationships</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {departments.map((dept) => (
+                {departments.map(dept => (
                   <div key={dept.id} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="font-semibold text-lg">{dept.name}</h3>
                       <Badge>{dept.doctorCount} doctors</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Head: {dept.head}
-                    </p>
+                    <p className="text-sm text-muted-foreground mb-2">Head: {dept.head}</p>
                     {dept.subDepartments.length > 0 && (
                       <div className="ml-4 space-y-1">
                         {dept.subDepartments.map((sub, index) => (
@@ -340,13 +328,11 @@ export function DepartmentManagement() {
             <Card>
               <CardHeader>
                 <CardTitle>Department Performance</CardTitle>
-                <CardDescription>
-                  Key metrics and performance indicators
-                </CardDescription>
+                <CardDescription>Key metrics and performance indicators</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {departments.map((dept) => (
+                  {departments.map(dept => (
                     <div key={dept.id} className="flex items-center justify-between p-3 border rounded">
                       <div>
                         <p className="font-medium">{dept.name}</p>
@@ -361,17 +347,15 @@ export function DepartmentManagement() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Resource Utilization</CardTitle>
-                <CardDescription>
-                  Department resource allocation and usage
-                </CardDescription>
+                <CardDescription>Department resource allocation and usage</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {departments.map((dept) => (
+                  {departments.map(dept => (
                     <div key={dept.id} className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>{dept.name}</span>

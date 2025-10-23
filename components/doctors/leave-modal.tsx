@@ -15,14 +15,14 @@ interface LeaveModalProps {
 }
 
 export function LeaveModal({ doctorName, onSave, onCancel }: LeaveModalProps) {
-  const [date, setDate] = useState('')
-  const [note, setNote] = useState('')
+  const [date, setDate] = useState("")
+  const [note, setNote] = useState("")
 
   const handleSave = () => {
     if (!date) return
     onSave(date, note)
-    setDate('')
-    setNote('')
+    setDate("")
+    setNote("")
   }
 
   return (
@@ -39,7 +39,7 @@ export function LeaveModal({ doctorName, onSave, onCancel }: LeaveModalProps) {
             </Button>
           </div>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="p-3 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground">Doctor:</p>
@@ -48,12 +48,7 @@ export function LeaveModal({ doctorName, onSave, onCancel }: LeaveModalProps) {
 
           <div className="space-y-2">
             <Label htmlFor="leave-date">Date</Label>
-            <Input
-              id="leave-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+            <Input id="leave-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
           </div>
 
           <div className="space-y-2">
@@ -62,7 +57,7 @@ export function LeaveModal({ doctorName, onSave, onCancel }: LeaveModalProps) {
               id="leave-note"
               placeholder="e.g., Medical conference, Personal leave, Holiday"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={e => setNote(e.target.value)}
               rows={3}
             />
           </div>

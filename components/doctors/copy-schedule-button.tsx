@@ -17,14 +17,14 @@ export function CopyScheduleButton({ schedules, onCopySchedules }: CopyScheduleB
     // Get current date
     const today = new Date()
     const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-    
+
     // Filter active schedules that would have been active last week
     const schedulesToCopy = schedules.filter(schedule => {
-      if (schedule.status !== 'active') return false
-      
+      if (schedule.status !== "active") return false
+
       const validFrom = new Date(schedule.validFrom)
-      const validTo = schedule.validTo === 'always' ? new Date('2999-12-31') : new Date(schedule.validTo)
-      
+      const validTo = schedule.validTo === "always" ? new Date("2999-12-31") : new Date(schedule.validTo)
+
       return validFrom <= lastWeek && validTo >= lastWeek
     })
 
@@ -36,17 +36,17 @@ export function CopyScheduleButton({ schedules, onCopySchedules }: CopyScheduleB
     const newSchedules: Schedule[] = schedulesToCopy.map(schedule => ({
       ...schedule,
       id: `${schedule.id}-copy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      validFrom: today.toISOString().split('T')[0],
-      createdAt: new Date().toISOString()
+      validFrom: today.toISOString().split("T")[0],
+      createdAt: new Date().toISOString(),
     }))
 
     onCopySchedules(newSchedules)
     setIsCopied(true)
-    
+
     setTimeout(() => setIsCopied(false), 2000)
   }
 
-  const activeSchedulesCount = schedules.filter(s => s.status === 'active').length
+  const activeSchedulesCount = schedules.filter(s => s.status === "active").length
 
   return (
     <Button

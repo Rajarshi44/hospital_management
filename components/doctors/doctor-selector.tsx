@@ -28,39 +28,46 @@ export function DoctorSelector({ value, onValueChange, placeholder = "Choose a d
 
   const filteredDoctors = useMemo(() => {
     if (!searchQuery) return mockDoctors
-    
+
     const query = searchQuery.toLowerCase()
-    return mockDoctors.filter(doctor => 
-      doctor.name.toLowerCase().includes(query) ||
-      doctor.departmentName.toLowerCase().includes(query) ||
-      doctor.specialization.toLowerCase().includes(query) ||
-      doctor.email.toLowerCase().includes(query)
+    return mockDoctors.filter(
+      doctor =>
+        doctor.name.toLowerCase().includes(query) ||
+        doctor.departmentName.toLowerCase().includes(query) ||
+        doctor.specialization.toLowerCase().includes(query) ||
+        doctor.email.toLowerCase().includes(query)
     )
   }, [searchQuery])
 
   const groupedDoctors = useMemo(() => {
-    const grouped = filteredDoctors.reduce((acc, doctor) => {
-      if (!acc[doctor.departmentName]) {
-        acc[doctor.departmentName] = []
-      }
-      acc[doctor.departmentName].push(doctor)
-      return acc
-    }, {} as Record<string, Doctor[]>)
+    const grouped = filteredDoctors.reduce(
+      (acc, doctor) => {
+        if (!acc[doctor.departmentName]) {
+          acc[doctor.departmentName] = []
+        }
+        acc[doctor.departmentName].push(doctor)
+        return acc
+      },
+      {} as Record<string, Doctor[]>
+    )
 
     // Sort departments alphabetically
     return Object.keys(grouped)
       .sort()
-      .reduce((acc, dept) => {
-        acc[dept] = grouped[dept].sort((a, b) => a.name.localeCompare(b.name))
-        return acc
-      }, {} as Record<string, Doctor[]>)
+      .reduce(
+        (acc, dept) => {
+          acc[dept] = grouped[dept].sort((a, b) => a.name.localeCompare(b.name))
+          return acc
+        },
+        {} as Record<string, Doctor[]>
+      )
   }, [filteredDoctors])
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
+      .split(" ")
       .map(n => n[0])
-      .join('')
+      .join("")
       .toUpperCase()
       .slice(0, 2)
   }
@@ -93,9 +100,7 @@ export function DoctorSelector({ value, onValueChange, placeholder = "Choose a d
             {selectedDoctor ? (
               <div className="flex items-center gap-3 flex-1 text-left">
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="text-xs">
-                    {getInitials(selectedDoctor.name)}
-                  </AvatarFallback>
+                  <AvatarFallback className="text-xs">{getInitials(selectedDoctor.name)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium">{selectedDoctor.name}</div>
@@ -113,30 +118,25 @@ export function DoctorSelector({ value, onValueChange, placeholder = "Choose a d
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        
-        <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+
+        <PopoverContent className="w-full p-0" style={{ width: "var(--radix-popover-trigger-width)" }}>
           <div className="p-3 border-b">
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search doctors by name, department, or specialization..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="border-0 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSearch}
-                  className="h-auto p-1"
-                >
+                <Button variant="ghost" size="sm" onClick={clearSearch} className="h-auto p-1">
                   ×
                 </Button>
               )}
             </div>
           </div>
-          
+
           <ScrollArea className="max-h-[300px]">
             {Object.keys(groupedDoctors).length === 0 ? (
               <div className="py-6 text-center text-sm text-muted-foreground">
@@ -150,7 +150,7 @@ export function DoctorSelector({ value, onValueChange, placeholder = "Choose a d
                       {departmentName} ({doctors.length})
                     </div>
                     <div className="space-y-1 mt-1">
-                      {doctors.map((doctor) => (
+                      {doctors.map(doctor => (
                         <div
                           key={doctor.id}
                           onClick={() => handleSelect(doctor.id)}
@@ -160,23 +160,15 @@ export function DoctorSelector({ value, onValueChange, placeholder = "Choose a d
                           )}
                         >
                           <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-xs">
-                              {getInitials(doctor.name)}
-                            </AvatarFallback>
+                            <AvatarFallback className="text-xs">{getInitials(doctor.name)}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium">{doctor.name}</span>
-                              {value === doctor.id && (
-                                <Check className="h-4 w-4 text-primary" />
-                              )}
+                              {value === doctor.id && <Check className="h-4 w-4 text-primary" />}
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              {doctor.specialization}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {doctor.email}
-                            </div>
+                            <div className="text-sm text-muted-foreground">{doctor.specialization}</div>
+                            <div className="text-xs text-muted-foreground">{doctor.email}</div>
                           </div>
                         </div>
                       ))}
@@ -188,19 +180,15 @@ export function DoctorSelector({ value, onValueChange, placeholder = "Choose a d
           </ScrollArea>
         </PopoverContent>
       </Popover>
-      
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
-      
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
       {selectedDoctor && (
         <div className="mt-3 p-3 bg-muted/50 rounded-lg">
           <div className="text-sm text-muted-foreground">Selected Doctor:</div>
           <div className="mt-2 flex items-center gap-3">
             <Avatar className="h-10 w-10">
-              <AvatarFallback>
-                {getInitials(selectedDoctor.name)}
-              </AvatarFallback>
+              <AvatarFallback>{getInitials(selectedDoctor.name)}</AvatarFallback>
             </Avatar>
             <div>
               <div className="font-medium">{selectedDoctor.name}</div>
