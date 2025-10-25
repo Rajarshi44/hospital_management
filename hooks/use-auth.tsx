@@ -26,9 +26,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is already logged in
     const initAuth = async () => {
       const user = authService.getCurrentUser()
-      const token = localStorage.getItem('accessToken')
-      console.log('🔑 Current token in initAuth:', token)
-      
+      const token = localStorage.getItem("accessToken")
+      console.log("🔑 Current token in initAuth:", token)
+
       if (user) {
         // Verify token is still valid by fetching current user from API
         try {
@@ -71,28 +71,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string) => {
-    setAuthState((prev) => ({ ...prev, isLoading: true }))
+    setAuthState(prev => ({ ...prev, isLoading: true }))
     try {
       const user = await authService.login(email, password)
-      const token = localStorage.getItem('accessToken')
-      console.log('🔑 Token after login:', token)
+      const token = localStorage.getItem("accessToken")
+      console.log("🔑 Token after login:", token)
       setAuthState({
         user,
         isLoading: false,
         isAuthenticated: true,
       })
     } catch (error) {
-      setAuthState((prev) => ({ ...prev, isLoading: false }))
+      setAuthState(prev => ({ ...prev, isLoading: false }))
       throw error
     }
   }
 
   const logout = async () => {
-    setAuthState((prev) => ({ ...prev, isLoading: true }))
-    console.log('🔑 Token before logout:', localStorage.getItem('accessToken'))
+    setAuthState(prev => ({ ...prev, isLoading: true }))
+    console.log("🔑 Token before logout:", localStorage.getItem("accessToken"))
     try {
       await authService.logout()
-      console.log('🔑 Token after logout:', localStorage.getItem('accessToken'))
+      console.log("🔑 Token after logout:", localStorage.getItem("accessToken"))
       setAuthState({
         user: null,
         isLoading: false,
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const register = async (userData: RegisterData) => {
-    setAuthState((prev) => ({ ...prev, isLoading: true }))
+    setAuthState(prev => ({ ...prev, isLoading: true }))
     try {
       const user = await authService.register(userData)
       setAuthState({
@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: true,
       })
     } catch (error) {
-      setAuthState((prev) => ({ ...prev, isLoading: false }))
+      setAuthState(prev => ({ ...prev, isLoading: false }))
       throw error
     }
   }
@@ -127,9 +127,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.refreshToken()
       const user = authService.getCurrentUser()
-      const token = localStorage.getItem('accessToken')
-      console.log('🔑 Token after refresh:', token)
-      setAuthState((prev) => ({
+      const token = localStorage.getItem("accessToken")
+      console.log("🔑 Token after refresh:", token)
+      setAuthState(prev => ({
         ...prev,
         user,
         isAuthenticated: !!user,
@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (updateData: Partial<RegisterData>) => {
     try {
       const user = await authService.updateProfile(updateData)
-      setAuthState((prev) => ({
+      setAuthState(prev => ({
         ...prev,
         user,
       }))
@@ -154,14 +154,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        ...authState, 
-        login, 
-        logout, 
-        register, 
-        refreshToken, 
-        updateProfile 
+    <AuthContext.Provider
+      value={{
+        ...authState,
+        login,
+        logout,
+        register,
+        refreshToken,
+        updateProfile,
       }}
     >
       {children}
@@ -180,27 +180,27 @@ export function useAuth() {
 // Custom hook to get and log current token
 export function useAuthToken() {
   const getCurrentToken = () => {
-    const token = localStorage.getItem('accessToken')
-    console.log('🔑 Current access token:', token)
+    const token = localStorage.getItem("accessToken")
+    console.log("🔑 Current access token:", token)
     return token
   }
 
   const getRefreshToken = () => {
-    const refreshToken = localStorage.getItem('refreshToken')
-    console.log('🔄 Current refresh token:', refreshToken)
+    const refreshToken = localStorage.getItem("refreshToken")
+    console.log("🔄 Current refresh token:", refreshToken)
     return refreshToken
   }
 
   const logAllTokens = () => {
-    const accessToken = localStorage.getItem('accessToken')
-    const refreshToken = localStorage.getItem('refreshToken')
-    console.log('🔑 All tokens:', { accessToken, refreshToken })
+    const accessToken = localStorage.getItem("accessToken")
+    const refreshToken = localStorage.getItem("refreshToken")
+    console.log("🔑 All tokens:", { accessToken, refreshToken })
     return { accessToken, refreshToken }
   }
 
   return {
     getCurrentToken,
     getRefreshToken,
-    logAllTokens
+    logAllTokens,
   }
 }
