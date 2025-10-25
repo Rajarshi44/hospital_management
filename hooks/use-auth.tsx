@@ -9,6 +9,9 @@ interface AuthContextType extends AuthState {
   register: (userData: RegisterData) => Promise<void>
   refreshToken: () => Promise<void>
   updateProfile: (updateData: Partial<RegisterData>) => Promise<void>
+  validateToken: (token: string) => Promise<void>
+  isTokenExpired: () => boolean
+  getTokenExpirationTime: () => number | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -29,17 +32,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem("accessToken")
       console.log("🔑 Current token in initAuth:", token)
 
-      if (user) {
-        // Verify token is still valid by fetching current user from API
-        try {
-          const freshUser = await authService.getCurrentUserFromAPI()
-          setAuthState({
-            user: freshUser,
-            isLoading: false,
-            isAuthenticated: true,
-          })
-        } catch (error) {
-          // Token is invalid or expired, try to refresh
+      if (user && token) {
+        // Check if token is expired before making API calls
+        if (authService.isTokenExpired()) {
+          console.log("⏰ Token is expired, attempting refresh")
           try {
             await authService.refreshToken()
             const freshUser = authService.getCurrentUser()
@@ -49,13 +45,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               isAuthenticated: !!freshUser,
             })
           } catch (refreshError) {
-            // Refresh failed, logout user
+            console.log("❌ Token refresh failed, logging out:", refreshError)
             await authService.logout()
             setAuthState({
               user: null,
               isLoading: false,
               isAuthenticated: false,
             })
+          }
+        } else {
+          // Token is not expired, verify it's still valid by fetching current user from API
+          try {
+            const freshUser = await authService.getCurrentUserFromAPI()
+            setAuthState({
+              user: freshUser,
+              isLoading: false,
+              isAuthenticated: true,
+            })
+          } catch (error) {
+            console.log("❌ Token validation failed, attempting refresh:", error)
+            // Token is invalid, try to refresh
+            try {
+              await authService.refreshToken()
+              const freshUser = authService.getCurrentUser()
+              setAuthState({
+                user: freshUser,
+                isLoading: false,
+                isAuthenticated: !!freshUser,
+              })
+            } catch (refreshError) {
+              console.log("❌ Token refresh failed, logging out:", refreshError)
+              // Refresh failed, logout user
+              await authService.logout()
+              setAuthState({
+                user: null,
+                isLoading: false,
+                isAuthenticated: false,
+              })
+            }
           }
         }
       } else {
@@ -153,6 +180,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const validateToken = async (token: string) => {
+    try {
+      const user = await authService.validateToken(token)
+      setAuthState(prev => ({
+        ...prev,
+        user,
+        isAuthenticated: true,
+      }))
+    } catch (error) {
+      setAuthState(prev => ({
+        ...prev,
+        user: null,
+        isAuthenticated: false,
+      }))
+      throw error
+    }
+  }
+
+  const isTokenExpired = () => {
+    return authService.isTokenExpired()
+  }
+
+  const getTokenExpirationTime = () => {
+    return authService.getTokenExpirationTime()
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -162,6 +215,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         refreshToken,
         updateProfile,
+        validateToken,
+        isTokenExpired,
+        getTokenExpirationTime,
       }}
     >
       {children}
@@ -179,6 +235,8 @@ export function useAuth() {
 
 // Custom hook to get and log current token
 export function useAuthToken() {
+  const authService = AuthService.getInstance()
+
   const getCurrentToken = () => {
     const token = localStorage.getItem("accessToken")
     console.log("🔑 Current access token:", token)
@@ -194,13 +252,39 @@ export function useAuthToken() {
   const logAllTokens = () => {
     const accessToken = localStorage.getItem("accessToken")
     const refreshToken = localStorage.getItem("refreshToken")
-    console.log("🔑 All tokens:", { accessToken, refreshToken })
-    return { accessToken, refreshToken }
+    const isExpired = authService.isTokenExpired()
+    const expirationTime = authService.getTokenExpirationTime()
+    
+    console.log("🔑 All tokens:", { 
+      accessToken, 
+      refreshToken, 
+      isExpired,
+      expirationTime: expirationTime ? new Date(expirationTime).toISOString() : null
+    })
+    return { accessToken, refreshToken, isExpired, expirationTime }
+  }
+
+  const validateCurrentToken = async () => {
+    const token = getCurrentToken()
+    if (!token) {
+      console.log("❌ No token found")
+      return false
+    }
+
+    try {
+      const user = await authService.validateToken(token)
+      console.log("✅ Token is valid:", user)
+      return true
+    } catch (error) {
+      console.log("❌ Token validation failed:", error)
+      return false
+    }
   }
 
   return {
     getCurrentToken,
     getRefreshToken,
     logAllTokens,
+    validateCurrentToken,
   }
 }

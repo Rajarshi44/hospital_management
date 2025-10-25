@@ -184,4 +184,40 @@ export class AuthService {
       throw new Error(error instanceof Error ? error.message : 'Failed to update profile')
     }
   }
+
+  async validateToken(token: string): Promise<User> {
+    try {
+      const user = await ApiClient.post<User>('/auth/validate-token', { token })
+      this.currentUser = user
+      localStorage.setItem('user', JSON.stringify(user))
+      return user
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Token validation failed')
+    }
+  }
+
+  isTokenExpired(): boolean {
+    const token = localStorage.getItem('accessToken')
+    if (!token) return true
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const currentTime = Date.now() / 1000
+      return payload.exp < currentTime
+    } catch {
+      return true
+    }
+  }
+
+  getTokenExpirationTime(): number | null {
+    const token = localStorage.getItem('accessToken')
+    if (!token) return null
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      return payload.exp * 1000 // Convert to milliseconds
+    } catch {
+      return null
+    }
+  }
 }
