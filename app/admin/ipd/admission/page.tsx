@@ -5,15 +5,22 @@ import { useSearchParams } from "next/navigation"
 import { Plus, User, Search, Calendar, MapPin, DollarSign, Users } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PatientSearch, AdmissionForm, NewPatientForm } from "@/components/ipd"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { PatientSearch, AdmissionForm, NewPatientForm, ComprehensiveAdmissionForm } from "@/components/ipd"
 import { Patient } from "@/lib/ipd-types"
 import { AppLayout } from "@/components/app-shell/app-layout"
 import { AuthProvider } from "@/hooks/use-auth"
 
 export default function AdmissionPage() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
-  const [activeTab, setActiveTab] = useState("existing")
+  const [showNewPatientDialog, setShowNewPatientDialog] = useState(false)
   const searchParams = useSearchParams()
 
   // Check for pre-selected patient from URL parameters
@@ -39,7 +46,6 @@ export default function AdmissionPage() {
       }
 
       setSelectedPatient(preSelectedPatient)
-      setActiveTab("existing")
     }
   }, [searchParams])
 
@@ -58,6 +64,37 @@ export default function AdmissionPage() {
                 <Search className="h-4 w-4 mr-2" />
                 Search Records
               </Button>
+              <Dialog open={showNewPatientDialog} onOpenChange={setShowNewPatientDialog}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Patient
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-[98vw] w-full max-h-[98vh] overflow-y-auto rounded-xl border-0 p-0 m-2">
+                  <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-200/60 p-4">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl font-bold text-slate-900">
+                        Complete Patient Admission
+                      </DialogTitle>
+                      <DialogDescription className="text-lg text-slate-600">
+                        Full admission process including patient registration, admission details, and payment
+                        information
+                      </DialogDescription>
+                    </DialogHeader>
+                  </div>
+                  <div className="p-2">
+                    <ComprehensiveAdmissionForm
+                      onSubmit={admissionData => {
+                        console.log("Admission completed:", admissionData)
+                        setShowNewPatientDialog(false)
+                        // Here you would typically redirect to patient management or show success
+                      }}
+                      onCancel={() => setShowNewPatientDialog(false)}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
@@ -110,37 +147,15 @@ export default function AdmissionPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
-                New Patient Admission
+                Patient Admission
               </CardTitle>
-              <CardDescription>Select an existing patient or register a new patient for admission</CardDescription>
+              <CardDescription>Search for existing patients to admit to the inpatient department</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="existing" className="flex items-center gap-2">
-                    <Search className="h-4 w-4" />
-                    Existing Patient
-                  </TabsTrigger>
-                  <TabsTrigger value="new" className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    New Patient
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="existing" className="space-y-6">
-                  <PatientSearch onPatientSelect={setSelectedPatient} selectedPatient={selectedPatient} />
-                  {selectedPatient && <AdmissionForm patient={selectedPatient} isNewPatient={false} />}
-                </TabsContent>
-
-                <TabsContent value="new" className="space-y-6">
-                  <NewPatientForm
-                    onPatientCreated={patient => {
-                      setSelectedPatient(patient)
-                      setActiveTab("existing")
-                    }}
-                  />
-                </TabsContent>
-              </Tabs>
+              <div className="space-y-6">
+                <PatientSearch onPatientSelect={setSelectedPatient} selectedPatient={selectedPatient} />
+                {selectedPatient && <AdmissionForm patient={selectedPatient} isNewPatient={false} />}
+              </div>
             </CardContent>
           </Card>
         </div>

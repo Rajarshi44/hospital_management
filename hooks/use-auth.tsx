@@ -26,6 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if user is already logged in
     const initAuth = async () => {
       const user = authService.getCurrentUser()
+      const token = localStorage.getItem('accessToken')
+      console.log('🔑 Current token in initAuth:', token)
       
       if (user) {
         // Verify token is still valid by fetching current user from API
@@ -72,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthState((prev) => ({ ...prev, isLoading: true }))
     try {
       const user = await authService.login(email, password)
+      const token = localStorage.getItem('accessToken')
+      console.log('🔑 Token after login:', token)
       setAuthState({
         user,
         isLoading: false,
@@ -85,8 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     setAuthState((prev) => ({ ...prev, isLoading: true }))
+    console.log('🔑 Token before logout:', localStorage.getItem('accessToken'))
     try {
       await authService.logout()
+      console.log('🔑 Token after logout:', localStorage.getItem('accessToken'))
       setAuthState({
         user: null,
         isLoading: false,
@@ -121,6 +127,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authService.refreshToken()
       const user = authService.getCurrentUser()
+      const token = localStorage.getItem('accessToken')
+      console.log('🔑 Token after refresh:', token)
       setAuthState((prev) => ({
         ...prev,
         user,
@@ -167,4 +175,32 @@ export function useAuth() {
     throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
+}
+
+// Custom hook to get and log current token
+export function useAuthToken() {
+  const getCurrentToken = () => {
+    const token = localStorage.getItem('accessToken')
+    console.log('🔑 Current access token:', token)
+    return token
+  }
+
+  const getRefreshToken = () => {
+    const refreshToken = localStorage.getItem('refreshToken')
+    console.log('🔄 Current refresh token:', refreshToken)
+    return refreshToken
+  }
+
+  const logAllTokens = () => {
+    const accessToken = localStorage.getItem('accessToken')
+    const refreshToken = localStorage.getItem('refreshToken')
+    console.log('🔑 All tokens:', { accessToken, refreshToken })
+    return { accessToken, refreshToken }
+  }
+
+  return {
+    getCurrentToken,
+    getRefreshToken,
+    logAllTokens
+  }
 }

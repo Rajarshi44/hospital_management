@@ -58,7 +58,7 @@ export function AppSidebar() {
       PHARMACIST: "Pharmacist",
       PATIENT: "Patient",
     }
-    return roleNames[role as keyof typeof roleNames] || role.toLowerCase().replace('_', ' ')
+    return roleNames[role as keyof typeof roleNames] || role.toLowerCase().replace("_", " ")
   }
 
   const getRoleColor = (role: string) => {
@@ -100,13 +100,23 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigation.map((item) => (
+              {navigation.map(item => (
                 <SidebarMenuItem key={item.title}>
                   {item.items ? (
-                    <Collapsible asChild defaultOpen={item.items.some((subItem) => pathname === subItem.url)}>
+                    <Collapsible
+                      asChild
+                      defaultOpen={item.items.some(
+                        subItem => pathname === subItem.url || pathname.startsWith(subItem.url + "/")
+                      )}
+                    >
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
-                          <SidebarMenuButton tooltip={item.title}>
+                          <SidebarMenuButton
+                            tooltip={item.title}
+                            isActive={item.items.some(
+                              subItem => pathname === subItem.url || pathname.startsWith(subItem.url + "/")
+                            )}
+                          >
                             <item.icon />
                             <span>{item.title}</span>
                             {item.badge && (
@@ -121,9 +131,12 @@ export function AppSidebar() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub>
-                            {item.items.map((subItem) => (
+                            {item.items.map(subItem => (
                               <SidebarMenuSubItem key={subItem.title}>
-                                <SidebarMenuSubButton asChild isActive={pathname === subItem.url}>
+                                <SidebarMenuSubButton
+                                  asChild
+                                  isActive={pathname === subItem.url || pathname.startsWith(subItem.url + "/")}
+                                >
                                   <a href={subItem.url}>
                                     <subItem.icon />
                                     <span>{subItem.title}</span>
@@ -177,15 +190,11 @@ export function AppSidebar() {
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
                     <AvatarImage src={user.avatar || "/placeholder.svg"} alt={getUserFullName(user)} />
-                    <AvatarFallback className="rounded-lg">
-                      {getUserInitials(user)}
-                    </AvatarFallback>
+                    <AvatarFallback className="rounded-lg">{getUserInitials(user)}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">{getUserFullName(user)}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {getRoleDisplayName(user.role)}
-                    </span>
+                    <span className="truncate text-xs text-muted-foreground">{getRoleDisplayName(user.role)}</span>
                   </div>
                   <ChevronUp className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -200,9 +209,7 @@ export function AppSidebar() {
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarImage src={user.avatar || "/placeholder.svg"} alt={getUserFullName(user)} />
-                      <AvatarFallback className="rounded-lg">
-                        {getUserInitials(user)}
-                      </AvatarFallback>
+                      <AvatarFallback className="rounded-lg">{getUserInitials(user)}</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">{getUserFullName(user)}</span>

@@ -4,36 +4,92 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { CalendarDays, Clock, Stethoscope, Bed, User, DollarSign, Save, AlertTriangle } from "lucide-react"
+import {
+  CalendarDays,
+  Clock,
+  Stethoscope,
+  Bed,
+  User,
+  DollarSign,
+  Save,
+  AlertTriangle,
+  Upload,
+  Phone,
+  Mail,
+  MapPin,
+  FileText,
+} from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { mockWards, mockBeds, getAvailableBeds } from "@/lib/ipd-mock-data"
 import { mockDoctors, mockDepartments } from "@/lib/schedule-mock-data"
 import { Patient, AdmissionFormData } from "@/lib/ipd-types"
+import { useToast } from "@/hooks/use-toast"
 
-const admissionSchema = z.object({
-  wardId: z.string().min(1, "Please select a ward"),
-  bedId: z.string().min(1, "Please select a bed"),
-  consultingDoctorId: z.string().min(1, "Please select a consulting doctor"),
-  departmentId: z.string().min(1, "Please select a department"),
-  admissionDate: z.string().min(1, "Please select admission date"),
-  admissionTime: z.string().min(1, "Please select admission time"),
-  reasonForAdmission: z.string().min(10, "Please provide reason for admission (minimum 10 characters)"),
-  tentativeDiagnosis: z.string().min(5, "Please provide tentative diagnosis"),
-  initialDeposit: z.number().min(0, "Deposit must be positive").optional(),
-  attendantName: z.string().min(1, "Attendant name is required"),
-  attendantRelation: z.string().min(1, "Attendant relation is required"),
-  attendantPhone: z.string().min(10, "Valid phone number is required"),
-  attendantAddress: z.string().min(10, "Attendant address is required"),
-})
+const admissionSchema = z
+  .object({
+    // Patient Information
+    fullName: z.string().min(2, "Full name is required"),
+    gender: z.enum(["male", "female", "other"], { required_error: "Gender is required" }),
+    dateOfBirth: z.string().min(1, "Date of birth is required"),
+    age: z.number().min(0, "Age must be positive"),
+    contactNumber: z.string().min(10, "Valid contact number is required"),
+    email: z.string().email("Valid email is required").optional().or(z.literal("")),
+    address: z.string().optional(),
+    bloodGroup: z.string().optional(),
+    allergies: z.string().optional(),
+    medicalHistory: z.string().optional(),
+    emergencyContactName: z.string().optional(),
+    emergencyContactNumber: z.string().optional(),
+
+    // Admission Details
+    admissionDate: z.string().min(1, "Admission date is required"),
+    admissionTime: z.string().min(1, "Admission time is required"),
+    admissionType: z.enum(["emergency", "planned", "referral"], { required_error: "Admission type is required" }),
+    departmentId: z.string().min(1, "Department is required"),
+    consultingDoctorId: z.string().min(1, "Consulting doctor is required"),
+    reasonForAdmission: z.string().min(10, "Reason for admission is required (minimum 10 characters)"),
+    tentativeDiagnosis: z.string().optional(),
+    wardId: z.string().min(1, "Ward type is required"),
+    bedId: z.string().min(1, "Bed selection is required"),
+    specialInstructions: z.string().optional(),
+    attendantName: z.string().optional(),
+    attendantRelation: z.string().optional(),
+    attendantPhone: z.string().optional(),
+    attendantContactNumber: z.string().optional(),
+    attendantAddress: z.string().optional(),
+
+    // Payment & Insurance
+    paymentMode: z.enum(["cash", "card", "insurance", "tpa"], { required_error: "Payment mode is required" }),
+    insuranceName: z.string().optional(),
+    policyNumber: z.string().optional(),
+    initialDeposit: z.number().min(0, "Deposit must be positive").optional(),
+    billingNotes: z.string().optional(),
+  })
+  .refine(
+    data => {
+      // Insurance fields required if payment mode is insurance/TPA
+      if (data.paymentMode === "insurance" || data.paymentMode === "tpa") {
+        return data.insuranceName && data.policyNumber
+      }
+      return true
+    },
+    {
+      message: "Insurance name and policy number are required for insurance/TPA payments",
+      path: ["insuranceName"],
+    }
+  )
 
 interface AdmissionFormProps {
   patient: Patient
@@ -42,25 +98,61 @@ interface AdmissionFormProps {
 
 export function AdmissionForm({ patient, isNewPatient }: AdmissionFormProps) {
   const [selectedWard, setSelectedWard] = useState("")
+  const [selectedDepartment, setSelectedDepartment] = useState("")
   const [availableBeds, setAvailableBeds] = useState(getAvailableBeds())
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState("patient-info")
+  const [showInsuranceFields, setShowInsuranceFields] = useState(false)
+  const { toast } = useToast()
+
+  // Calculate age from date of birth
+  const calculateAge = (dob: string) => {
+    const today = new Date()
+    const birthDate = new Date(dob)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
 
   const form = useForm<z.infer<typeof admissionSchema>>({
     resolver: zodResolver(admissionSchema),
     defaultValues: {
-      wardId: "",
-      bedId: "",
-      consultingDoctorId: "",
-      departmentId: "",
+      // Auto-fill patient information
+      fullName: patient.name || "",
+      gender: patient.gender || "male",
+      dateOfBirth: "",
+      age: patient.age || 0,
+      contactNumber: patient.phone || "",
+      email: patient.email || "",
+      address: patient.address || "",
+      bloodGroup: patient.bloodGroup || "",
+      allergies: patient.allergies?.join(", ") || "",
+      medicalHistory: patient.medicalHistory || "",
+      emergencyContactName: patient.emergencyContact?.name || "",
+      emergencyContactNumber: patient.emergencyContact?.phone || "",
+
+      // Admission details defaults
       admissionDate: new Date().toISOString().split("T")[0],
       admissionTime: new Date().toTimeString().split(" ")[0].substring(0, 5),
+      admissionType: "planned",
+      departmentId: "",
+      consultingDoctorId: "",
       reasonForAdmission: "",
-      tentativeDiagnosis: "",
+      wardId: "",
+      bedId: "",
+      specialInstructions: "",
+      attendantName: "",
+      attendantContactNumber: "",
+
+      // Payment defaults
+      paymentMode: "cash",
+      insuranceName: "",
+      policyNumber: "",
       initialDeposit: 0,
-      attendantName: patient.emergencyContact?.name || "",
-      attendantRelation: patient.emergencyContact?.relation || "",
-      attendantPhone: patient.emergencyContact?.phone || "",
-      attendantAddress: patient.address || "",
+      billingNotes: "",
     },
   })
 

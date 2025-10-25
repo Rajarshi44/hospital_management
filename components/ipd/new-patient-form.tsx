@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { User, Phone, MapPin, Heart, Save, UserPlus } from "lucide-react"
+import { User, Phone, MapPin, Heart, Save, UserPlus, Calendar, Mail } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,18 +17,24 @@ import { Separator } from "@/components/ui/separator"
 import { Patient } from "@/lib/ipd-types"
 
 const patientSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  age: z.number().min(1, "Age must be at least 1").max(150, "Age must be less than 150"),
-  gender: z.enum(["male", "female", "other"]),
-  phone: z.string().min(10, "Phone number must be at least 10 digits"),
-  email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
-  address: z.string().min(10, "Address must be at least 10 characters"),
+  // Personal Information
+  fullName: z.string().min(2, "Full name is required"),
+  gender: z.enum(["male", "female", "other"], { required_error: "Gender is required" }),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  age: z.number().min(0, "Age must be positive"),
+  contactNumber: z.string().min(10, "Valid contact number is required"),
+  email: z.string().email("Valid email is required").optional().or(z.literal("")),
+  address: z.string().min(10, "Address is required (minimum 10 characters)"),
+
+  // Medical Information
   bloodGroup: z.string().optional(),
   allergies: z.string().optional(),
   medicalHistory: z.string().optional(),
+
+  // Emergency Contact
   emergencyContactName: z.string().min(2, "Emergency contact name is required"),
   emergencyContactRelation: z.string().min(1, "Emergency contact relation is required"),
-  emergencyContactPhone: z.string().min(10, "Emergency contact phone is required"),
+  emergencyContactNumber: z.string().min(10, "Emergency contact phone is required"),
 })
 
 interface NewPatientFormProps {
@@ -41,10 +47,11 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
   const form = useForm<z.infer<typeof patientSchema>>({
     resolver: zodResolver(patientSchema),
     defaultValues: {
-      name: "",
+      fullName: "",
       age: 0,
       gender: undefined,
-      phone: "",
+      dateOfBirth: "",
+      contactNumber: "",
       email: "",
       address: "",
       bloodGroup: "",
@@ -52,7 +59,7 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
       medicalHistory: "",
       emergencyContactName: "",
       emergencyContactRelation: "",
-      emergencyContactPhone: "",
+      emergencyContactNumber: "",
     },
   })
 
@@ -65,10 +72,10 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
       const newPatient: Patient = {
         id: `patient_${Date.now()}`,
         uhid: `PAT${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`,
-        name: data.name,
+        name: data.fullName,
         age: data.age,
         gender: data.gender,
-        phone: data.phone,
+        phone: data.contactNumber,
         email: data.email || undefined,
         address: data.address,
         bloodGroup: data.bloodGroup || undefined,
@@ -77,7 +84,7 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
         emergencyContact: {
           name: data.emergencyContactName,
           relation: data.emergencyContactRelation,
-          phone: data.emergencyContactPhone,
+          phone: data.emergencyContactNumber,
         },
       }
 
@@ -103,10 +110,10 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="fullName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Full Name *</FormLabel>
@@ -130,6 +137,38 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
                         placeholder="Enter age"
                         {...field}
                         onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date of Birth *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        onChange={e => {
+                          field.onChange(e.target.value)
+                          // Auto-calculate age from date of birth
+                          if (e.target.value) {
+                            const today = new Date()
+                            const birthDate = new Date(e.target.value)
+                            const age = today.getFullYear() - birthDate.getFullYear()
+                            const monthDiff = today.getMonth() - birthDate.getMonth()
+                            const adjustedAge =
+                              monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())
+                                ? age - 1
+                                : age
+                            form.setValue("age", adjustedAge)
+                          }
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -164,7 +203,7 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="phone"
+                name="contactNumber"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Phone Number *</FormLabel>
@@ -336,7 +375,7 @@ export function NewPatientForm({ onPatientCreated }: NewPatientFormProps) {
 
             <FormField
               control={form.control}
-              name="emergencyContactPhone"
+              name="emergencyContactNumber"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Contact Phone *</FormLabel>

@@ -10,30 +10,45 @@ import { AppLayout } from "@/components/app-shell/app-layout"
 import { AuthProvider } from "@/hooks/use-auth"
 
 export default function IPDOverviewPage() {
-  // Calculate dashboard stats
-  const totalAdmissions = mockAdmissions.filter(a => a.status !== "discharged").length
-  const criticalPatients = mockAdmissions.filter(a => a.status === "critical").length
-  const dischargeReady = mockAdmissions.filter(
-    a => a.status === "stable" && getDaysAdmitted(a.admissionDate) >= 2
-  ).length
-  const newAdmissionsToday = mockAdmissions.filter(
-    a => new Date(a.admissionDate).toDateString() === new Date().toDateString()
-  ).length
+  // Calculate dashboard stats with error handling
+  let totalAdmissions = 0
+  let criticalPatients = 0
+  let dischargeReady = 0
+  let newAdmissionsToday = 0
+  let recentAdmissions: any[] = []
+  let wardStats: any[] = []
 
-  const recentAdmissions = mockAdmissions
-    .filter(a => a.status !== "discharged")
-    .sort((a, b) => new Date(b.admissionDate).getTime() - new Date(a.admissionDate).getTime())
-    .slice(0, 5)
+  try {
+    totalAdmissions = mockAdmissions?.filter(a => a.status !== "discharged")?.length || 0
+    criticalPatients = mockAdmissions?.filter(a => a.status === "critical")?.length || 0
+    dischargeReady = mockAdmissions?.filter(a => a.status === "stable")?.length || 0
 
-  // Ward occupancy stats
-  const wardStats = mockWards.map(ward => {
-    const occupancyRate = Math.round((ward.occupiedBeds / ward.totalBeds) * 100)
+    // Simplified date calculation
+    const today = new Date().toDateString()
+    newAdmissionsToday =
+      mockAdmissions?.filter(a => {
+        try {
+          return new Date(a.admissionDate).toDateString() === today
+        } catch (e) {
+          return false
+        }
+      })?.length || 0
 
-    return {
-      ...ward,
-      occupancyRate,
-    }
-  })
+    recentAdmissions = mockAdmissions?.filter(a => a.status !== "discharged")?.slice(0, 5) || []
+
+    // Ward occupancy stats with error handling
+    wardStats =
+      mockWards?.map(ward => {
+        const occupancyRate = ward.totalBeds > 0 ? Math.round((ward.occupiedBeds / ward.totalBeds) * 100) : 0
+
+        return {
+          ...ward,
+          occupancyRate,
+        }
+      }) || []
+  } catch (error) {
+    console.error("Error loading IPD dashboard data:", error)
+  }
 
   return (
     <AuthProvider>
