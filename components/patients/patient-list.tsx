@@ -19,7 +19,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface PatientListProps {
   onPatientSelect: (patient: Patient) => void
-  onNewPatient: () => void
+  onNewPatient?: () => void
   refreshTrigger?: number
 }
 
@@ -83,17 +83,11 @@ export function PatientList({ onPatientSelect, onNewPatient, refreshTrigger }: P
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>All Patients</CardTitle>
-            <CardDescription>
-              {filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''} found
-            </CardDescription>
-          </div>
-          <Button onClick={onNewPatient}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add New Patient
-          </Button>
+        <div>
+          <CardTitle>All Patients</CardTitle>
+          <CardDescription>
+            {filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''} found
+          </CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -124,12 +118,6 @@ export function PatientList({ onPatientSelect, onNewPatient, refreshTrigger }: P
               <p className="text-muted-foreground">
                 {searchQuery ? "No patients found matching your search." : "No patients in the system yet."}
               </p>
-              {!searchQuery && (
-                <Button onClick={onNewPatient} className="mt-4">
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add First Patient
-                </Button>
-              )}
             </div>
           ) : (
             <div className="rounded-md border">

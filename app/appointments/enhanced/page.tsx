@@ -26,7 +26,7 @@ import { mockAppointments, getAppointmentStats, filterAppointments } from "@/lib
 import { mockDoctors, mockDepartments } from "@/lib/schedule-mock-data"
 import { Appointment, AppointmentStatus } from "@/lib/appointments-types"
 
-export default function AppointmentsPage() {
+export default function EnhancedAppointmentsPage() {
   const { toast } = useToast()
   const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments)
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>(mockAppointments)
@@ -48,10 +48,10 @@ export default function AppointmentsPage() {
   useEffect(() => {
     const filtered = filterAppointments(appointments, {
       patientSearch,
-      doctorId: doctorFilter === "all" ? "" : doctorFilter,
-      departmentId: departmentFilter === "all" ? "" : departmentFilter,
-      status: statusFilter === "all" ? "" : statusFilter,
-      mode: modeFilter === "all" ? "" : modeFilter,
+      doctorId: doctorFilter,
+      departmentId: departmentFilter,
+      status: statusFilter,
+      mode: modeFilter,
       dateFrom,
       dateTo,
     })
@@ -227,12 +227,12 @@ export default function AppointmentsPage() {
                   />
                 </div>
 
-                <Select value={doctorFilter || undefined} onValueChange={(value) => setDoctorFilter(value)}>
+                <Select value={doctorFilter} onValueChange={setDoctorFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Doctors" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Doctors</SelectItem>
+                    <SelectItem value="">All Doctors</SelectItem>
                     {mockDoctors.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
                         Dr. {doctor.name}
@@ -241,12 +241,12 @@ export default function AppointmentsPage() {
                   </SelectContent>
                 </Select>
 
-                <Select value={departmentFilter || undefined} onValueChange={(value) => setDepartmentFilter(value)}>
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Departments" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
+                    <SelectItem value="">All Departments</SelectItem>
                     {mockDepartments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
@@ -255,12 +255,12 @@ export default function AppointmentsPage() {
                   </SelectContent>
                 </Select>
 
-                <Select value={statusFilter || undefined} onValueChange={(value) => setStatusFilter(value)}>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="">All Status</SelectItem>
                     <SelectItem value="Scheduled">Scheduled</SelectItem>
                     <SelectItem value="Checked-in">Checked-in</SelectItem>
                     <SelectItem value="In Progress">In Progress</SelectItem>
@@ -269,12 +269,12 @@ export default function AppointmentsPage() {
                   </SelectContent>
                 </Select>
 
-                <Select value={modeFilter || undefined} onValueChange={(value) => setModeFilter(value)}>
+                <Select value={modeFilter} onValueChange={setModeFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Modes" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Modes</SelectItem>
+                    <SelectItem value="">All Modes</SelectItem>
                     <SelectItem value="Offline">In-Person</SelectItem>
                     <SelectItem value="Tele/Video">Tele/Video</SelectItem>
                   </SelectContent>

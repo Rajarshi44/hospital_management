@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 
 interface PatientSearchProps {
   onPatientSelect: (patient: Patient) => void
-  onNewPatient: () => void
+  onNewPatient?: () => void
   refreshTrigger?: number
 }
 
@@ -89,10 +89,6 @@ export function PatientSearch({ onPatientSelect, onNewPatient, refreshTrigger }:
             disabled={isLoading}
           />
         </div>
-        <Button onClick={onNewPatient}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Patient
-        </Button>
       </div>
 
       {/* Search Results */}
@@ -109,9 +105,6 @@ export function PatientSearch({ onPatientSelect, onNewPatient, refreshTrigger }:
               <CardContent className="text-center py-8">
                 <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">No patients found matching your search.</p>
-                <Button onClick={onNewPatient} className="mt-4">
-                  Add New Patient
-                </Button>
               </CardContent>
             </Card>
           )}
@@ -192,15 +185,11 @@ export function PatientSearch({ onPatientSelect, onNewPatient, refreshTrigger }:
         <Card>
           <CardHeader>
             <CardTitle>Patient Management</CardTitle>
-            <CardDescription>Search for existing patients or add a new patient to the system.</CardDescription>
+            <CardDescription>Search for existing patients in the system.</CardDescription>
           </CardHeader>
           <CardContent className="text-center py-8">
             <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground mb-4">Start typing to search for patients</p>
-            <Button onClick={onNewPatient}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Patient
-            </Button>
+            <p className="text-muted-foreground">Start typing to search for patients</p>
           </CardContent>
         </Card>
       )}

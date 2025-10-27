@@ -90,11 +90,6 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         ],
       },
       {
-        title: "Pharmacy / Inventory",
-        url: "/pharmacy",
-        icon: Pill,
-      },
-      {
         title: "Billing & Payments",
         url: "/billing",
         icon: CreditCard,
@@ -272,16 +267,6 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         url: "/prescriptions",
         icon: Pill,
         badge: "7",
-      },
-      {
-        title: "Inventory",
-        url: "/inventory",
-        icon: ClipboardList,
-        items: [
-          { title: "Stock Levels", url: "/inventory/stock", icon: ClipboardList },
-          { title: "Low Stock", url: "/inventory/low-stock", icon: ClipboardList, badge: "12" },
-          { title: "Orders", url: "/inventory/orders", icon: Receipt },
-        ],
       },
       {
         title: "Patients",

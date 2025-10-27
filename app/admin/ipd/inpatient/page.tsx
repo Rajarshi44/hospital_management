@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Users, Bed, Filter, Search, Plus, Activity, FileText, ArrowUpDown, AlertTriangle, Check } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Users, Bed, Filter, Search, Plus, Activity, FileText, ArrowUpDown, AlertTriangle, Check, ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -23,6 +24,7 @@ import { AppLayout } from "@/components/app-shell/app-layout"
 import { AuthProvider } from "@/hooks/use-auth"
 
 export default function InpatientListPage() {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [doctorFilter, setDoctorFilter] = useState("all")
@@ -86,6 +88,10 @@ export default function InpatientListPage() {
               <p className="text-muted-foreground">Monitor and manage all admitted patients</p>
             </div>
             <div className="flex items-center space-x-2">
+              <Button variant="outline" onClick={() => router.push("/admin/ipd")}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Dashboard
+              </Button>
               <Button variant="outline" size="sm">
                 <FileText className="h-4 w-4 mr-2" />
                 Export Report

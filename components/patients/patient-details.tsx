@@ -28,7 +28,7 @@ import { useToast } from "@/hooks/use-toast"
 
 interface PatientDetailsProps {
   patient: Patient
-  onEdit: () => void
+  onEdit?: () => void
   onClose: () => void
 }
 
@@ -133,10 +133,6 @@ export function PatientDetails({ patient, onEdit, onClose }: PatientDetailsProps
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={onEdit} variant="outline">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
               <Button onClick={handleToggleStatus} variant="outline" disabled={isTogglingStatus}>
                 {isTogglingStatus ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

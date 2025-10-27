@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Search, FileText, Download, UserCheck, Clock, AlertTriangle } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Search, FileText, Download, UserCheck, Clock, AlertTriangle, ArrowLeft } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +22,7 @@ import { AppLayout } from "@/components/app-shell/app-layout"
 import { AuthProvider } from "@/hooks/use-auth"
 
 export default function DischargePage() {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedAdmission, setSelectedAdmission] = useState<string | null>(null)
 
@@ -89,6 +91,10 @@ export default function DischargePage() {
               <p className="text-muted-foreground">Process patient discharges and generate discharge summaries</p>
             </div>
             <div className="flex items-center space-x-2">
+              <Button variant="outline" onClick={() => router.push("/admin/ipd")}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Dashboard
+              </Button>
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
                 Discharge Reports
