@@ -64,12 +64,12 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
           { title: "OPD Patients", url: "/patients", icon: Users },
           {
             title: "IPD Management",
-            url: "/admin/ipd",
+            url: "/ipd",
             icon: Bed,
             items: [
-              { title: "Admission", url: "/admin/ipd/admission", icon: UserCheck },
-              { title: "Inpatient List", url: "/admin/ipd/inpatient", icon: Activity },
-              { title: "Discharge", url: "/admin/ipd/discharge", icon: FileText },
+              { title: "Admission", url: "/ipd/admission", icon: UserCheck },
+              { title: "Inpatient List", url: "/ipd/inpatient", icon: Activity },
+              { title: "Discharge", url: "/ipd/discharge", icon: FileText },
             ],
           },
           { title: "Patient History", url: "/patients/history", icon: FileText },
