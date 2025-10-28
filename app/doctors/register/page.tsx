@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { AppLayout } from "@/components/app-shell/app-layout"
-import { DoctorRegistrationForm } from "@/components/doctors/doctor-registration-form-enhanced"
+import { DoctorRegistrationFormSimplified } from "@/components/doctors/doctor-registration-form-simplified"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 
@@ -30,14 +30,14 @@ export default function RegisterDoctorPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Register New Doctor</h1>
             <p className="text-muted-foreground">
-              Complete doctor registration with comprehensive information and verification
+              Enter doctor information to register them in the system
             </p>
           </div>
         </div>
 
         {/* Registration Form */}
         <div className="max-w-5xl mx-auto">
-          <DoctorRegistrationForm onSuccess={handleSuccess} onCancel={handleCancel} />
+          <DoctorRegistrationFormSimplified onSuccess={handleSuccess} onCancel={handleCancel} />
         </div>
       </div>
     </AppLayout>

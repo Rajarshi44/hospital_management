@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Search, Filter, Download, Eye, Edit, Trash2, UserCheck } from "lucide-react"
+import { Plus, Search, Filter, Download, Eye, Edit, Trash2, UserCheck, Crown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,49 +9,53 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { getDoctors, deleteDoctor, getDepartments, getSpecializations, getDoctorStats } from "@/lib/doctor-service"
-import type { Doctor } from "@/lib/types"
+import { useDoctor, type Doctor } from "@/hooks/use-doctor"
+import { useDepartments } from "@/hooks/use-departments"
 import { AppLayout } from "@/components/app-shell/app-layout"
+import { DoctorDetailsModal } from "@/components/doctors/doctor-details-modal"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 
 export default function DoctorsPage() {
-  const [doctors, setDoctors] = useState<Doctor[]>([])
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([])
-  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedDepartment, setSelectedDepartment] = useState<string>("")
   const [selectedSpecialization, setSelectedSpecialization] = useState<string>("")
   const [statusFilter, setStatusFilter] = useState<string>("")
-  const [departments, setDepartments] = useState<string[]>([])
-  const [specializations, setSpecializations] = useState<string[]>([])
-  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, byDepartment: {} })
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showHODDialog, setShowHODDialog] = useState(false)
+  const [selectedDoctorForHOD, setSelectedDoctorForHOD] = useState<Doctor | null>(null)
+  
+  const { doctors, loading, fetchDoctors, deleteDoctor: deleteDoctorFromAPI, updateDoctor } = useDoctor()
+  const { departments: departmentsList, assignHeadDoctor, removeHeadDoctor } = useDepartments()
   const { toast } = useToast()
 
+  // Extract unique departments and specializations from doctors data
+  const departments = Array.from(new Set(doctors.map(d => d.primaryDepartment?.name || d.department).filter(Boolean))) as string[]
+  const specializations = Array.from(new Set(doctors.map(d => d.specialization)))
+  
+  // Calculate stats
+  const stats = {
+    total: doctors.length,
+    active: doctors.filter(d => d.isActive).length,
+    inactive: doctors.filter(d => !d.isActive).length,
+  }
+
   useEffect(() => {
-    loadDoctors()
-    setDepartments(getDepartments())
-    setSpecializations(getSpecializations())
-    setStats(getDoctorStats())
-  }, [])
+    fetchDoctors()
+  }, [fetchDoctors])
 
   useEffect(() => {
     filterDoctors()
   }, [doctors, searchQuery, selectedDepartment, selectedSpecialization, statusFilter])
-
-  const loadDoctors = async () => {
-    try {
-      setLoading(true)
-      const data = await getDoctors()
-      setDoctors(data)
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load doctors",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const filterDoctors = () => {
     let filtered = doctors
@@ -63,13 +67,12 @@ export default function DoctorsPage() {
           doctor.firstName.toLowerCase().includes(query) ||
           doctor.lastName.toLowerCase().includes(query) ||
           doctor.specialization.toLowerCase().includes(query) ||
-          doctor.department.toLowerCase().includes(query) ||
-          doctor.employeeId.toLowerCase().includes(query)
+          ((doctor.primaryDepartment?.name || doctor.department) && (doctor.primaryDepartment?.name || doctor.department)!.toLowerCase().includes(query))
       )
     }
 
     if (selectedDepartment && selectedDepartment !== "all") {
-      filtered = filtered.filter(doctor => doctor.department === selectedDepartment)
+      filtered = filtered.filter(doctor => (doctor.primaryDepartment?.name || doctor.department) === selectedDepartment)
     }
 
     if (selectedSpecialization && selectedSpecialization !== "all") {
@@ -89,12 +92,12 @@ export default function DoctorsPage() {
 
   const handleDeleteDoctor = async (doctorId: string) => {
     try {
-      await deleteDoctor(doctorId)
+      await deleteDoctorFromAPI(doctorId)
       toast({
         title: "Success",
         description: "Doctor deleted successfully",
       })
-      loadDoctors()
+      fetchDoctors()
     } catch (error) {
       toast({
         title: "Error",
@@ -109,6 +112,82 @@ export default function DoctorsPage() {
     setSelectedDepartment("")
     setSelectedSpecialization("")
     setStatusFilter("")
+  }
+
+  const handleAssignHOD = (doctor: Doctor) => {
+    setSelectedDoctorForHOD(doctor)
+    setShowHODDialog(true)
+  }
+
+  const confirmAssignHOD = async (departmentId: string) => {
+    if (!selectedDoctorForHOD) return
+    
+    try {
+      // Find the department to get its name
+      const department = departmentsList.find(dept => dept.id === departmentId)
+      if (!department) {
+        toast({
+          title: "Error",
+          description: "Department not found",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // First, update the doctor's department if it's different
+      const currentDepartmentName = selectedDoctorForHOD.primaryDepartment?.name || selectedDoctorForHOD.department;
+      if (currentDepartmentName !== department.name) {
+        await updateDoctor(selectedDoctorForHOD.id, { department: department.name })
+      }
+
+      // Then assign as HOD
+      await assignHeadDoctor(departmentId, selectedDoctorForHOD.id)
+      
+      toast({
+        title: "Success",
+        description: `Dr. ${selectedDoctorForHOD.firstName} ${selectedDoctorForHOD.lastName} has been assigned as Head of ${department.name} Department`,
+      })
+      
+      // Refresh doctors list to reflect the department change
+      fetchDoctors()
+      
+      setShowHODDialog(false)
+      setSelectedDoctorForHOD(null)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to assign Head of Department",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleRemoveHOD = async (doctor: Doctor, departmentId: string) => {
+    if (confirm(`Remove Dr. ${doctor.firstName} ${doctor.lastName} as Head of Department?`)) {
+      try {
+        await removeHeadDoctor(departmentId)
+        toast({
+          title: "Success",
+          description: "Head of Department removed successfully",
+        })
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to remove Head of Department",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  // Check if doctor is HOD of any department
+  const isHOD = (doctorId: string) => {
+    return departmentsList.some(dept => dept.headDoctorId === doctorId)
+  }
+
+  // Get department where doctor is HOD
+  const getHODDepartment = (doctorId: string) => {
+    return departmentsList.find(dept => dept.headDoctorId === doctorId)
   }
 
   if (loading) {
@@ -271,7 +350,6 @@ export default function DoctorsPage() {
                 >
                   <div className="flex items-center gap-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={doctor.profileImage} alt={`${doctor.firstName} ${doctor.lastName}`} />
                       <AvatarFallback>
                         {doctor.firstName[0]}
                         {doctor.lastName[0]}
@@ -285,15 +363,26 @@ export default function DoctorsPage() {
                         <Badge variant={doctor.isActive ? "default" : "secondary"}>
                           {doctor.isActive ? "Active" : "Inactive"}
                         </Badge>
+                        {isHOD(doctor.id) && (
+                          <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                            <Crown className="w-3 h-3 mr-1" />
+                            HOD
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{doctor.employeeId}</span>
+                        <span>ID: {doctor.id}</span>
                         <span>{doctor.specialization}</span>
-                        <span>{doctor.department}</span>
+                        <span>{doctor.primaryDepartment?.name || doctor.department || "No Department"}</span>
                         <span>{doctor.experience} years exp.</span>
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {doctor.phone} • {doctor.email}
+                        {isHOD(doctor.id) && (
+                          <span className="ml-2 text-yellow-600">
+                            • Head of {getHODDepartment(doctor.id)?.name}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -302,10 +391,8 @@ export default function DoctorsPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        toast({
-                          title: "View Details",
-                          description: `Viewing details for Dr. ${doctor.firstName} ${doctor.lastName}`,
-                        })
+                        setSelectedDoctor(doctor)
+                        setShowDetailsModal(true)
                       }}
                     >
                       <Eye className="h-4 w-4" />
@@ -313,6 +400,27 @@ export default function DoctorsPage() {
                     <Button variant="ghost" size="sm">
                       <Edit className="h-4 w-4" />
                     </Button>
+                    {isHOD(doctor.id) ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const dept = getHODDepartment(doctor.id)
+                          if (dept) handleRemoveHOD(doctor, dept.id)
+                        }}
+                        className="text-yellow-600"
+                      >
+                        <Crown className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAssignHOD(doctor)}
+                      >
+                        <UserCheck className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -334,6 +442,64 @@ export default function DoctorsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Doctor Details Modal */}
+      {selectedDoctor && (
+        <DoctorDetailsModal
+          doctor={selectedDoctor}
+          open={showDetailsModal}
+          onOpenChange={(open) => {
+            setShowDetailsModal(open)
+            if (!open) setSelectedDoctor(null)
+          }}
+        />
+      )}
+
+      {/* HOD Assignment Dialog */}
+      <Dialog open={showHODDialog} onOpenChange={setShowHODDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Assign Head of Department</DialogTitle>
+            <DialogDescription>
+              Assign Dr. {selectedDoctorForHOD?.firstName} {selectedDoctorForHOD?.lastName} as Head of Department.
+              {selectedDoctorForHOD?.department && (
+                <span className="block mt-1 text-sm">
+                  Current department: {selectedDoctorForHOD.department}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="department">Select Department</Label>
+              <Select onValueChange={confirmAssignHOD}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departmentsList.map(dept => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name} 
+                      {dept.headDoctorId && " (Currently has HOD)"}
+                      {(selectedDoctorForHOD?.department !== dept.name && selectedDoctorForHOD?.primaryDepartment?.name !== dept.name) && " (Will transfer doctor)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedDoctorForHOD?.department && (
+              <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
+                <strong>Note:</strong> If you select a different department, the doctor will be transferred to that department and then assigned as HOD.
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowHODDialog(false)}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   )
 }
