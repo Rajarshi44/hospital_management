@@ -72,7 +72,7 @@ export class AuthService {
 
   async login(email: string, password: string): Promise<User> {
     try {
-      const response = await ApiClient.post<AuthResponse>('/auth/login', {
+      const response = await ApiClient.post<AuthResponse>('auth/login', {
         email,
         password,
       })
@@ -122,7 +122,7 @@ export class AuthService {
 
   async register(userData: RegisterData): Promise<User> {
     try {
-      const response = await ApiClient.post<AuthResponse>('/auth/register', userData)
+      const response = await ApiClient.post<AuthResponse>('auth/register', userData)
 
       // Store tokens
       localStorage.setItem('accessToken', response.accessToken)
@@ -145,7 +145,7 @@ export class AuthService {
     }
 
     try {
-      const response = await ApiClient.post<AuthResponse>('/auth/refresh', {
+      const response = await ApiClient.post<AuthResponse>('auth/refresh', {
         refreshToken,
       })
 
@@ -165,7 +165,7 @@ export class AuthService {
 
   async getCurrentUserFromAPI(): Promise<User> {
     try {
-      const user = await ApiClient.get<User>('/auth/me', true)
+      const user = await ApiClient.get<User>('auth/me', true)
       this.currentUser = user
       localStorage.setItem('user', JSON.stringify(user))
       return user
@@ -187,7 +187,7 @@ export class AuthService {
 
   async validateToken(token: string): Promise<User> {
     try {
-      const user = await ApiClient.post<User>('/auth/validate-token', { token })
+      const user = await ApiClient.post<User>('auth/validate-token', { token })
       this.currentUser = user
       localStorage.setItem('user', JSON.stringify(user))
       return user

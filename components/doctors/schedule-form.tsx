@@ -8,8 +8,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Schedule, ScheduleFormData } from "@/hooks/use-schedule"
-import { Doctor } from "@/hooks/use-doctor"
+import { Schedule, ScheduleFormData } from "@/hooks/doctor/use-schedule"
+import { Doctor } from "@/hooks/doctor/use-doctor"
 
 const scheduleFormSchema = z.object({
   doctorId: z.string().min(1, "Doctor is required"),

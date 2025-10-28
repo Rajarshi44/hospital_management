@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { type Doctor } from "@/hooks/use-doctor"
+import { type Doctor } from "@/hooks/doctor/use-doctor"
 import { format } from "date-fns"
 import { 
   Mail, 

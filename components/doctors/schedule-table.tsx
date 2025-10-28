@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Edit, Trash2, Clock, User, Building } from "lucide-react"
-import { Schedule } from "@/hooks/use-schedule"
+import { Schedule } from "@/hooks/doctor/use-schedule"
 
 interface ScheduleTableProps {
   schedules: Schedule[]

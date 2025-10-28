@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { toast } from './use-toast';
+import { toast } from '../use-toast';
 
 export interface Department {
   id: string;

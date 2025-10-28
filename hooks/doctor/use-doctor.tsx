@@ -76,12 +76,15 @@ export const useDoctor = (): UseDoctorReturn => {
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+  const API_BASE_URL = "http://localhost:5000"
 
   const getAuthToken = () => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("accessToken")
+      const token = localStorage.getItem("accessToken")
+      console.log("👩‍⚕️ useDoctor.getAuthToken() - Token:", token ? "EXISTS" : "NULL")
+      return token
     }
+    console.log("👩‍⚕️ useDoctor.getAuthToken() - Window undefined, returning null")
     return null
   }
 

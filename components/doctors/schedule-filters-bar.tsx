@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Filter, X } from "lucide-react"
-import { ScheduleFilters } from "@/hooks/use-schedule"
-import { Doctor } from "@/hooks/use-doctor"
+import { ScheduleFilters } from "@/hooks/doctor/use-schedule"
+import { Doctor } from "@/hooks/doctor/use-doctor"
 import { Department } from "@/hooks/use-departments"
 
 interface ScheduleFiltersBarProps {

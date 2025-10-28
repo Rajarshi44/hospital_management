@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Clock, User, Building, Calendar } from "lucide-react"
-import { Schedule } from "@/hooks/use-schedule"
+import { Schedule } from "@/hooks/doctor/use-schedule"
 
 interface WorkingHoursViewProps {
   schedules: Schedule[]

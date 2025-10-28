@@ -62,7 +62,7 @@ export const useSchedule = (): UseScheduleReturn => {
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+  const API_BASE_URL = "http://localhost:5000"
 
   const getAuthToken = () => {
     if (typeof window !== "undefined") {

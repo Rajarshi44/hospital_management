@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Clock, User, Building, Calendar, RefreshCw, Edit, Save, X } from "lucide-react"
-import { useDoctor, Doctor } from "@/hooks/use-doctor"
+import { useDoctor, Doctor } from "@/hooks/doctor/use-doctor"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 
