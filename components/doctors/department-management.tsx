@@ -220,7 +220,7 @@ export function DepartmentManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No head assigned</SelectItem>
+                          <SelectItem value="none">No head assigned</SelectItem>
                           {doctors.map((doctor) => (
                             <SelectItem key={doctor.id} value={doctor.id}>
                               Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization}

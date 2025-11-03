@@ -31,9 +31,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { PatientSearchSelect, DoctorTimeSlotPicker, PrescriptionBuilder, VitalsCalculator } from "@/components/opd";
+import { PatientSearchSelect, PrescriptionBuilder, VitalsCalculator } from "@/components/opd";
+import { DoctorTimeSlotPicker } from "@/components/opd/doctor-time-slot-picker-new";
 import { opdService } from "@/lib/opd-service";
 import { generateVisitId } from "@/lib/opd-mock-data";
+import { useOPDVisit } from "@/hooks/useOPDVisit";
 import type { OPDVisitForm as OPDVisitFormType, Gender, BloodGroup, IdProofType, VisitType, ReferralSource, AppointmentMode, VisitPriority, VisitStatus, PaymentMode, PaymentStatus, InvestigationUrgency, Department } from "@/lib/opd-types";
 import type { Patient } from "@/lib/patient-service";
 
@@ -60,7 +62,7 @@ const opdVisitSchema = z.object({
   visit: z.object({
     visitId: z.string(),
     visitDate: z.string(),
-    department: z.string(),
+    department: z.string().min(1, "Department is required"),
     consultingDoctor: z.string().min(1, "Consulting doctor is required"),
     doctorSpecialization: z.string().optional(),
     visitType: z.enum(["OPD", "EMERGENCY", "REVIEW"]),
@@ -179,9 +181,26 @@ interface OPDVisitFormProps {
 
 export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormProps) {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  
+  // Initialize OPD Visit hook
+  const { createOPDVisit, isSubmitting } = useOPDVisit({
+    onSuccess: (visitId: string) => {
+      toast({
+        title: "Success!",
+        description: `OPD visit ${visitId} created successfully with auto patient registration.`,
+      });
+      onSuccess?.(visitId);
+    },
+    onError: (error: string) => {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    },
+  });
   
   // Collapsible section states
   const [openSections, setOpenSections] = useState({
@@ -206,6 +225,15 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
       age--;
     }
     return age;
+  };
+
+  // Generate token number based on doctor and date
+  const generateTokenNumber = (doctorName: string): string => {
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const timeStr = today.getHours().toString().padStart(2, '0') + today.getMinutes().toString().padStart(2, '0');
+    const doctorInitials = doctorName.split(' ').map(name => name.charAt(0)).join('').toUpperCase();
+    return `${doctorInitials}-${dateStr}-${timeStr}`;
   };
 
   // Initialize form with default values
@@ -233,7 +261,7 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
       visit: {
         visitId: generateVisitId(),
         visitDate: new Date().toISOString(),
-        department: "General Medicine",
+        department: "",
         consultingDoctor: "",
         doctorSpecialization: "",
         visitType: "OPD",
@@ -393,35 +421,22 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
   };
 
   const onSubmit = async (data: OPDVisitFormType) => {
-    setIsSubmitting(true);
     try {
-      const result = await opdService.createVisit(data);
+      // Use the new hook to create OPD visit with auto patient creation
+      const visitId = await createOPDVisit(data);
       
       // Clear draft after successful submission
       const userId = "current-user";
       opdService.clearDraft(userId);
 
-      toast({
-        title: "Success!",
-        description: `OPD visit ${result.visit.visitId} created successfully.`,
-      });
-
-      if (onSuccess) {
-        onSuccess(result.visit.visitId);
-      }
-
       // Reset form for new visit
       form.reset();
       setSelectedPatient(null);
+      
+      // Success is handled by the hook's onSuccess callback
     } catch (error) {
       console.error("Error creating OPD visit:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create OPD visit",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+      // Error is handled by the hook's onError callback
     }
   };
 
@@ -766,14 +781,34 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
             <CollapsibleContent>
               <CardContent className="space-y-6 pt-6">
                 <DoctorTimeSlotPicker
-                  selectedDepartment={form.watch("visit.department") as Department}
+                  selectedDepartment={form.watch("visit.department")}
                   selectedDoctorId={form.watch("visit.consultingDoctor")}
-                  selectedSlot={form.watch("visit.appointmentSlot")}
+                  selectedSlot={form.watch("visit.appointmentSlot") || ""}
                   visitDate={form.watch("visit.visitDate")}
-                  onDepartmentChange={(dept) => form.setValue("visit.department", dept)}
-                  onDoctorChange={(doctorId, specialization) => {
+                  onDepartmentChange={(departmentId, departmentName) => {
+                    form.setValue("visit.department", departmentId);
+                  }}
+                  onDoctorChange={(doctorId, specialization, consultationFee, doctorName) => {
                     form.setValue("visit.consultingDoctor", doctorId);
                     form.setValue("visit.doctorSpecialization", specialization);
+                    
+                    // Auto-generate and set token number
+                    const tokenNumber = generateTokenNumber(doctorName);
+                    form.setValue("visit.tokenNumber", tokenNumber);
+                    
+                    // Auto-fill billing information
+                    form.setValue("billing.consultationFee", consultationFee);
+                    
+                    // Recalculate total payable
+                    const currentValues = form.getValues("billing");
+                    const total = consultationFee + (currentValues.investigationEstimate || 0) + (currentValues.procedureCharges || 0) - (currentValues.discountAmount || 0);
+                    form.setValue("billing.totalPayable", Math.max(0, total));
+                    
+                    // Show success message
+                    toast({
+                      title: "Doctor Selected",
+                      description: `${doctorName} - Fee: ₹${consultationFee} - Token: ${tokenNumber}`,
+                    });
                   }}
                   onSlotChange={(slot) => form.setValue("visit.appointmentSlot", slot)}
                 />

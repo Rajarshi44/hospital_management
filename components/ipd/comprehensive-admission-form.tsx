@@ -983,7 +983,7 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
                                 </SelectItem>
                               ))}
                               {availableBeds.length === 0 && (
-                                <SelectItem value="" disabled>
+                                <SelectItem value="no-beds" disabled>
                                   No beds available for selected ward type
                                 </SelectItem>
                               )}

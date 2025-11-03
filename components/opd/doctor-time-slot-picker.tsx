@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, AlertTriangle } from "lucide-react";
+import { Clock, AlertTriangle, User, Calendar, ChevronRight } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -12,25 +12,18 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getDoctors } from "@/lib/doctor-service";
-import { getDoctorSlots, mockDoctorSlots } from "@/lib/opd-mock-data";
-import type { TimeSlot } from "@/lib/opd-types";
-import type { Department } from "@/lib/opd-types";
-import type { Doctor as DoctorType } from "@/lib/types";
-
-interface Doctor {
-  id: string;
-  name: string;
-  specialization: string;
-  department: string;
-}
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDepartments } from "@/hooks/doctor/use-departments";
+import { useAppointments, type Doctor, type TimeSlot } from "@/hooks/useAppointments";
 
 interface DoctorTimeSlotPickerProps {
-  selectedDepartment?: Department;
+  selectedDepartment?: string;
   selectedDoctorId?: string;
   selectedSlot?: string;
   visitDate: string;
-  onDepartmentChange: (department: Department) => void;
+  onDepartmentChange: (departmentId: string, departmentName: string) => void;
   onDoctorChange: (doctorId: string, specialization: string) => void;
   onSlotChange: (slot: string) => void;
 }

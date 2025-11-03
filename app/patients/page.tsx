@@ -8,7 +8,9 @@ import { PatientSearch } from "@/components/patients/patient-search"
 import { PatientList } from "@/components/patients/patient-list"
 import { PatientDetails } from "@/components/patients/patient-details"
 import { OPDVisitForm } from "@/components/opd/opd-visit-form"
+import { OPDPatientList } from "@/components/patients/opd-patient-list"
 import type { Patient } from "@/lib/patient-service"
+import type { EnhancedPatient } from "@/hooks/usePatient"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, UserPlus, Stethoscope } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,6 +29,36 @@ export default function PatientsPage() {
   const handlePatientSelect = (patient: Patient) => {
     setSelectedPatient(patient)
     setViewMode("details")
+  }
+
+  const handleOPDPatientSelect = (patient: EnhancedPatient) => {
+    // Convert EnhancedPatient to Patient for compatibility
+    const compatiblePatient: Patient = {
+      id: patient.id,
+      userId: '',
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      email: patient.email || '',
+      phone: patient.phone,
+      dateOfBirth: new Date(patient.dateOfBirth),
+      gender: patient.gender as any,
+      address: patient.address,
+      city: patient.city || '',
+      state: patient.state || '',
+      zipCode: patient.zipCode || '',
+      emergencyContactName: patient.emergencyContact.name || '',
+      emergencyContactPhone: patient.emergencyContact.phone || '',
+      emergencyContactRelationship: patient.emergencyContact.relationship || '',
+      bloodGroup: patient.bloodGroup || null,
+      allergies: patient.allergies || null,
+      chronicConditions: patient.medicalHistory.chronicConditions || null,
+      currentMedications: patient.medicalHistory.currentMedications || null,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    setSelectedPatient(compatiblePatient);
+    setViewMode("details");
   }
 
   const handleNewOPDVisit = () => {
@@ -90,32 +122,10 @@ export default function PatientsPage() {
               </div>
 
               <TabsContent value="opd-list" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>OPD Patient Visits</CardTitle>
-                        <CardDescription>
-                          Outpatient department consultations and visits
-                        </CardDescription>
-                      </div>
-                      <Badge variant="secondary" className="text-lg px-3 py-1">
-                        Today: 0
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Stethoscope className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                      <h3 className="text-lg font-semibold mb-2">No OPD visits recorded yet</h3>
-                      <p className="mb-4">Click the button below to start recording OPD patient visits</p>
-                      <Button onClick={handleNewOPDVisit} variant="default" size="lg">
-                        <Stethoscope className="h-4 w-4 mr-2" />
-                        New OPD Visit
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <OPDPatientList 
+                  onPatientSelect={handleOPDPatientSelect}
+                  refreshTrigger={refreshTrigger}
+                />
               </TabsContent>
 
               <TabsContent value="all-patients" className="space-y-4">

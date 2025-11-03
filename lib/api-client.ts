@@ -1,12 +1,12 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export class ApiClient {
-  private static getHeaders(includeAuth = false): HeadersInit {
+  private static getHeaders(includeAuth = true): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
 
-    if (includeAuth) {
+    if (includeAuth && typeof window !== 'undefined') {
       const token = localStorage.getItem('accessToken');
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -19,9 +19,11 @@ export class ApiClient {
   static async request<T>(
     endpoint: string,
     options: RequestInit = {},
-    includeAuth = false
+    includeAuth = true
   ): Promise<T> {
-    const url = `${API_URL}${endpoint}`;
+    // Ensure proper URL construction with leading slash
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${API_URL}${cleanEndpoint}`;
     const headers = this.getHeaders(includeAuth);
 
     try {
@@ -49,14 +51,14 @@ export class ApiClient {
     }
   }
 
-  static async get<T>(endpoint: string, includeAuth = false): Promise<T> {
+  static async get<T>(endpoint: string, includeAuth = true): Promise<T> {
     return this.request<T>(endpoint, { method: 'GET' }, includeAuth);
   }
 
   static async post<T>(
     endpoint: string,
     data: any,
-    includeAuth = false
+    includeAuth = true
   ): Promise<T> {
     return this.request<T>(
       endpoint,
@@ -71,7 +73,7 @@ export class ApiClient {
   static async put<T>(
     endpoint: string,
     data: any,
-    includeAuth = false
+    includeAuth = true
   ): Promise<T> {
     return this.request<T>(
       endpoint,
@@ -86,7 +88,7 @@ export class ApiClient {
   static async patch<T>(
     endpoint: string,
     data: any,
-    includeAuth = false
+    includeAuth = true
   ): Promise<T> {
     return this.request<T>(
       endpoint,
@@ -98,7 +100,7 @@ export class ApiClient {
     );
   }
 
-  static async delete<T>(endpoint: string, includeAuth = false): Promise<T> {
+  static async delete<T>(endpoint: string, includeAuth = true): Promise<T> {
     return this.request<T>(endpoint, { method: 'DELETE' }, includeAuth);
   }
 }

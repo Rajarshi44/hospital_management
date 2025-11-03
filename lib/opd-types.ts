@@ -56,7 +56,7 @@ export interface OPDRegistration {
 export interface OPDVisit {
   visitId: string;
   visitDate: string; // ISO date-time
-  department: Department;
+  department: string; // Department ID or name
   consultingDoctor: string; // Doctor ID
   doctorSpecialization?: string;
   visitType: VisitType;

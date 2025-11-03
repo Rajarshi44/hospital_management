@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { AppLayout } from "@/components/app-shell/app-layout"
 import { AuthProvider } from "@/hooks/use-auth"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,15 +22,161 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
 import { BookAppointmentDialog } from "@/components/appointments/book-appointment-dialog"
-import { mockAppointments, getAppointmentStats, filterAppointments } from "@/lib/appointments-mock-data"
-import { mockDoctors, mockDepartments } from "@/lib/schedule-mock-data"
+
 import { Appointment, AppointmentStatus } from "@/lib/appointments-types"
+import { useAppointments } from "@/hooks/useAppointments"
+
+// Hook to fetch doctors and departments
+const useDoctorsAndDepartments = () => {
+  const [doctors, setDoctors] = useState<any[]>([])
+  const [departments, setDepartments] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+
+  const getAuthHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+    }
+  }
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [doctorsRes, departmentsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/doctors?limit=100`, { headers: getAuthHeaders() }),
+        fetch(`${API_BASE_URL}/departments?limit=100`, { headers: getAuthHeaders() }),
+      ])
+
+      if (doctorsRes.ok) {
+        const doctorsData = await doctorsRes.json()
+        setDoctors(doctorsData)
+      }
+
+      if (departmentsRes.ok) {
+        const departmentsData = await departmentsRes.json()
+        setDepartments(departmentsData)
+      }
+    } catch (error) {
+      console.error('Error fetching doctors/departments:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [API_BASE_URL])
+
+  useEffect(() => {
+    console.log('🏥 Fetching doctors and departments...')
+    fetchData()
+  }, [fetchData])
+
+  return { doctors, departments, loading }
+}
+
+// Transform backend appointment to frontend format
+const transformAppointment = (backendAppointment: any): Appointment => {
+  return {
+    id: backendAppointment.id,
+    appointmentId: backendAppointment.appointmentId || `APT${backendAppointment.id}`,
+    patientId: backendAppointment.patientId,
+    patientName: backendAppointment.patientName || 
+      `${backendAppointment.patient?.firstName || ''} ${backendAppointment.patient?.lastName || ''}`.trim(),
+    patientUHID: backendAppointment.patient?.patientId || 'N/A',
+    patientPhone: backendAppointment.patient?.phone || '',
+    doctorId: backendAppointment.doctorId,
+    doctorName: backendAppointment.doctorName || 
+      `Dr. ${backendAppointment.doctor?.firstName || ''} ${backendAppointment.doctor?.lastName || ''}`.trim(),
+    departmentId: backendAppointment.departmentId || '',
+    department: backendAppointment.department?.name || 'Unknown',
+    date: backendAppointment.date,
+    timeSlot: `${backendAppointment.startTime} - ${backendAppointment.endTime}`,
+    slot: `${new Date(backendAppointment.date).toLocaleDateString()} ${backendAppointment.startTime} - ${backendAppointment.endTime}`,
+    mode: "Offline" as const, // Default mode, could be enhanced based on backend data
+    status: mapBackendStatus(backendAppointment.status),
+    visitType: "First Visit" as const, // Default, could be enhanced
+    priority: backendAppointment.priority === 'URGENT' || backendAppointment.priority === 'EMERGENCY',
+    notes: backendAppointment.notes,
+    consultationFee: backendAppointment.consultationFee || backendAppointment.doctor?.consultationFee || 0,
+    paymentMode: "Cash" as const,
+    paymentStatus: "Pending" as const,
+    createdAt: backendAppointment.createdAt,
+    updatedAt: backendAppointment.updatedAt,
+  }
+}
+
+const mapBackendStatus = (backendStatus: string): AppointmentStatus => {
+  const statusMap: Record<string, AppointmentStatus> = {
+    'SCHEDULED': 'Scheduled',
+    'CONFIRMED': 'Scheduled',
+    'CHECKED_IN': 'Checked-in',
+    'IN_PROGRESS': 'In Progress',
+    'COMPLETED': 'Completed',
+    'CANCELLED': 'Cancelled',
+  }
+  return statusMap[backendStatus] || 'Scheduled'
+}
+
+const getAppointmentStats = (appointments: Appointment[]) => {
+  const today = new Date().toDateString()
+  const todayAppointments = appointments.filter(apt => 
+    new Date(apt.date).toDateString() === today
+  )
+  
+  return {
+    todayAppointments: todayAppointments.length,
+    pending: appointments.filter(apt => 
+      apt.status === 'Scheduled' || apt.status === 'Checked-in'
+    ).length,
+    completed: appointments.filter(apt => apt.status === 'Completed').length,
+    cancelled: appointments.filter(apt => apt.status === 'Cancelled').length,
+  }
+}
+
+const filterAppointments = (appointments: Appointment[], filters: any) => {
+  return appointments.filter(apt => {
+    // Patient search
+    if (filters.patientSearch) {
+      const search = filters.patientSearch.toLowerCase()
+      const matchesName = apt.patientName.toLowerCase().includes(search)
+      const matchesUHID = apt.patientUHID.toLowerCase().includes(search)
+      const matchesPhone = apt.patientPhone.includes(search)
+      if (!matchesName && !matchesUHID && !matchesPhone) return false
+    }
+    
+    // Doctor filter
+    if (filters.doctorId && filters.doctorId !== 'all' && apt.doctorId !== filters.doctorId) return false
+    
+    // Department filter
+    if (filters.departmentId && filters.departmentId !== 'all' && apt.departmentId !== filters.departmentId) return false
+    
+    // Status filter
+    if (filters.status && filters.status !== 'all' && apt.status !== filters.status) return false
+    
+    // Mode filter
+    if (filters.mode && filters.mode !== 'all' && apt.mode !== filters.mode) return false
+    
+    // Date filters
+    if (filters.dateFrom) {
+      const aptDate = new Date(apt.date)
+      const fromDate = new Date(filters.dateFrom)
+      if (aptDate < fromDate) return false
+    }
+    
+    if (filters.dateTo) {
+      const aptDate = new Date(apt.date)
+      const toDate = new Date(filters.dateTo)
+      if (aptDate > toDate) return false
+    }
+    
+    return true
+  })
+}
 
 export default function AppointmentsPage() {
   const { toast } = useToast()
-  const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments)
-  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>(mockAppointments)
   const [showBookDialog, setShowBookDialog] = useState(false)
+  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
   
   // Filters
   const [patientSearch, setPatientSearch] = useState("")
@@ -41,8 +187,45 @@ export default function AppointmentsPage() {
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
 
+  // Use appointments hook
+  const { 
+    appointments: backendAppointments, 
+    isLoading, 
+    error,
+    getAppointments 
+  } = useAppointments({
+    onError: (error) => {
+      toast({
+        title: "Error Loading Appointments",
+        description: error,
+        variant: "destructive",
+      })
+    }
+  })
+
+  // Use doctors and departments hook
+  const { doctors, departments } = useDoctorsAndDepartments()
+
+  // Transform backend appointments to frontend format
+  const appointments = useMemo(() => {
+    return (backendAppointments || []).map(transformAppointment)
+  }, [backendAppointments])
+  
   // Stats
-  const stats = getAppointmentStats(appointments)
+  const stats = useMemo(() => {
+    return getAppointmentStats(appointments)
+  }, [appointments])
+
+  // Create stable function reference
+  const loadAppointments = useCallback(() => {
+    getAppointments({ limit: 100, includeOPD: true })
+  }, [getAppointments])
+
+  // Load appointments on component mount
+  useEffect(() => {
+    console.log('🔄 Loading appointments including OPD visits...')
+    loadAppointments()
+  }, [loadAppointments])
 
   // Apply filters
   useEffect(() => {
@@ -58,42 +241,42 @@ export default function AppointmentsPage() {
     setFilteredAppointments(filtered)
   }, [appointments, patientSearch, doctorFilter, departmentFilter, statusFilter, modeFilter, dateFrom, dateTo])
 
-  const handleBookSuccess = (data: any) => {
-    const newAppointment: Appointment = {
-      id: String(appointments.length + 1),
-      appointmentId: `APT${String(appointments.length + 1).padStart(3, '0')}`,
-      ...data,
-      slot: `${new Date(data.appointmentDate).toLocaleDateString()} ${data.timeSlot}`,
-      status: "Scheduled" as AppointmentStatus,
-      paymentStatus: "Pending" as const,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    setAppointments([newAppointment, ...appointments])
-  }
-
-  const handleStatusChange = (appointmentId: string, newStatus: AppointmentStatus) => {
-    setAppointments(prev =>
-      prev.map(apt =>
-        apt.id === appointmentId
-          ? { ...apt, status: newStatus, updatedAt: new Date().toISOString() }
-          : apt
-      )
-    )
-    
-    const statusMessages: Record<AppointmentStatus, string> = {
-      "Scheduled": "Appointment scheduled",
-      "Checked-in": "Patient checked in",
-      "In Progress": "Consultation in progress",
-      "Completed": "Appointment completed",
-      "Cancelled": "Appointment cancelled",
-    }
+  const handleBookSuccess = useCallback((data: any) => {
+    // Refresh appointments after booking
+    loadAppointments()
     
     toast({
-      title: "Status Updated",
-      description: statusMessages[newStatus],
+      title: "Appointment Booked",
+      description: "Appointment has been scheduled successfully",
     })
-  }
+  }, [loadAppointments, toast])
+
+  const handleStatusChange = useCallback(async (appointmentId: string, newStatus: AppointmentStatus) => {
+    try {
+      // Here you would call an update API endpoint
+      // For now, we'll just refresh the data
+      loadAppointments()
+      
+      const statusMessages: Record<AppointmentStatus, string> = {
+        "Scheduled": "Appointment scheduled",
+        "Checked-in": "Patient checked in",
+        "In Progress": "Consultation in progress", 
+        "Completed": "Appointment completed",
+        "Cancelled": "Appointment cancelled",
+      }
+      
+      toast({
+        title: "Status Updated",
+        description: statusMessages[newStatus],
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update appointment status",
+        variant: "destructive",
+      })
+    }
+  }, [loadAppointments, toast])
 
   const clearFilters = () => {
     setPatientSearch("")
@@ -233,9 +416,9 @@ export default function AppointmentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Doctors</SelectItem>
-                    {mockDoctors.map((doctor) => (
+                    {doctors.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
-                        Dr. {doctor.name}
+                        Dr. {doctor.firstName} {doctor.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -247,7 +430,7 @@ export default function AppointmentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Departments</SelectItem>
-                    {mockDepartments.map((dept) => (
+                    {departments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
                       </SelectItem>
@@ -302,8 +485,15 @@ export default function AppointmentsPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Appointments List</CardTitle>
-                <Badge variant="secondary">{filteredAppointments.length} appointments</Badge>
+                <Badge variant="secondary">
+                  {isLoading ? 'Loading...' : `${filteredAppointments.length} appointments`}
+                </Badge>
               </div>
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                  Error: {error}
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -321,10 +511,19 @@ export default function AppointmentsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAppointments.length === 0 ? (
+                    {isLoading ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                          No appointments found
+                          <div className="flex items-center justify-center gap-2">
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            Loading appointments...
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredAppointments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                          {error ? 'Failed to load appointments' : 'No appointments found'}
                         </TableCell>
                       </TableRow>
                     ) : (

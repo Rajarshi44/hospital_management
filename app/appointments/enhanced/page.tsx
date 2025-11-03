@@ -34,10 +34,10 @@ export default function EnhancedAppointmentsPage() {
   
   // Filters
   const [patientSearch, setPatientSearch] = useState("")
-  const [doctorFilter, setDoctorFilter] = useState("")
-  const [departmentFilter, setDepartmentFilter] = useState("")
-  const [statusFilter, setStatusFilter] = useState("")
-  const [modeFilter, setModeFilter] = useState("")
+  const [doctorFilter, setDoctorFilter] = useState("all")
+  const [departmentFilter, setDepartmentFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [modeFilter, setModeFilter] = useState("all")
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
 
@@ -48,10 +48,10 @@ export default function EnhancedAppointmentsPage() {
   useEffect(() => {
     const filtered = filterAppointments(appointments, {
       patientSearch,
-      doctorId: doctorFilter,
-      departmentId: departmentFilter,
-      status: statusFilter,
-      mode: modeFilter,
+      doctorId: doctorFilter === "all" ? undefined : doctorFilter,
+      departmentId: departmentFilter === "all" ? undefined : departmentFilter,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      mode: modeFilter === "all" ? undefined : modeFilter,
       dateFrom,
       dateTo,
     })
@@ -232,7 +232,7 @@ export default function EnhancedAppointmentsPage() {
                     <SelectValue placeholder="All Doctors" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Doctors</SelectItem>
+                    <SelectItem value="all">All Doctors</SelectItem>
                     {mockDoctors.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
                         Dr. {doctor.name}
@@ -246,7 +246,7 @@ export default function EnhancedAppointmentsPage() {
                     <SelectValue placeholder="All Departments" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Departments</SelectItem>
+                    <SelectItem value="all">All Departments</SelectItem>
                     {mockDepartments.map((dept) => (
                       <SelectItem key={dept.id} value={dept.id}>
                         {dept.name}
@@ -260,7 +260,7 @@ export default function EnhancedAppointmentsPage() {
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Status</SelectItem>
+                    <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="Scheduled">Scheduled</SelectItem>
                     <SelectItem value="Checked-in">Checked-in</SelectItem>
                     <SelectItem value="In Progress">In Progress</SelectItem>
@@ -274,7 +274,7 @@ export default function EnhancedAppointmentsPage() {
                     <SelectValue placeholder="All Modes" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Modes</SelectItem>
+                    <SelectItem value="all">All Modes</SelectItem>
                     <SelectItem value="Offline">In-Person</SelectItem>
                     <SelectItem value="Tele/Video">Tele/Video</SelectItem>
                   </SelectContent>
