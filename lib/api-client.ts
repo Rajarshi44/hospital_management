@@ -8,8 +8,12 @@ export class ApiClient {
 
     if (includeAuth && typeof window !== 'undefined') {
       const token = localStorage.getItem('accessToken');
+      console.log('🔐 API Client - Token from localStorage:', token ? 'Token exists' : 'No token');
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔐 API Client - Authorization header set');
+      } else {
+        console.log('🔐 API Client - No token available for authentication');
       }
     }
 
@@ -27,6 +31,10 @@ export class ApiClient {
     const headers = this.getHeaders(includeAuth);
 
     try {
+      console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+      const hasAuth = (headers as any)['Authorization'] ? '🔐 Authenticated' : '🚫 No Auth';
+      console.log(`🔗 ${hasAuth}`);
+      
       const response = await fetch(url, {
         ...options,
         headers: {
@@ -35,14 +43,19 @@ export class ApiClient {
         },
       });
 
+      console.log(`📡 Response: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({
           message: response.statusText,
         }));
+        console.error(`❌ API Error (${response.status}):`, error);
         throw new Error(error.message || 'An error occurred');
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log(`✅ API Success - Data type: ${Array.isArray(data) ? 'Array' : 'Object'}, Length: ${Array.isArray(data) ? data.length : Object.keys(data).length}`);
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         throw error;

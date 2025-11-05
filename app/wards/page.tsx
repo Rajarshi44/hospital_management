@@ -44,15 +44,77 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Bed as BedIcon, Users, CheckCircle, Clock, Wrench, Plus, Filter,
   RefreshCw, Droplet, Wind, Activity, Shield, Baby, AlertCircle,
-  ChevronDown, ChevronUp, X, Loader2
+  ChevronDown, ChevronUp, X, Loader2, Edit, Trash2, MoreVertical
 } from "lucide-react"
-import { mockWards, mockBeds, getAvailableBeds, getBedsByWard } from "@/lib/ipd-mock-data"
-import { Bed, Ward } from "@/lib/ipd-types"
 import { useToast } from "@/hooks/use-toast"
+import { useWards } from "@/hooks/useIPD"
+import { useDepartments } from "@/hooks/doctor/use-departments"
+import { useEffect } from "react"
 
 type BedStatusFilter = "all" | "Available" | "Occupied" | "Cleaning" | "Maintenance"
+
+// Types for backend data
+interface Bed {
+  id: string
+  bedNumber?: string
+  number?: string
+  wardId: string
+  isOccupied: boolean
+  bedType?: string
+  type?: string
+  wardName?: string
+  dailyRate?: number
+  chargesPerDay?: number
+  amenities?: string[]
+  isActive: boolean
+  admissions?: any[]
+  ward?: {
+    id: string
+    name: string
+    type: string
+  }
+}
+
+interface Ward {
+  id: string
+  wardNumber: string
+  name: string
+  type: 'GENERAL' | 'ICU' | 'NICU' | 'CCU' | 'EMERGENCY'
+  totalBeds: number
+  availableBeds: number
+  floor?: string
+  description?: string
+  isActive: boolean
+  department: {
+    id: string
+    name: string
+  }
+  beds: Bed[]
+  availability?: {
+    totalBeds: number
+    availableBeds: number
+    occupiedBeds: number
+    inactiveBeds: number
+  }
+}
 
 // Ward Setup Schema
 const roomSchema = z.object({
@@ -74,7 +136,8 @@ const wardSetupSchema = z.object({
   wardCode: z.string().min(2, "Ward code is required"),
   floor: z.number().min(0, "Floor number is required"),
   wing: z.string().optional(),
-  wardType: z.enum(["General", "Semi-Private", "Private", "ICU", "PICU", "NICU"]),
+  wardType: z.enum(["GENERAL", "ICU", "NICU", "CCU", "EMERGENCY"]),
+  departmentId: z.string().min(1, "Department is required"),
   totalRooms: z.number().min(1, "At least 1 room required"),
   rooms: z.array(roomSchema).min(1, "Add at least one room"),
   bedFeatures: z.array(bedFeatureSchema).min(1, "Configure at least one bed"),
@@ -91,12 +154,24 @@ export default function WardsPage() {
   const [selectedBed, setSelectedBed] = useState<Bed | null>(null)
   const [showBedDetails, setShowBedDetails] = useState(false)
   const [showWardSetup, setShowWardSetup] = useState(false)
+  const [editingWard, setEditingWard] = useState<Ward | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+
+  // Backend hooks
+  const { wards, loading: wardsLoading, createWard, updateWard, deleteWard, getWard, getAllAvailableBeds, refetch: refetchWards } = useWards()
+  const { departments, fetchDepartments } = useDepartments()
   const [openSections, setOpenSections] = useState({
     ward: true,
     rooms: false,
     beds: false,
     staff: false,
   })
+
+  // Initialize data
+  useEffect(() => {
+    fetchDepartments()
+    refetchWards()
+  }, [fetchDepartments, refetchWards])
 
   const form = useForm<WardSetupFormData>({
     resolver: zodResolver(wardSetupSchema),
@@ -105,7 +180,8 @@ export default function WardsPage() {
       wardCode: "",
       floor: 1,
       wing: "",
-      wardType: "General",
+      wardType: "GENERAL",
+      departmentId: "",
       totalRooms: 1,
       rooms: [{ roomNumber: "", roomType: "General", noOfBeds: 1, billingClass: "Economy" }],
       bedFeatures: [{ bedIdentifier: "", features: [], nurseCall: false, isEmergencyBay: false }],
@@ -125,15 +201,29 @@ export default function WardsPage() {
   })
 
   const stats = useMemo(() => {
-    const totalBeds = mockBeds.length
-    const occupied = mockBeds.filter(b => b.isOccupied).length
-    const available = mockBeds.filter(b => !b.isOccupied).length
-    const underCleaning = 0
+    if (!wards || wards.length === 0) {
+      return { totalBeds: 0, occupied: 0, available: 0, underCleaning: 0 }
+    }
+    
+    const totalBeds = wards.reduce((sum, ward) => sum + (ward.availability?.totalBeds || ward.beds?.length || 0), 0)
+    const occupied = wards.reduce((sum, ward) => sum + (ward.availability?.occupiedBeds || 0), 0)
+    const available = wards.reduce((sum, ward) => sum + (ward.availability?.availableBeds || 0), 0)
+    const underCleaning = wards.reduce((sum, ward) => sum + (ward.availability?.inactiveBeds || 0), 0)
+    
     return { totalBeds, occupied, available, underCleaning }
-  }, [])
+  }, [wards])
 
   const filteredBeds = useMemo(() => {
-    let beds = mockBeds
+    if (!wards || wards.length === 0) return []
+    
+    // Get all beds from all wards
+    let beds: Bed[] = []
+    wards.forEach(ward => {
+      if (ward.beds) {
+        beds = beds.concat(ward.beds.map((bed: any) => ({ ...bed, wardId: ward.id, id: bed.id || `${ward.id}-${bed.number}` })))
+      }
+    })
+    
     if (selectedWard !== "all") {
       beds = beds.filter(b => b.wardId === selectedWard)
     }
@@ -143,7 +233,7 @@ export default function WardsPage() {
       beds = beds.filter(b => b.isOccupied)
     }
     return beds
-  }, [selectedWard, statusFilter])
+  }, [wards, selectedWard, statusFilter])
 
   const bedsByWard = useMemo(() => {
     const grouped: Record<string, Bed[]> = {}
@@ -185,19 +275,116 @@ export default function WardsPage() {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
 
-  const handleWardSetupSubmit = async (data: WardSetupFormData) => {
+  const handleEditWard = async (ward: Ward) => {
+    console.log('🔥 Edit ward clicked for:', ward.name);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      toast({
-        title: "Ward Setup Complete!",
-        description: `Ward "${data.wardName}" has been created with ${data.rooms.length} rooms and ${data.bedFeatures.length} beds.`,
-      })
-      setShowWardSetup(false)
-      form.reset()
+      console.log('🔥 Fetching ward details for ID:', ward.id);
+      const wardDetails = await getWard(ward.id) as Ward
+      console.log('🔥 Ward details received:', wardDetails);
+      
+      setEditingWard(wardDetails)
+      
+      // Pre-populate form with existing ward data
+      const formData = {
+        wardName: wardDetails.name || "",
+        wardCode: wardDetails.wardNumber || "",
+        floor: parseInt(wardDetails.floor || '1'),
+        wing: wardDetails.description || "",
+        wardType: wardDetails.type as any,
+        departmentId: wardDetails.department?.id || "",
+        totalRooms: 1,
+        rooms: [{ 
+          roomNumber: `${wardDetails.wardNumber || 'R'}-001`, 
+          roomType: "General" as const, 
+          noOfBeds: wardDetails.totalBeds || 1, 
+          billingClass: "Economy" as const 
+        }],
+        bedFeatures: [{ 
+          bedIdentifier: `${wardDetails.wardNumber || 'B'}-001`, 
+          features: [], 
+          nurseCall: false, 
+          isEmergencyBay: false 
+        }],
+        nurseStation: wardDetails.description || "",
+        nursePatientRatio: "1:5",
+      };
+      
+      console.log('🔥 Setting form data:', formData);
+      form.reset(formData)
+      
+      console.log('🔥 Opening ward setup dialog');
+      setShowWardSetup(true)
     } catch (error) {
+      console.error('🔥 Error loading ward details:', error)
       toast({
         title: "Error",
-        description: "Failed to create ward. Please try again.",
+        description: "Failed to load ward details",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteWard = async (wardId: string) => {
+    try {
+      await deleteWard(wardId)
+      setShowDeleteConfirm(null)
+    } catch (error) {
+      console.error('Error deleting ward:', error)
+    }
+  }
+
+  const handleWardSetupSubmit = async (data: WardSetupFormData) => {
+    console.log('🔥 Form submission started');
+    console.log('🔥 Form data:', data);
+    console.log('🔥 Editing ward:', editingWard);
+    
+    try {
+      const wardData = {
+        name: data.wardName,
+        wardNumber: data.wardCode,
+        type: data.wardType,
+        floor: data.floor.toString(),
+        totalBeds: data.rooms.reduce((sum, room) => sum + room.noOfBeds, 0),
+        departmentId: data.departmentId,
+        description: `${data.wardType} ward with ${data.totalRooms} rooms`
+      }
+      
+      console.log('🔥 Prepared ward data:', wardData);
+
+      if (editingWard) {
+        console.log('🔥 Updating ward with ID:', editingWard.id);
+        const result = await updateWard(editingWard.id, wardData)
+        console.log('🔥 Update result:', result);
+        toast({
+          title: "Ward Updated!",
+          description: `Ward "${data.wardName}" has been updated successfully.`,
+        })
+      } else {
+        console.log('🔥 Creating new ward');
+        const result = await createWard(wardData)
+        console.log('🔥 Create result:', result);
+        toast({
+          title: "Ward Setup Complete!",
+          description: `Ward "${data.wardName}" has been created successfully.`,
+        })
+      }
+      
+      console.log('🔥 Refreshing wards data');
+      // Refresh wards data
+      refetchWards()
+      
+      console.log('🔥 Closing dialog and resetting form');
+      setShowWardSetup(false)
+      setEditingWard(null)
+      form.reset()
+      
+      console.log('🔥 Form submission completed successfully');
+    } catch (error) {
+      console.error('🔥 Ward operation error:', error);
+      console.error('🔥 Error details:', JSON.stringify(error, null, 2));
+      toast({
+        title: "Error",
+        description: `Failed to ${editingWard ? 'update' : 'create'} ward. Please try again.`,
         variant: "destructive",
       })
     }
@@ -218,9 +405,169 @@ export default function WardsPage() {
     })
   }
 
+  const getWardTypeDisplay = (type: string) => {
+    const typeMap: Record<string, string> = {
+      'GENERAL': 'General',
+      'ICU': 'ICU',
+      'NICU': 'NICU', 
+      'CCU': 'CCU',
+      'EMERGENCY': 'Emergency'
+    }
+    return typeMap[type] || type
+  }
+
   const bedFeatureOptions = ["Oxygen", "Ventilator", "Cardiac Monitor", "Isolation", "Negative Pressure", "Child Cot"]
 
-  return <AuthProvider><AppLayout><div className="space-y-6"><div className="flex items-center justify-between"><div><h1 className="text-3xl font-bold tracking-tight">Ward &amp; Bed Management</h1><p className="text-muted-foreground">Monitor bed occupancy and manage ward allocation</p></div><Button size="lg" onClick={() => setShowWardSetup(true)}><Plus className="h-5 w-5 mr-2" />Ward Setup</Button></div><div className="grid grid-cols-1 md:grid-cols-4 gap-4"><Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total Beds</CardTitle><BedIcon className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats.totalBeds}</div><p className="text-xs text-muted-foreground">Across all wards</p></CardContent></Card><Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Occupied</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold text-blue-600">{stats.occupied}</div><p className="text-xs text-muted-foreground">{Math.round((stats.occupied / stats.totalBeds) * 100)}% occupancy</p></CardContent></Card><Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Available</CardTitle><CheckCircle className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold text-green-600">{stats.available}</div><p className="text-xs text-muted-foreground">Ready for admission</p></CardContent></Card><Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Cleaning / Maintenance</CardTitle><Wrench className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold text-orange-600">{stats.underCleaning}</div><p className="text-xs text-muted-foreground">Under maintenance</p></CardContent></Card></div><Card><CardHeader><div className="flex items-center justify-between"><CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" />Filters</CardTitle><Button variant="ghost" size="sm" onClick={clearFilters}><RefreshCw className="h-4 w-4 mr-2" />Clear Filters</Button></div></CardHeader><CardContent><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label className="text-sm font-medium mb-2 block">Ward</label><Select value={selectedWard} onValueChange={setSelectedWard}><SelectTrigger><SelectValue placeholder="All Wards" /></SelectTrigger><SelectContent><SelectItem value="all">All Wards</SelectItem>{mockWards.map((ward) => <SelectItem key={ward.id} value={ward.id}>{ward.name}</SelectItem>)}</SelectContent></Select></div><div><label className="text-sm font-medium mb-2 block">Status</label><Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}><SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="Available">Available</SelectItem><SelectItem value="Occupied">Occupied</SelectItem><SelectItem value="Cleaning">Cleaning</SelectItem><SelectItem value="Maintenance">Maintenance</SelectItem></SelectContent></Select></div><div><label className="text-sm font-medium mb-2 block">Search Bed</label><Input placeholder="Bed number..." /></div></div></CardContent></Card><div className="space-y-6">{mockWards.filter(ward => selectedWard === "all" || ward.id === selectedWard).map((ward) => {const wardBeds = bedsByWard[ward.id] || [];if (wardBeds.length === 0) return null;return <Card key={ward.id}><CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-xl">{ward.name}</CardTitle><p className="text-sm text-muted-foreground mt-1">{ward.type.charAt(0).toUpperCase() + ward.type.slice(1)} Ward  Floor {Math.floor(Math.random() * 5) + 1}</p></div><Badge variant="secondary" className="text-base">{wardBeds.length} {wardBeds.length === 1 ? "bed" : "beds"}</Badge></div></CardHeader><CardContent><div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">{wardBeds.map((bed) => <Card key={bed.id} className={`cursor-pointer transition-all hover:shadow-lg ${bed.isOccupied ? "border-blue-200 bg-blue-50/50" : "border-green-200 bg-green-50/50"}`} onClick={() => handleBedClick(bed)}><CardContent className="p-4"><div className="space-y-3"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><BedIcon className="h-5 w-5" /><span className="font-bold">{bed.bedNumber}</span></div></div>{getStatusBadge(bed)}<div className="flex items-center gap-2 pt-2 border-t">{getFeatureIcons(bed.amenities)}</div><div className="text-xs text-muted-foreground">₹{bed.chargesPerDay}/day</div></div></CardContent></Card>)}</div></CardContent></Card>})}{filteredBeds.length === 0 && <Card><CardContent className="py-12"><div className="text-center text-muted-foreground"><BedIcon className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>No beds found matching your filters</p></div></CardContent></Card>}</div></div><Dialog open={showWardSetup} onOpenChange={setShowWardSetup}><DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle className="text-2xl">Ward &amp; Bed Setup</DialogTitle><DialogDescription>Configure ward details, rooms, beds, and staff allocation</DialogDescription></DialogHeader><Form {...form}><form onSubmit={form.handleSubmit(handleWardSetupSubmit)} className="space-y-6">
+  return <AuthProvider><AppLayout><div className="space-y-6">
+
+      
+      <div className="flex items-center justify-between"><div><h1 className="text-3xl font-bold tracking-tight">Ward &amp; Bed Management</h1><p className="text-muted-foreground">Monitor bed occupancy and manage ward allocation</p></div><Button size="lg" onClick={() => setShowWardSetup(true)}><Plus className="h-5 w-5 mr-2" />Ward Setup</Button></div><div className="grid grid-cols-1 md:grid-cols-4 gap-4"><Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total Beds</CardTitle><BedIcon className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{stats.totalBeds}</div><p className="text-xs text-muted-foreground">Across all wards</p></CardContent></Card><Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Occupied</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold text-blue-600">{stats.occupied}</div><p className="text-xs text-muted-foreground">{Math.round((stats.occupied / stats.totalBeds) * 100)}% occupancy</p></CardContent></Card><Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Available</CardTitle><CheckCircle className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold text-green-600">{stats.available}</div><p className="text-xs text-muted-foreground">Ready for admission</p></CardContent></Card><Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Cleaning / Maintenance</CardTitle><Wrench className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold text-orange-600">{stats.underCleaning}</div><p className="text-xs text-muted-foreground">Under maintenance</p></CardContent></Card></div><Card><CardHeader><div className="flex items-center justify-between"><CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" />Filters</CardTitle><Button variant="ghost" size="sm" onClick={clearFilters}><RefreshCw className="h-4 w-4 mr-2" />Clear Filters</Button></div></CardHeader><CardContent><div className="grid grid-cols-1 md:grid-cols-3 gap-4"><div><label className="text-sm font-medium mb-2 block">Ward</label><Select value={selectedWard} onValueChange={setSelectedWard}><SelectTrigger><SelectValue placeholder="All Wards" /></SelectTrigger><SelectContent><SelectItem value="all">All Wards</SelectItem>{(wards || []).map((ward) => <SelectItem key={ward.id} value={ward.id}>{ward.name}</SelectItem>)}</SelectContent></Select></div><div><label className="text-sm font-medium mb-2 block">Status</label><Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}><SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="Available">Available</SelectItem><SelectItem value="Occupied">Occupied</SelectItem><SelectItem value="Cleaning">Cleaning</SelectItem><SelectItem value="Maintenance">Maintenance</SelectItem></SelectContent></Select></div><div><label className="text-sm font-medium mb-2 block">Search Bed</label><Input placeholder="Bed number..." /></div></div></CardContent></Card><div className="space-y-6">
+        {(wards || [])
+          .filter(ward => selectedWard === "all" || ward.id === selectedWard)
+          .map((ward) => {
+            const wardBeds = bedsByWard[ward.id] || [];
+            
+            return (
+              <Card key={ward.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-xl">{ward.name}</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {getWardTypeDisplay(ward.type)} Ward • Floor {ward.floor || 'N/A'} • {ward.department?.name || 'No Department'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-base">
+                        {wardBeds.length} {wardBeds.length === 1 ? "bed" : "beds"}
+                      </Badge>
+                      
+                      {/* Simple buttons as fallback */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Direct edit clicked:', ward.name);
+                          handleEditWard(ward);
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      
+                      {/* Quick update button for testing */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            console.log('Quick update clicked for:', ward.name);
+                            await updateWard(ward.id, {
+                              name: ward.name + " (Updated)",
+                              description: "Updated via quick button"
+                            });
+                            toast({
+                              title: "Quick Update Success!",
+                              description: `Ward "${ward.name}" updated successfully.`,
+                            });
+                            refetchWards();
+                          } catch (error) {
+                            console.error('Quick update error:', error);
+                            toast({
+                              title: "Quick Update Failed",
+                              description: "Could not update ward",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        Quick Update
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          console.log('Direct delete clicked:', ward.name);
+                          setShowDeleteConfirm(ward.id);
+                        }}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+
+
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {wardBeds.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {wardBeds.map((bed) => (
+                        <Card 
+                          key={bed.id} 
+                          className={`cursor-pointer transition-all hover:shadow-lg ${
+                            bed.isOccupied ? "border-blue-200 bg-blue-50/50" : "border-green-200 bg-green-50/50"
+                          }`} 
+                          onClick={() => handleBedClick(bed)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <BedIcon className="h-5 w-5" />
+                                  <span className="font-bold">{bed.bedNumber || bed.number}</span>
+                                </div>
+                              </div>
+                              {getStatusBadge(bed)}
+                              <div className="flex items-center gap-2 pt-2 border-t">
+                                {getFeatureIcons(bed.amenities || [])}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                ₹{bed.chargesPerDay || bed.dailyRate || 0}/day
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-muted-foreground">
+                      <BedIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No beds configured for this ward yet</p>
+                      <p className="text-xs">Use the edit option above to add beds</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        
+        {wards && wards.length === 0 && (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center text-muted-foreground">
+                <BedIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No wards found. Create your first ward to get started.</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <Dialog open={showWardSetup} onOpenChange={(open) => {
+            setShowWardSetup(open);
+            if (!open) {
+              setEditingWard(null);
+              form.reset();
+            }
+          }}><DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle className="text-2xl">
+                {editingWard ? 'Edit Ward' : 'Ward & Bed Setup'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingWard ? 'Update ward details and configuration' : 'Configure ward details, rooms, beds, and staff allocation'}
+              </DialogDescription></DialogHeader><Form {...form}><form onSubmit={form.handleSubmit(handleWardSetupSubmit)} className="space-y-6">
                 {/* Ward Creation */}
                 <Collapsible open={openSections.ward} onOpenChange={() => toggleSection("ward")}>
                   <Card className="border-l-4 border-l-primary">
@@ -281,12 +628,31 @@ export default function WardsPage() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="General">General</SelectItem>
-                                  <SelectItem value="Semi-Private">Semi-Private</SelectItem>
-                                  <SelectItem value="Private">Private</SelectItem>
+                                  <SelectItem value="GENERAL">General</SelectItem>
                                   <SelectItem value="ICU">ICU</SelectItem>
-                                  <SelectItem value="PICU">PICU</SelectItem>
                                   <SelectItem value="NICU">NICU</SelectItem>
+                                  <SelectItem value="CCU">CCU</SelectItem>
+                                  <SelectItem value="EMERGENCY">Emergency</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )} />
+                          <FormField control={form.control} name="departmentId" render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Department *</FormLabel>
+                              <Select value={field.value} onValueChange={field.onChange}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select department" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {departments?.map((dept) => (
+                                    <SelectItem key={dept.id} value={dept.id}>
+                                      {dept.name}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -581,20 +947,180 @@ export default function WardsPage() {
                 </Collapsible>
 
                 <DialogFooter>
-                  <Button type="button" variant="ghost" onClick={() => setShowWardSetup(false)}>Cancel</Button>
-                  <Button type="submit" size="lg">
+                  <Button type="button" variant="ghost" onClick={() => {
+                    setShowWardSetup(false);
+                    setEditingWard(null);
+                    form.reset();
+                  }}>Cancel</Button>
+                  <Button 
+                    type="submit" 
+                    size="lg"
+                    onClick={() => {
+                      console.log('🔥 Submit button clicked');
+                      console.log('🔥 Form errors:', JSON.stringify(form.formState.errors, null, 2));
+                      console.log('🔥 Form values:', JSON.stringify(form.getValues(), null, 2));
+                      console.log('🔥 Is submitting:', form.formState.isSubmitting);
+                      console.log('🔥 Is valid:', form.formState.isValid);
+                      
+                      // Try to trigger validation manually
+                      form.trigger().then((isValid) => {
+                        console.log('🔥 Manual validation result:', isValid);
+                      });
+                    }}
+                  >
                     {form.formState.isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Creating...
+                        {editingWard ? 'Updating...' : 'Creating...'}
                       </>
                     ) : (
                       <>
                         <CheckCircle className="mr-2 h-5 w-5" />
-                        Create Ward
+                        {editingWard ? 'Update Ward' : 'Create Ward'}
                       </>
                     )}
                   </Button>
                 </DialogFooter>
-              </form></Form></DialogContent></Dialog><Sheet open={showBedDetails} onOpenChange={setShowBedDetails}><SheetContent className="w-full sm:max-w-lg overflow-y-auto">{selectedBed && <><SheetHeader><SheetTitle className="flex items-center gap-2"><BedIcon className="h-6 w-6" />Bed {selectedBed.bedNumber}</SheetTitle><SheetDescription>{selectedBed.wardName}  {selectedBed.type.charAt(0).toUpperCase() + selectedBed.type.slice(1)}</SheetDescription></SheetHeader><div className="mt-6 space-y-6"><div><h3 className="font-semibold mb-3 flex items-center gap-2"><AlertCircle className="h-4 w-4" />Basic Information</h3><div className="space-y-2 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Ward:</span><span className="font-medium">{selectedBed.wardName}</span></div><div className="flex justify-between"><span className="text-muted-foreground">Bed Type:</span><span className="font-medium capitalize">{selectedBed.type}</span></div><div className="flex justify-between"><span className="text-muted-foreground">Charges:</span><span className="font-medium">₹{selectedBed.chargesPerDay}/day</span></div><div className="flex justify-between"><span className="text-muted-foreground">Status:</span>{getStatusBadge(selectedBed)}</div><div className="pt-2"><span className="text-muted-foreground">Amenities:</span><div className="flex flex-wrap gap-2 mt-2">{selectedBed.amenities.map((amenity, i) => <Badge key={i} variant="outline">{amenity}</Badge>)}</div></div></div></div>{selectedBed.isOccupied ? <div className="p-4 bg-blue-50 rounded-lg"><h3 className="font-semibold mb-3 flex items-center gap-2"><Users className="h-4 w-4" />Current Occupancy</h3><div className="space-y-2 text-sm"><div className="flex justify-between"><span className="text-muted-foreground">Patient:</span><span className="font-medium">John Doe</span></div><div className="flex justify-between"><span className="text-muted-foreground">UHID:</span><span className="font-medium">PAT001</span></div><div className="flex justify-between"><span className="text-muted-foreground">Admitted:</span><span className="font-medium">2 days ago</span></div><div className="flex justify-between"><span className="text-muted-foreground">Doctor:</span><span className="font-medium">Dr. Sarah Johnson</span></div></div></div> : <div className="p-4 bg-green-50 rounded-lg"><p className="text-sm text-center text-green-800">This bed is available for new admissions</p></div>}<div><h3 className="font-semibold mb-3">Actions</h3><div className="space-y-2">{!selectedBed.isOccupied ? <Button className="w-full" onClick={handleAssignBed}><Users className="h-4 w-4 mr-2" />Assign Bed to Patient</Button> : <><Button variant="outline" className="w-full"><Activity className="h-4 w-4 mr-2" />Transfer Patient</Button><Button variant="outline" className="w-full" onClick={handleReleaseBed}><CheckCircle className="h-4 w-4 mr-2" />Release Bed</Button></>}<Button variant="outline" className="w-full"><Clock className="h-4 w-4 mr-2" />Mark for Cleaning</Button><Button variant="outline" className="w-full"><Wrench className="h-4 w-4 mr-2" />Report Maintenance</Button></div></div></div></>}</SheetContent></Sheet></AppLayout></AuthProvider>
+              </form></Form></DialogContent></Dialog>
+
+        <AlertDialog open={!!showDeleteConfirm} onOpenChange={() => setShowDeleteConfirm(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Ward</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this ward? This action cannot be undone and will remove all associated bed data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                className="bg-red-600 hover:bg-red-700"
+                onClick={() => showDeleteConfirm && handleDeleteWard(showDeleteConfirm)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Ward
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+      <Sheet open={showBedDetails} onOpenChange={setShowBedDetails}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          {selectedBed && (
+            <>
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <BedIcon className="h-6 w-6" />
+                  Bed {selectedBed.bedNumber}
+                </SheetTitle>
+                <SheetDescription>
+                  {selectedBed.wardName} • {selectedBed.type ? selectedBed.type.charAt(0).toUpperCase() + selectedBed.type.slice(1) : selectedBed.bedType || 'Standard'}
+                </SheetDescription>
+              </SheetHeader>
+              
+              <div className="mt-6 space-y-6">
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Basic Information
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ward:</span>
+                      <span className="font-medium">{selectedBed.wardName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Bed Type:</span>
+                      <span className="font-medium capitalize">{selectedBed.type || selectedBed.bedType || 'Standard'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Charges:</span>
+                      <span className="font-medium">₹{selectedBed.chargesPerDay}/day</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status:</span>
+                      {getStatusBadge(selectedBed)}
+                    </div>
+                    <div className="pt-2">
+                      <span className="text-muted-foreground">Amenities:</span>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {(selectedBed.amenities || []).map((amenity: string, i: number) => (
+                          <Badge key={i} variant="outline">{amenity}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedBed.isOccupied ? (
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Current Occupancy
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Patient:</span>
+                        <span className="font-medium">John Doe</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">UHID:</span>
+                        <span className="font-medium">PAT001</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Admitted:</span>
+                        <span className="font-medium">2 days ago</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Doctor:</span>
+                        <span className="font-medium">Dr. Sarah Johnson</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <p className="text-sm text-center text-green-800">
+                      This bed is available for new admissions
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="font-semibold mb-3">Actions</h3>
+                  <div className="space-y-2">
+                    {!selectedBed.isOccupied ? (
+                      <Button className="w-full" onClick={handleAssignBed}>
+                        <Users className="h-4 w-4 mr-2" />
+                        Assign Bed to Patient
+                      </Button>
+                    ) : (
+                      <>
+                        <Button variant="outline" className="w-full">
+                          <Activity className="h-4 w-4 mr-2" />
+                          Transfer Patient
+                        </Button>
+                        <Button variant="outline" className="w-full" onClick={handleReleaseBed}>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Release Bed
+                        </Button>
+                      </>
+                    )}
+                    <Button variant="outline" className="w-full">
+                      <Clock className="h-4 w-4 mr-2" />
+                      Mark for Cleaning
+                    </Button>
+                    <Button variant="outline" className="w-full">
+                      <Wrench className="h-4 w-4 mr-2" />
+                      Report Maintenance
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </div>
+  </AppLayout>
+</AuthProvider>
 }
