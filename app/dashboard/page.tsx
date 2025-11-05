@@ -5,7 +5,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { UserCheck, Activity, FileText, Users, Clock, AlertTriangle, TrendingUp, Bed, RefreshCw, TestTube, Stethoscope, IndianRupee, BellRing, Building2, Siren, Heart, CreditCard } from "lucide-react"
+import {
+  UserCheck,
+  Activity,
+  FileText,
+  Users,
+  Clock,
+  AlertTriangle,
+  TrendingUp,
+  Bed,
+  RefreshCw,
+  TestTube,
+  Stethoscope,
+  IndianRupee,
+  BellRing,
+  Building2,
+  Siren,
+  Heart,
+  CreditCard,
+  Zap,
+  AlertCircle,
+} from "lucide-react"
 import Link from "next/link"
 import { mockAdmissions, mockWards, mockBeds, getDaysAdmitted } from "@/lib/ipd-mock-data"
 import { AppLayout } from "@/components/app-shell/app-layout"
@@ -24,12 +44,8 @@ const mockPendingDiagnostics = {
     { patient: "John Smith", test: "Complete Blood Count", waitTime: "45 min" },
     { patient: "Maria Garcia", test: "Liver Function Test", waitTime: "1.2 hrs" },
   ],
-  radiology: [
-    { patient: "Robert Johnson", test: "Chest X-Ray", waitTime: "30 min" },
-  ],
-  scan: [
-    { patient: "David Brown", test: "CT Scan", waitTime: "2 hrs" },
-  ],
+  radiology: [{ patient: "Robert Johnson", test: "Chest X-Ray", waitTime: "30 min" }],
+  scan: [{ patient: "David Brown", test: "CT Scan", waitTime: "2 hrs" }],
 }
 
 const mockBillingData = {
@@ -104,482 +120,235 @@ export default function DashboardPage() {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case "admission": return <UserCheck className="h-4 w-4 text-blue-600" />
-      case "discharge": return <FileText className="h-4 w-4 text-green-600" />
-      case "transfer": return <Activity className="h-4 w-4 text-orange-600" />
-      default: return <Activity className="h-4 w-4" />
+      case "admission":
+        return <UserCheck className="h-4 w-4 text-blue-600" />
+      case "discharge":
+        return <FileText className="h-4 w-4 text-green-600" />
+      case "transfer":
+        return <Activity className="h-4 w-4 text-orange-600" />
+      default:
+        return <Activity className="h-4 w-4" />
     }
   }
 
   const getAlertColor = (priority: string) => {
     switch (priority) {
-      case "high": return "bg-red-100 text-red-700 border-red-200"
-      case "medium": return "bg-orange-100 text-orange-700 border-orange-200"
-      case "low": return "bg-yellow-100 text-yellow-700 border-yellow-200"
-      default: return "bg-gray-100 text-gray-700"
+      case "high":
+        return "bg-red-100 text-red-700 border-red-200"
+      case "medium":
+        return "bg-orange-100 text-orange-700 border-orange-200"
+      case "low":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200"
+      default:
+        return "bg-gray-100 text-gray-700"
     }
   }
 
   return (
     <AuthProvider>
       <AppLayout>
-        <div className="container mx-auto p-6 space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">IPD Management Dashboard</h1>
-              <p className="text-muted-foreground flex items-center gap-2 mt-1">
-                Comprehensive inpatient department management • Last updated: {lastRefresh.toLocaleTimeString()}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleRefresh}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Badge variant="outline" className="text-lg px-3 py-1">
-                {totalAdmissions} Active Patients
-              </Badge>
+        <div className="container mx-auto p-6 space-y-8">
+          {/* Modern Header with Gradient */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 p-8 text-white shadow-2xl">
+            <div className="absolute inset-0 bg-grid-white/10" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-4xl font-bold tracking-tight mb-2">Dashboard Overview</h1>
+                  <p className="text-blue-100 flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Last updated: {lastRefresh.toLocaleTimeString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleRefresh}
+                    className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-6 py-3 border border-white/30">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold">{totalAdmissions}</div>
+                      <div className="text-xs text-blue-100">Active Patients</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Top Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Admissions</CardTitle>
-                <Users className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalAdmissions}</div>
-                <p className="text-xs text-muted-foreground">Active inpatients</p>
+          {/* Modern Stats Cards with Gradient Backgrounds */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="border-none shadow-lg bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-xl transition-all duration-300">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-700 mb-2">Active Admissions</p>
+                    <p className="text-4xl font-bold text-blue-900">{totalAdmissions}</p>
+                    <p className="text-xs text-blue-600 mt-2">Total inpatients</p>
+                  </div>
+                  <div className="p-3 bg-blue-500 rounded-xl shadow-lg">
+                    <Users className="h-6 w-6 text-white" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Critical</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{criticalPatients}</div>
-                <p className="text-xs text-muted-foreground">Require immediate attention</p>
+            <Card className="border-none shadow-lg bg-gradient-to-br from-red-50 to-red-100/50 hover:shadow-xl transition-all duration-300">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-red-700 mb-2">Critical Cases</p>
+                    <p className="text-4xl font-bold text-red-900">{criticalPatients}</p>
+                    <p className="text-xs text-red-600 mt-2">Need attention</p>
+                  </div>
+                  <div className="p-3 bg-red-500 rounded-xl shadow-lg">
+                    <AlertTriangle className="h-6 w-6 text-white" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ready for Discharge</CardTitle>
-                <FileText className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{dischargeReady}</div>
-                <p className="text-xs text-muted-foreground">Patients stable for discharge</p>
+            <Card className="border-none shadow-lg bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-xl transition-all duration-300">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-700 mb-2">Ready to Discharge</p>
+                    <p className="text-4xl font-bold text-green-900">{dischargeReady}</p>
+                    <p className="text-xs text-green-600 mt-2">Stable patients</p>
+                  </div>
+                  <div className="p-3 bg-green-500 rounded-xl shadow-lg">
+                    <FileText className="h-6 w-6 text-white" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Today's Admissions</CardTitle>
-                <TrendingUp className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{newAdmissionsToday}</div>
-                <p className="text-xs text-muted-foreground">New admissions today</p>
+            <Card className="border-none shadow-lg bg-gradient-to-br from-purple-50 to-purple-100/50 hover:shadow-xl transition-all duration-300">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-purple-700 mb-2">Today's Admissions</p>
+                    <p className="text-4xl font-bold text-purple-900">{newAdmissionsToday}</p>
+                    <p className="text-xs text-purple-600 mt-2">New today</p>
+                  </div>
+                  <div className="p-3 bg-purple-500 rounded-xl shadow-lg">
+                    <TrendingUp className="h-6 w-6 text-white" />
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Main Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column */}
-            <div className="space-y-6">
-              {/* Bed Occupancy */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bed className="h-5 w-5" />
-                    Bed Occupancy
-                  </CardTitle>
-                  <CardDescription>Current bed availability across all wards</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={bedOccupancyData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={90}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {bedOccupancyData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+          {/* Simplified Dashboard Content */}
+          <div className="grid grid-cols-1 gap-6">
+            {/* Ward Summary - Simple Grid */}
+            <Card className="border-none shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50">
+                <CardTitle className="text-lg">Ward Summary</CardTitle>
+                <CardDescription className="text-gray-600">Current patient distribution</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="p-4 rounded-lg bg-blue-50 text-center">
+                    <div className="text-3xl font-bold text-blue-600">{icuCount}</div>
+                    <p className="text-sm text-gray-600 mt-1">ICU</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">{totalBeds}</div>
-                      <p className="text-xs text-muted-foreground">Total</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">{occupiedBeds}</div>
-                      <p className="text-xs text-muted-foreground">Occupied</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">{availableBeds}</div>
-                      <p className="text-xs text-muted-foreground">Available</p>
-                    </div>
+                  <div className="p-4 rounded-lg bg-green-50 text-center">
+                    <div className="text-3xl font-bold text-green-600">{generalCount}</div>
+                    <p className="text-sm text-gray-600 mt-1">General</p>
                   </div>
-                  <div className="mt-4 p-3 bg-muted rounded-lg">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>ICU Occupancy:</span>
-                      <span className="font-medium">{icuOccupied} / {icuBeds.length}</span>
-                    </div>
-                    <Progress value={(icuOccupied / icuBeds.length) * 100} className="mt-2" />
+                  <div className="p-4 rounded-lg bg-purple-50 text-center">
+                    <div className="text-3xl font-bold text-purple-600">{privateCount}</div>
+                    <p className="text-sm text-gray-600 mt-1">Private</p>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Alerts */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BellRing className="h-5 w-5" />
-                    Critical Alerts
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {mockAlerts.map((alert) => (
-                      <div key={alert.id} className={`p-3 rounded-lg border ${getAlertColor(alert.priority)}`}>
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{alert.message}</p>
-                            <p className="text-xs mt-1 opacity-75">{alert.time}</p>
-                          </div>
-                          <Badge variant="outline" className="ml-2">{alert.priority}</Badge>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="p-4 rounded-lg bg-red-50 text-center">
+                    <div className="text-3xl font-bold text-red-600">{ventilatorCount}</div>
+                    <p className="text-sm text-gray-600 mt-1">Ventilator</p>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Activity Feed */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5" />
-                    Live Admission/Discharge Feed
-                  </CardTitle>
-                  <CardDescription>Recent activity (last 6 hours)</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {mockActivityFeed.map((activity) => (
-                      <div key={activity.id} className="flex items-start gap-3 pb-3 border-b last:border-0">
-                        <div className="mt-1">{getActivityIcon(activity.type)}</div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{activity.patient}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {activity.type === "transfer" 
-                              ? `Transferred from ${activity.from} to ${activity.to}`
-                              : `${activity.type.charAt(0).toUpperCase() + activity.type.slice(1)} • ${activity.ward}`
-                            }
-                          </p>
-                        </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">{activity.time}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-6">
-              {/* Inpatient Load */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5" />
-                    Inpatient Load
-                  </CardTitle>
-                  <CardDescription>Patient distribution by ward type</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Siren className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium">ICU</span>
-                      </div>
-                      <div className="text-2xl font-bold text-blue-600">{icuCount}</div>
-                      <p className="text-xs text-muted-foreground">Patients</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-green-50 border border-green-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium">General</span>
-                      </div>
-                      <div className="text-2xl font-bold text-green-600">{generalCount}</div>
-                      <p className="text-xs text-muted-foreground">Patients</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Bed className="h-4 w-4 text-purple-600" />
-                        <span className="text-sm font-medium">Private</span>
-                      </div>
-                      <div className="text-2xl font-bold text-purple-600">{privateCount}</div>
-                      <p className="text-xs text-muted-foreground">Patients</p>
-                    </div>
-                    <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Heart className="h-4 w-4 text-red-600" />
-                        <span className="text-sm font-medium">Ventilator</span>
-                      </div>
-                      <div className="text-2xl font-bold text-red-600">{ventilatorCount}</div>
-                      <p className="text-xs text-muted-foreground">Patients</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Doctors On Duty */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Stethoscope className="h-5 w-5" />
-                    Doctors On Duty
-                  </CardTitle>
-                  <CardDescription>Current shift doctors</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {mockDoctorsOnDuty.map((doctor) => (
-                      <div key={doctor.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium text-sm">{doctor.name}</p>
-                          <p className="text-xs text-muted-foreground">{doctor.speciality} • {doctor.shift} Shift</p>
-                        </div>
-                        <Badge variant={doctor.status === "active" ? "default" : "secondary"}>
-                          {doctor.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Pending Diagnostics */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TestTube className="h-5 w-5" />
-                    Pending Diagnostics
-                  </CardTitle>
-                  <CardDescription>Awaiting test results</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Lab Tests</span>
-                        <Badge variant="secondary">{mockPendingDiagnostics.lab.length}</Badge>
-                      </div>
-                      <div className="space-y-2">
-                        {mockPendingDiagnostics.lab.map((item, i) => (
-                          <div key={i} className="text-xs flex justify-between p-2 bg-muted rounded">
-                            <span>{item.patient} - {item.test}</span>
-                            <span className="text-muted-foreground">{item.waitTime}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Radiology</span>
-                        <Badge variant="secondary">{mockPendingDiagnostics.radiology.length}</Badge>
-                      </div>
-                      <div className="space-y-2">
-                        {mockPendingDiagnostics.radiology.map((item, i) => (
-                          <div key={i} className="text-xs flex justify-between p-2 bg-muted rounded">
-                            <span>{item.patient} - {item.test}</span>
-                            <span className="text-muted-foreground">{item.waitTime}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Scans</span>
-                        <Badge variant="secondary">{mockPendingDiagnostics.scan.length}</Badge>
-                      </div>
-                      <div className="space-y-2">
-                        {mockPendingDiagnostics.scan.map((item, i) => (
-                          <div key={i} className="text-xs flex justify-between p-2 bg-muted rounded">
-                            <span>{item.patient} - {item.test}</span>
-                            <span className="text-muted-foreground">{item.waitTime}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Billing */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Billing & Deposits
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg border">
-                      <div className="flex items-center gap-2 mb-1">
-                        <IndianRupee className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">Total Due</span>
-                      </div>
-                      <div className="text-lg font-bold">₹{mockBillingData.totalDue.toLocaleString()}</div>
-                    </div>
-                    <div className="p-3 rounded-lg border">
-                      <div className="flex items-center gap-2 mb-1">
-                        <AlertTriangle className="h-3 w-3 text-orange-500" />
-                        <span className="text-xs text-muted-foreground">Low Advance</span>
-                      </div>
-                      <div className="text-lg font-bold text-orange-600">{mockBillingData.lowAdvanceCount}</div>
-                    </div>
-                    <div className="p-3 rounded-lg border">
-                      <div className="flex items-center gap-2 mb-1">
-                        <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">Avg Daily</span>
-                      </div>
-                      <div className="text-lg font-bold">₹{mockBillingData.avgDaily.toLocaleString()}</div>
-                    </div>
-                    <div className="p-3 rounded-lg border">
-                      <div className="flex items-center gap-2 mb-1">
-                        <AlertTriangle className="h-3 w-3 text-red-500" />
-                        <span className="text-xs text-muted-foreground">Shortfall</span>
-                      </div>
-                      <div className="text-lg font-bold text-red-600">{mockBillingData.depositShortfall}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Frequently used IPD operations</CardDescription>
+          <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <div className="p-2 bg-indigo-500 rounded-lg">
+                  <Zap className="h-5 w-5 text-white" />
+                </div>
+                Quick Actions
+              </CardTitle>
+              <CardDescription className="text-gray-600">Frequently used IPD operations</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <Link href="/admin/ipd/admission">
-                  <Button className="w-full h-20 flex flex-col gap-2">
-                    <UserCheck className="h-6 w-6" />
-                    <span className="text-sm">New Admission</span>
+                <Link href="/ipd/admission">
+                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all">
+                    <UserCheck className="h-7 w-7" />
+                    <span className="text-sm font-medium">New Admission</span>
                   </Button>
                 </Link>
-                <Link href="/admin/ipd/inpatient">
-                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
-                    <Activity className="h-6 w-6" />
-                    <span className="text-sm">Manage Inpatients</span>
+                <Link href="/ipd/inpatient">
+                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg hover:shadow-xl transition-all text-white">
+                    <Activity className="h-7 w-7" />
+                    <span className="text-sm font-medium">Manage Inpatients</span>
                   </Button>
                 </Link>
                 <Link href="/wards">
-                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
-                    <Bed className="h-6 w-6" />
-                    <span className="text-sm">Ward/Bed Status</span>
+                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all text-white">
+                    <Bed className="h-7 w-7" />
+                    <span className="text-sm font-medium">Ward/Bed Status</span>
                   </Button>
                 </Link>
-                <Link href="/admin/ipd/discharge">
-                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
-                    <FileText className="h-6 w-6" />
-                    <span className="text-sm">Discharge</span>
+                <Link href="/ipd/discharge">
+                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg hover:shadow-xl transition-all text-white">
+                    <FileText className="h-7 w-7" />
+                    <span className="text-sm font-medium">Discharge</span>
                   </Button>
                 </Link>
                 <Link href="/billing">
-                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2">
-                    <IndianRupee className="h-6 w-6" />
-                    <span className="text-sm">Billing Dashboard</span>
+                  <Button className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg hover:shadow-xl transition-all text-white">
+                    <IndianRupee className="h-7 w-7" />
+                    <span className="text-sm font-medium">Billing Dashboard</span>
                   </Button>
                 </Link>
               </div>
             </CardContent>
           </Card>
 
-          {/* Recent Admissions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Admissions</CardTitle>
-              <CardDescription>Latest patient admissions and their current status</CardDescription>
+          {/* Recent Admissions - Simplified */}
+          <Card className="border-none shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50">
+              <CardTitle className="text-lg">Recent Admissions</CardTitle>
+              <CardDescription className="text-gray-600">Latest patient admissions</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="pt-6">
+              <div className="space-y-3">
                 {recentAdmissions.map(admission => (
-                  <div key={admission.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-medium">{admission.patientName}</h3>
-                        <Badge variant="secondary">{admission.uhid}</Badge>
-                        <Badge
-                          variant={
-                            admission.status === "critical"
-                              ? "destructive"
-                              : admission.status === "stable"
-                                ? "default"
-                                : "secondary"
-                          }
-                        >
-                          {admission.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Bed className="h-4 w-4" />
-                          {admission.wardName} - Bed {admission.bedNumber}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {getDaysAdmitted(admission.admissionDate)} days
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Stethoscope className="h-4 w-4" />
-                          {admission.consultingDoctorName}
-                        </span>
-                      </div>
+                  <div key={admission.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold">{admission.patientName}</h3>
+                      <Badge variant="secondary">{admission.uhid}</Badge>
+                      <Badge variant={admission.status === "critical" ? "destructive" : "default"}>
+                        {admission.status}
+                      </Badge>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Link href="/admin/ipd/inpatient">
-                        <Button size="sm" variant="outline">
-                          View Details
-                        </Button>
-                      </Link>
-                    </div>
+                    <p className="text-sm text-gray-600">
+                      {admission.wardName} - Bed {admission.bedNumber} • {getDaysAdmitted(admission.admissionDate)} days
+                    </p>
                   </div>
                 ))}
               </div>
 
               {recentAdmissions.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Users className="mx-auto h-12 w-12 mb-2 opacity-50" />
                   <p>No recent admissions</p>
-                  <p className="text-sm">New admissions will appear here</p>
                 </div>
               )}
             </CardContent>
