@@ -331,10 +331,6 @@ export default function AppointmentsPage() {
               <h1 className="text-3xl font-bold tracking-tight">Appointments</h1>
               <p className="text-muted-foreground">Manage patient appointments and schedules</p>
             </div>
-            <Button onClick={() => setShowBookDialog(true)} size="lg">
-              <Plus className="h-5 w-5 mr-2" />
-              Book Appointment
-            </Button>
           </div>
 
           {/* Stats Cards */}

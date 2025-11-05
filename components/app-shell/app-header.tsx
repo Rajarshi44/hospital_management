@@ -85,27 +85,6 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Quick Actions */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                <Plus className="h-4 w-4" />
-                Quick Actions
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {getQuickActions().map((action, index) => (
-                <DropdownMenuItem key={index} onClick={action.action}>
-                  {action.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <NotificationCenter />
-
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
