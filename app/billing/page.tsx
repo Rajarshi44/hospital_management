@@ -69,32 +69,147 @@ const mockRevenueBySource = [
 ]
 
 const mockOPDBills = [
-  { id: "OPD001", patientUhid: "PAT001", patientName: "John Doe", doctor: "Dr. Sarah Johnson", amount: 2500, status: "Paid", date: "2025-10-28" },
-  { id: "OPD002", patientUhid: "PAT002", patientName: "Jane Smith", doctor: "Dr. Michael Chen", amount: 1800, status: "Pending", date: "2025-10-28" },
-  { id: "OPD003", patientUhid: "PAT003", patientName: "Bob Wilson", doctor: "Dr. Emily Brown", amount: 3200, status: "Interim", date: "2025-10-27" },
+  {
+    id: "OPD001",
+    patientUhid: "PAT001",
+    patientName: "John Doe",
+    doctor: "Dr. Sarah Johnson",
+    amount: 2500,
+    status: "Paid",
+    date: "2025-10-28",
+  },
+  {
+    id: "OPD002",
+    patientUhid: "PAT002",
+    patientName: "Jane Smith",
+    doctor: "Dr. Michael Chen",
+    amount: 1800,
+    status: "Pending",
+    date: "2025-10-28",
+  },
+  {
+    id: "OPD003",
+    patientUhid: "PAT003",
+    patientName: "Bob Wilson",
+    doctor: "Dr. Emily Brown",
+    amount: 3200,
+    status: "Interim",
+    date: "2025-10-27",
+  },
 ]
 
 const mockIPDBills = [
-  { id: "IPD001", admissionId: "ADM001", patientName: "Alice Johnson", bedDays: 5, runningTotal: 45000, tpaStatus: "Approved", status: "Running" },
-  { id: "IPD002", admissionId: "ADM002", patientName: "Robert Smith", bedDays: 3, runningTotal: 28000, tpaStatus: "Pending", status: "Running" },
-  { id: "IPD003", admissionId: "ADM003", patientName: "Carol White", bedDays: 7, runningTotal: 65000, tpaStatus: "N/A", status: "Finalized" },
+  {
+    id: "IPD001",
+    admissionId: "ADM001",
+    patientName: "Alice Johnson",
+    bedDays: 5,
+    runningTotal: 45000,
+    tpaStatus: "Approved",
+    status: "Running",
+  },
+  {
+    id: "IPD002",
+    admissionId: "ADM002",
+    patientName: "Robert Smith",
+    bedDays: 3,
+    runningTotal: 28000,
+    tpaStatus: "Pending",
+    status: "Running",
+  },
+  {
+    id: "IPD003",
+    admissionId: "ADM003",
+    patientName: "Carol White",
+    bedDays: 7,
+    runningTotal: 65000,
+    tpaStatus: "N/A",
+    status: "Finalized",
+  },
 ]
 
 const mockTPAClaims = [
-  { claimId: "CLM001", patient: "Alice Johnson", tpa: "Star Health", policyNo: "SH123456", claimedAmount: 45000, approvedAmount: 40000, status: "Approved" },
-  { claimId: "CLM002", patient: "Robert Smith", tpa: "HDFC Ergo", policyNo: "HD789012", claimedAmount: 28000, approvedAmount: 0, status: "Pending" },
-  { claimId: "CLM003", patient: "David Brown", tpa: "ICICI Lombard", policyNo: "IC345678", claimedAmount: 55000, approvedAmount: 0, status: "Rejected" },
+  {
+    claimId: "CLM001",
+    patient: "Alice Johnson",
+    tpa: "Star Health",
+    policyNo: "SH123456",
+    claimedAmount: 45000,
+    approvedAmount: 40000,
+    status: "Approved",
+  },
+  {
+    claimId: "CLM002",
+    patient: "Robert Smith",
+    tpa: "HDFC Ergo",
+    policyNo: "HD789012",
+    claimedAmount: 28000,
+    approvedAmount: 0,
+    status: "Pending",
+  },
+  {
+    claimId: "CLM003",
+    patient: "David Brown",
+    tpa: "ICICI Lombard",
+    policyNo: "IC345678",
+    claimedAmount: 55000,
+    approvedAmount: 0,
+    status: "Rejected",
+  },
 ]
 
 const mockAdvancePayments = [
-  { id: "ADV001", patientUhid: "PAT001", patientName: "John Doe", amount: 10000, mode: "Card", date: "2025-10-25", status: "Applied" },
-  { id: "ADV002", patientUhid: "PAT004", patientName: "Emma Wilson", amount: 5000, mode: "Cash", date: "2025-10-27", status: "Pending" },
+  {
+    id: "ADV001",
+    patientUhid: "PAT001",
+    patientName: "John Doe",
+    amount: 10000,
+    mode: "Card",
+    date: "2025-10-25",
+    status: "Applied",
+  },
+  {
+    id: "ADV002",
+    patientUhid: "PAT004",
+    patientName: "Emma Wilson",
+    amount: 5000,
+    mode: "Cash",
+    date: "2025-10-27",
+    status: "Pending",
+  },
 ]
 
 const mockLedgerTransactions = [
-  { txnId: "TXN001", date: "2025-10-28 10:30", type: "Payment", patientUhid: "PAT001", amount: 2500, mode: "UPI", status: "Success", billId: "OPD001" },
-  { txnId: "TXN002", date: "2025-10-28 11:15", type: "Refund", patientUhid: "PAT005", amount: 500, mode: "Cash", status: "Completed", billId: "OPD015" },
-  { txnId: "TXN003", date: "2025-10-28 14:20", type: "Advance", patientUhid: "PAT004", amount: 5000, mode: "Cash", status: "Success", billId: "-" },
+  {
+    txnId: "TXN001",
+    date: "2025-10-28 10:30",
+    type: "Payment",
+    patientUhid: "PAT001",
+    amount: 2500,
+    mode: "UPI",
+    status: "Success",
+    billId: "OPD001",
+  },
+  {
+    txnId: "TXN002",
+    date: "2025-10-28 11:15",
+    type: "Refund",
+    patientUhid: "PAT005",
+    amount: 500,
+    mode: "Cash",
+    status: "Completed",
+    billId: "OPD015",
+  },
+  {
+    txnId: "TXN003",
+    date: "2025-10-28 14:20",
+    type: "Advance",
+    patientUhid: "PAT004",
+    amount: 5000,
+    mode: "Cash",
+    status: "Success",
+    billId: "-",
+  },
 ]
 
 export default function BillingPage() {
@@ -206,7 +321,9 @@ export default function BillingPage() {
                     <Clock className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">₹{mockDashboardStats.outstandingReceivables.toLocaleString()}</div>
+                    <div className="text-2xl font-bold">
+                      ₹{mockDashboardStats.outstandingReceivables.toLocaleString()}
+                    </div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                       <ArrowDownRight className="h-3 w-3 text-red-600" />
                       <span className="text-red-600">+5.2%</span> pending
@@ -304,7 +421,7 @@ export default function BillingPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {mockRevenueBySource.map((item) => (
+                    {mockRevenueBySource.map(item => (
                       <div key={item.source} className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="font-medium">{item.source}</span>
@@ -313,10 +430,7 @@ export default function BillingPage() {
                           </span>
                         </div>
                         <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full ${item.color}`}
-                            style={{ width: `${item.percentage}%` }}
-                          />
+                          <div className={`h-full ${item.color}`} style={{ width: `${item.percentage}%` }} />
                         </div>
                       </div>
                     ))}
@@ -378,7 +492,7 @@ export default function BillingPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockOPDBills.map((bill) => (
+                      {mockOPDBills.map(bill => (
                         <TableRow key={bill.id}>
                           <TableCell className="font-mono">{bill.id}</TableCell>
                           <TableCell>{bill.patientUhid}</TableCell>
@@ -435,7 +549,7 @@ export default function BillingPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockIPDBills.map((bill) => (
+                      {mockIPDBills.map(bill => (
                         <TableRow key={bill.id}>
                           <TableCell className="font-mono">{bill.id}</TableCell>
                           <TableCell>{bill.admissionId}</TableCell>
@@ -492,7 +606,7 @@ export default function BillingPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockTPAClaims.map((claim) => (
+                      {mockTPAClaims.map(claim => (
                         <TableRow key={claim.claimId}>
                           <TableCell className="font-mono">{claim.claimId}</TableCell>
                           <TableCell className="font-medium">{claim.patient}</TableCell>

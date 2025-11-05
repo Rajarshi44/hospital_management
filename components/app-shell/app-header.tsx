@@ -91,9 +91,7 @@ export function AppHeader() {
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user.avatar || undefined} alt={getUserFullName(user)} />
-                  <AvatarFallback>
-                    {getUserInitials(user)}
-                  </AvatarFallback>
+                  <AvatarFallback>{getUserInitials(user)}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -103,7 +101,7 @@ export function AppHeader() {
                   <p className="text-sm font-medium leading-none">{getUserFullName(user)}</p>
                   <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
                   <p className="text-xs leading-none text-muted-foreground capitalize">
-                    {user.role.toLowerCase().replace('_', ' ')}
+                    {user.role.toLowerCase().replace("_", " ")}
                   </p>
                 </div>
               </DropdownMenuLabel>
