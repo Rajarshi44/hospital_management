@@ -6,10 +6,14 @@ export class ApiClient {
       "Content-Type": "application/json",
     }
 
-    if (includeAuth && typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken")
+    if (includeAuth && typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      console.log('🔐 API Client - Token from localStorage:', token ? 'Token exists' : 'No token');
       if (token) {
-        headers["Authorization"] = `Bearer ${token}`
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('🔐 API Client - Authorization header set');
+      } else {
+        console.log('🔐 API Client - No token available for authentication');
       }
     }
 
@@ -24,6 +28,10 @@ export class ApiClient {
     const headers = this.getHeaders(includeAuth)
 
     try {
+      console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+      const hasAuth = (headers as any)['Authorization'] ? '🔐 Authenticated' : '🚫 No Auth';
+      console.log(`🔗 ${hasAuth}`);
+      
       const response = await fetch(url, {
         ...options,
         headers: {
@@ -31,6 +39,8 @@ export class ApiClient {
           ...options.headers,
         },
       })
+
+      console.log(`📡 Response: ${response.status} ${response.statusText}`);
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({
