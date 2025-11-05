@@ -20,6 +20,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Search,
   Plus,
   FileText,
@@ -47,6 +54,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
+  MoreVertical,
+  Edit,
+  Eye,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { AppLayout } from "@/components/app-shell/app-layout"
@@ -692,19 +702,22 @@ export default function BillingPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {mockRevenueBySource.map(item => (
-                      <div key={item.source} className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="font-medium">{item.source}</span>
-                          <span className="text-muted-foreground">
-                            ₹{item.amount.toLocaleString()} ({item.percentage}%)
-                          </span>
+                    {mockRevenueBySource.map(item => {
+                      const widthClass = item.percentage >= 50 ? 'w-1/2' : item.percentage >= 30 ? 'w-1/3' : item.percentage >= 10 ? 'w-1/6' : 'w-1/12';
+                      return (
+                        <div key={item.source} className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium">{item.source}</span>
+                            <span className="text-muted-foreground">
+                              ₹{item.amount.toLocaleString()} ({item.percentage}%)
+                            </span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full ${item.color} ${widthClass}`} />
+                          </div>
                         </div>
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div className={`h-full ${item.color}`} style={{ width: `${item.percentage}%` }} />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </CardContent>
                 </Card>
 
@@ -856,10 +869,6 @@ export default function BillingPage() {
                       <CardTitle>Insurance & TPA Claims</CardTitle>
                       <CardDescription>Manage insurance claims and TPA authorizations</CardDescription>
                     </div>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Submit Claim
-                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -889,9 +898,28 @@ export default function BillingPage() {
                           </TableCell>
                           <TableCell>{getStatusBadge(claim.status)}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="sm">
-                              <FileText className="h-4 w-4" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit Claim
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem>
+                                  <FileText className="h-4 w-4 mr-2" />
+                                  Documents
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))}

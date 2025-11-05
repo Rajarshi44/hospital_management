@@ -15,7 +15,6 @@ export default function IPDOverviewPage() {
   let criticalPatients = 0
   let dischargeReady = 0
   let newAdmissionsToday = 0
-  let recentAdmissions: any[] = []
   let wardStats: any[] = []
 
   try {
@@ -33,8 +32,6 @@ export default function IPDOverviewPage() {
           return false
         }
       })?.length || 0
-
-    recentAdmissions = mockAdmissions?.filter(a => a.status !== "discharged")?.slice(0, 5) || []
 
     // Ward occupancy stats with error handling
     wardStats =
@@ -170,64 +167,6 @@ export default function IPDOverviewPage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Recent Admissions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Admissions</CardTitle>
-              <CardDescription>Latest patient admissions and their current status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentAdmissions.map(admission => (
-                  <div key={admission.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-medium">{admission.patientName}</h3>
-                        <Badge variant="secondary">{admission.uhid}</Badge>
-                        <Badge
-                          variant={
-                            admission.status === "critical"
-                              ? "destructive"
-                              : admission.status === "stable"
-                                ? "default"
-                                : "secondary"
-                          }
-                        >
-                          {admission.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Bed className="h-4 w-4" />
-                          {admission.wardName} - Bed {admission.bedNumber}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {getDaysAdmitted(admission.admissionDate)} days
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Link href="/admin/ipd/inpatient">
-                        <Button size="sm" variant="outline">
-                          View Details
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {recentAdmissions.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="mx-auto h-12 w-12 mb-2 opacity-50" />
-                  <p>No recent admissions</p>
-                  <p className="text-sm">New admissions will appear here</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </AppLayout>
     </AuthProvider>

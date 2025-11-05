@@ -250,7 +250,6 @@ export default function InpatientListPage() {
                       <TableHead>Ward/Bed</TableHead>
                       <TableHead>Consulting Doctor</TableHead>
                       <TableHead>Days Admitted</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -282,15 +281,6 @@ export default function InpatientListPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">{getDaysAdmitted(admission.admissionDate)} days</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={getStatusBadgeColor(admission.status)}
-                            className="flex items-center gap-1 w-fit"
-                          >
-                            {getStatusIcon(admission.status)}
-                            {admission.status.charAt(0).toUpperCase() + admission.status.slice(1)}
-                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-1">

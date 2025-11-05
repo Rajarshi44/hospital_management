@@ -33,6 +33,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { BookAppointmentDialog } from "@/components/appointments/book-appointment-dialog"
 
@@ -189,6 +196,11 @@ export default function AppointmentsPage() {
   const { toast } = useToast()
   const [showBookDialog, setShowBookDialog] = useState(false)
   const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([])
+  
+  // Edit status dialog state
+  const [editStatusDialog, setEditStatusDialog] = useState(false)
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null)
+  const [newStatus, setNewStatus] = useState<AppointmentStatus>("Scheduled")
 
   // Filters
   const [patientSearch, setPatientSearch] = useState("")
@@ -266,12 +278,25 @@ export default function AppointmentsPage() {
     [loadAppointments, toast]
   )
 
+  const openEditStatusDialog = (appointmentId: string, currentStatus: AppointmentStatus) => {
+    setSelectedAppointmentId(appointmentId)
+    setNewStatus(currentStatus)
+    setEditStatusDialog(true)
+  }
+
   const handleStatusChange = useCallback(
-    async (appointmentId: string, newStatus: AppointmentStatus) => {
+    async (appointmentId: string, statusToUpdate: AppointmentStatus) => {
       try {
-        // Here you would call an update API endpoint
-        // For now, we'll just refresh the data
-        loadAppointments()
+        console.log(`Updating appointment ${appointmentId} to status: ${statusToUpdate}`)
+        
+        // Update filtered appointments locally for immediate UI feedback
+        setFilteredAppointments(prev => 
+          prev.map(apt => 
+            apt.id === appointmentId 
+              ? { ...apt, status: statusToUpdate }
+              : apt
+          )
+        )
 
         const statusMessages: Record<AppointmentStatus, string> = {
           Scheduled: "Appointment scheduled",
@@ -283,8 +308,15 @@ export default function AppointmentsPage() {
 
         toast({
           title: "Status Updated",
-          description: statusMessages[newStatus],
+          description: statusMessages[statusToUpdate],
         })
+        
+        setEditStatusDialog(false)
+        
+        // Optionally refresh from backend after a delay
+        setTimeout(() => {
+          loadAppointments()
+        }, 500)
       } catch (error) {
         toast({
           title: "Error",
@@ -295,6 +327,12 @@ export default function AppointmentsPage() {
     },
     [loadAppointments, toast]
   )
+
+  const handleSaveStatus = () => {
+    if (selectedAppointmentId && newStatus) {
+      handleStatusChange(selectedAppointmentId, newStatus)
+    }
+  }
 
   const clearFilters = () => {
     setPatientSearch("")
@@ -572,15 +610,17 @@ export default function AppointmentsPage() {
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => openEditStatusDialog(appointment.id, appointment.status)}
+                                >
                                   <Edit className="h-4 w-4 mr-2" />
-                                  Edit
+                                  Edit Status
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 {appointment.status === "Scheduled" && (
                                   <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "Checked-in")}>
                                     <User className="h-4 w-4 mr-2" />
-                                    Check-In
+                                    Quick Check-In
                                   </DropdownMenuItem>
                                 )}
                                 {appointment.status === "Checked-in" && (
@@ -595,10 +635,15 @@ export default function AppointmentsPage() {
                                     Mark Completed
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "Cancelled")}>
-                                  <XCircle className="h-4 w-4 mr-2" />
-                                  Cancel
-                                </DropdownMenuItem>
+                                {appointment.status !== "Cancelled" && appointment.status !== "Completed" && (
+                                  <DropdownMenuItem 
+                                    onClick={() => handleStatusChange(appointment.id, "Cancelled")}
+                                    className="text-red-600"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Cancel Appointment
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -613,6 +658,78 @@ export default function AppointmentsPage() {
         </div>
 
         <BookAppointmentDialog open={showBookDialog} onOpenChange={setShowBookDialog} onSuccess={handleBookSuccess} />
+
+        {/* Edit Status Dialog */}
+        <Dialog open={editStatusDialog} onOpenChange={setEditStatusDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Appointment Status</DialogTitle>
+              <DialogDescription>
+                Update the status of this appointment
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Current Status</label>
+                <div className="flex items-center gap-2">
+                  {selectedAppointmentId && 
+                    getStatusBadge(
+                      filteredAppointments.find(a => a.id === selectedAppointmentId)?.status || "Scheduled"
+                    )
+                  }
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">New Status</label>
+                <Select value={newStatus} onValueChange={(value) => setNewStatus(value as AppointmentStatus)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Scheduled">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Scheduled
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="Checked-in">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Checked-in
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="In Progress">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        In Progress
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="Completed">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Completed
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="Cancelled">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4" />
+                        Cancelled
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditStatusDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveStatus}>
+                Save Status
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </AppLayout>
     </AuthProvider>
   )

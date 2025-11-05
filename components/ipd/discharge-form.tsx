@@ -164,11 +164,10 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="diagnosis">Diagnosis</TabsTrigger>
             <TabsTrigger value="medications">Medications</TabsTrigger>
             <TabsTrigger value="followup">Follow-up</TabsTrigger>
-            <TabsTrigger value="billing">Billing</TabsTrigger>
           </TabsList>
 
           <TabsContent value="diagnosis" className="space-y-4">
@@ -393,51 +392,6 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
                     </FormItem>
                   )}
                 />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="billing" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Billing Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Bed Charges ({estimatedCharges.days} days):</span>
-                        <span>${estimatedCharges.bedCharges.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Medical Charges:</span>
-                        <span>${estimatedCharges.medicalCharges.toLocaleString()}</span>
-                      </div>
-                      {admission.initialDeposit && (
-                        <div className="flex justify-between text-green-600">
-                          <span>Initial Deposit:</span>
-                          <span>-${admission.initialDeposit.toLocaleString()}</span>
-                        </div>
-                      )}
-                      <Separator />
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>Total Amount:</span>
-                        <span>${estimatedCharges.totalCharges.toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <div className="pl-4 border-l">
-                      <h4 className="font-medium mb-2">Payment Status</h4>
-                      <Badge variant="secondary">Pending Payment</Badge>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Final billing will be processed after discharge confirmation.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

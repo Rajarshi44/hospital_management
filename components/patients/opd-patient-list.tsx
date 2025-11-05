@@ -72,6 +72,79 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
   const [showPatientDetails, setShowPatientDetails] = useState(false);
   const [searchInput, setSearchInput] = useState('');
 
+  // Export OPD patient list to CSV
+  const exportToCSV = () => {
+    if (!patients || patients.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Define CSV headers
+    const headers = [
+      'Patient ID',
+      'Patient Name',
+      'Age',
+      'Gender',
+      'Phone',
+      'Email',
+      'Blood Group',
+      'Address',
+      'City',
+      'State',
+      'Zip Code',
+      'Emergency Contact Name',
+      'Emergency Contact Phone',
+      'Allergies',
+      'Chronic Conditions',
+      'Current Medications'
+    ];
+
+    // Map patients data to CSV rows
+    const csvRows = [
+      headers.join(','),
+      ...patients.map(patient => {
+        const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
+        const allergiesStr = patient.allergies ? String(patient.allergies) : 'None';
+        const chronicStr = patient.medicalHistory.chronicConditions ? String(patient.medicalHistory.chronicConditions) : 'None';
+        const medsStr = patient.medicalHistory.currentMedications ? String(patient.medicalHistory.currentMedications) : 'None';
+        
+        return [
+          patient.patientId || 'N/A',
+          `"${patient.firstName} ${patient.lastName}"`,
+          age,
+          patient.gender,
+          patient.phone || 'N/A',
+          patient.email || 'N/A',
+          patient.bloodGroup || 'N/A',
+          `"${patient.address || 'N/A'}"`,
+          patient.city || 'N/A',
+          patient.state || 'N/A',
+          patient.zipCode || 'N/A',
+          `"${patient.emergencyContact.name || 'N/A'}"`,
+          patient.emergencyContact.phone || 'N/A',
+          `"${allergiesStr}"`,
+          `"${chronicStr}"`,
+          `"${medsStr}"`
+        ].join(',');
+      })
+    ];
+
+    const csvContent = csvRows.join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `opd-patients-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Refresh when trigger changes
   useEffect(() => {
     if (refreshTrigger) {
@@ -193,7 +266,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={exportToCSV}>
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
