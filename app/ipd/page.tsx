@@ -123,7 +123,7 @@ export default function IPDOverviewPage() {
                 <CardDescription>Admit new patients or register existing patients for inpatient care</CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href="/admin/ipd/admission">
+                <Link href="/ipd/admission">
                   <Button className="w-full">
                     <UserCheck className="mr-2 h-4 w-4" />
                     New Admission
@@ -143,7 +143,7 @@ export default function IPDOverviewPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href="/admin/ipd/inpatient">
+                <Link href="/ipd/inpatient">
                   <Button variant="outline" className="w-full">
                     <Activity className="mr-2 h-4 w-4" />
                     Manage Patients
@@ -161,7 +161,7 @@ export default function IPDOverviewPage() {
                 <CardDescription>Process discharges, generate summaries and complete billing</CardDescription>
               </CardHeader>
               <CardContent>
-                <Link href="/admin/ipd/discharge">
+                <Link href="/ipd/discharge">
                   <Button variant="outline" className="w-full">
                     <FileText className="mr-2 h-4 w-4" />
                     Process Discharge
@@ -170,52 +170,6 @@ export default function IPDOverviewPage() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Ward Occupancy */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Ward Occupancy Status
-              </CardTitle>
-              <CardDescription>Current bed occupancy across all wards</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {wardStats.map(ward => (
-                  <div key={ward.id} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-medium">{ward.name}</h3>
-                      <Badge
-                        variant={
-                          ward.occupancyRate > 90 ? "destructive" : ward.occupancyRate > 70 ? "default" : "secondary"
-                        }
-                      >
-                        {ward.occupancyRate}%
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {ward.occupiedBeds} / {ward.totalBeds} beds occupied
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            ward.occupancyRate > 90
-                              ? "bg-red-500 w-full"
-                              : ward.occupancyRate > 70
-                                ? "bg-yellow-500 w-4/5"
-                                : "bg-green-500 w-3/5"
-                          }`}
-                        />
-                      </div>
-                      <span className="text-xs text-muted-foreground min-w-[3rem]">{ward.occupancyRate}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Recent Admissions */}
           <Card>

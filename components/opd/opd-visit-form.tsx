@@ -357,21 +357,21 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
     }
   }, []);
 
-  // Auto-save every 30 seconds
-  useEffect(() => {
-    const userId = "current-user"; // Replace with actual user ID from auth
-    const interval = setInterval(() => {
-      const formData = form.getValues();
-      setAutoSaveStatus("saving");
-      opdService.saveDraft(userId, formData);
-      setTimeout(() => {
-        setAutoSaveStatus("saved");
-        setTimeout(() => setAutoSaveStatus("idle"), 2000);
-      }, 500);
-    }, 30000); // 30 seconds
+  // Auto-save every 30 seconds - DISABLED
+  // useEffect(() => {
+  //   const userId = "current-user"; // Replace with actual user ID from auth
+  //   const interval = setInterval(() => {
+  //     const formData = form.getValues();
+  //     setAutoSaveStatus("saving");
+  //     opdService.saveDraft(userId, formData);
+  //     setTimeout(() => {
+  //       setAutoSaveStatus("saved");
+  //       setTimeout(() => setAutoSaveStatus("idle"), 2000);
+  //     }, 500);
+  //   }, 30000); // 30 seconds
 
-    return () => clearInterval(interval);
-  }, [form]);
+  //   return () => clearInterval(interval);
+  // }, [form]);
 
   // Auto-calculate total payable
   useEffect(() => {

@@ -84,7 +84,7 @@ export default function AdmissionPage() {
                 </Button>
               ) : (
                 <>
-                  <Button variant="outline" onClick={() => router.push("/admin/ipd")}>
+                  <Button variant="outline" onClick={() => router.push("/ipd")}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Dashboard
                   </Button>
@@ -175,7 +175,8 @@ export default function AdmissionPage() {
                     <div>
                       <CardTitle className="text-2xl font-bold">Complete Patient Admission</CardTitle>
                       <CardDescription className="text-base mt-1">
-                        Full admission process including patient registration, admission details, and payment information
+                        Full admission process including patient registration, admission details, and payment
+                        information
                       </CardDescription>
                     </div>
                   </div>
@@ -185,10 +186,7 @@ export default function AdmissionPage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                <EnhancedAdmissionForm
-                  onSubmit={handleAdmissionSuccess}
-                  onCancel={handleAdmissionCancel}
-                />
+                <EnhancedAdmissionForm onSubmit={handleAdmissionSuccess} onCancel={handleAdmissionCancel} />
               </CardContent>
             </Card>
           )}

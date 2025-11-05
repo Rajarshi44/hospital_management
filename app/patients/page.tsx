@@ -35,20 +35,20 @@ export default function PatientsPage() {
     // Convert EnhancedPatient to Patient for compatibility
     const compatiblePatient: Patient = {
       id: patient.id,
-      userId: '',
+      userId: "",
       firstName: patient.firstName,
       lastName: patient.lastName,
-      email: patient.email || '',
+      email: patient.email || "",
       phone: patient.phone,
       dateOfBirth: new Date(patient.dateOfBirth),
       gender: patient.gender as any,
       address: patient.address,
-      city: patient.city || '',
-      state: patient.state || '',
-      zipCode: patient.zipCode || '',
-      emergencyContactName: patient.emergencyContact.name || '',
-      emergencyContactPhone: patient.emergencyContact.phone || '',
-      emergencyContactRelationship: patient.emergencyContact.relationship || '',
+      city: patient.city || "",
+      state: patient.state || "",
+      zipCode: patient.zipCode || "",
+      emergencyContactName: patient.emergencyContact.name || "",
+      emergencyContactPhone: patient.emergencyContact.phone || "",
+      emergencyContactRelationship: patient.emergencyContact.relationship || "",
       bloodGroup: patient.bloodGroup || null,
       allergies: patient.allergies || null,
       chronicConditions: patient.medicalHistory.chronicConditions || null,
@@ -56,9 +56,9 @@ export default function PatientsPage() {
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
-    setSelectedPatient(compatiblePatient);
-    setViewMode("details");
+    }
+    setSelectedPatient(compatiblePatient)
+    setViewMode("details")
   }
 
   const handleNewOPDVisit = () => {
@@ -122,21 +122,12 @@ export default function PatientsPage() {
               </div>
 
               <TabsContent value="opd-list" className="space-y-4">
-                <OPDPatientList 
-                  onPatientSelect={handleOPDPatientSelect}
-                  refreshTrigger={refreshTrigger}
-                />
+                <OPDPatientList onPatientSelect={handleOPDPatientSelect} refreshTrigger={refreshTrigger} />
               </TabsContent>
 
               <TabsContent value="all-patients" className="space-y-4">
-                <PatientSearch
-                  onPatientSelect={handlePatientSelect}
-                  refreshTrigger={refreshTrigger}
-                />
-                <PatientList
-                  onPatientSelect={handlePatientSelect}
-                  refreshTrigger={refreshTrigger}
-                />
+                <PatientSearch onPatientSelect={handlePatientSelect} refreshTrigger={refreshTrigger} />
+                <PatientList onPatientSelect={handlePatientSelect} refreshTrigger={refreshTrigger} />
               </TabsContent>
             </Tabs>
           )}
@@ -162,7 +153,7 @@ export default function PatientsPage() {
                       </div>
                     </div>
                     <Badge variant="secondary" className="text-sm px-3 py-1">
-                      Auto-saves every 30s
+                      Manual Save Only
                     </Badge>
                   </div>
                 </CardHeader>

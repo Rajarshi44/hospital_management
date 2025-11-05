@@ -1,12 +1,12 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText, Printer } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { OPDVisitForm } from "@/components/opd/opd-visit-form";
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { ArrowLeft, FileText, Printer } from "lucide-react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { OPDVisitForm } from "@/components/opd/opd-visit-form"
 import {
   Dialog,
   DialogContent,
@@ -14,34 +14,34 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog"
 
 export default function OPDPage() {
-  const router = useRouter();
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [visitId, setVisitId] = useState<string>("");
+  const router = useRouter()
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
+  const [visitId, setVisitId] = useState<string>("")
 
   const handleSuccess = (newVisitId: string) => {
-    setVisitId(newVisitId);
-    setShowSuccessDialog(true);
-  };
+    setVisitId(newVisitId)
+    setShowSuccessDialog(true)
+  }
 
   const handlePrintVisit = () => {
     // TODO: Implement print functionality
-    window.print();
-  };
+    window.print()
+  }
 
   const handleViewVisit = () => {
     // TODO: Navigate to visit details page
-    router.push(`/patients/opd/${visitId}`);
-  };
+    router.push(`/patients/opd/${visitId}`)
+  }
 
   const handleNewVisit = () => {
-    setShowSuccessDialog(false);
-    setVisitId("");
+    setShowSuccessDialog(false)
+    setVisitId("")
     // Refresh the page to clear the form
-    router.refresh();
-  };
+    router.refresh()
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -71,8 +71,8 @@ export default function OPDPage() {
             New OPD Visit
           </CardTitle>
           <CardDescription>
-            Fill in all required fields marked with * to complete the patient visit record.
-            The form auto-saves every 30 seconds.
+            Fill in all required fields marked with * to complete the patient visit record. Please remember to save your
+            changes manually.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -91,8 +91,7 @@ export default function OPDPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              The OPD visit has been recorded. You can now print the visit summary, view details,
-              or create a new visit.
+              The OPD visit has been recorded. You can now print the visit summary, view details, or create a new visit.
             </p>
           </div>
           <DialogFooter className="flex gap-2">
@@ -109,5 +108,5 @@ export default function OPDPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }
