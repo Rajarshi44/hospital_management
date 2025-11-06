@@ -11,12 +11,18 @@ export interface CreateAdmissionDto {
     dateOfBirth: string;
     gender: 'MALE' | 'FEMALE' | 'OTHER';
     address: string;
-    bloodGroup?: string;
-    allergies?: string;
-    medicalHistory?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
     emergencyContactName?: string;
     emergencyContactPhone?: string;
     emergencyContactRelationship?: string;
+    bloodGroup?: string;
+    allergies?: string;
+    chronicConditions?: string;
+    currentMedications?: string;
+    insuranceProvider?: string;
+    insurancePolicyNumber?: string;
   };
   doctorId: string;
   bedId: string;
@@ -156,8 +162,8 @@ export class IPDService {
     return ApiClient.get(`/ipd/admissions/${id}`);
   }
 
-  static async updateAdmission(id: string, data: Partial<CreateAdmissionDto>) {
-    return ApiClient.patch(`/ipd/admissions/${id}`, data);
+  static async updateAdmission(id: string, data: any) {
+    return ApiClient.put(`/ipd/admissions/${id}`, data);
   }
 
   // Discharge
@@ -190,6 +196,25 @@ export class IPDService {
 
   static async getDischargeByAdmission(admissionId: string) {
     return ApiClient.get(`/ipd/discharge/admission/${admissionId}`);
+  }
+
+  // Statistics methods
+  static async getDashboardStats() {
+    return ApiClient.get('/ipd/dashboard');
+  }
+
+  // Doctors
+  static async getDoctors(filters?: { isActive?: boolean }) {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined) {
+          params.append(key, value.toString());
+        }
+      });
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return ApiClient.get(`/doctors${query}`);
   }
 
   static async prepareDischarge(admissionId: string) {
@@ -324,7 +349,33 @@ export class IPDService {
     const query = params.toString() ? `?${params.toString()}` : '';
     const endpoint = `/ipd/wards${query}`;
     
-    return ApiClient.get(endpoint);
+    const wards = await ApiClient.get(endpoint) as any[];
+    
+    // If the beds in wards are missing dailyRate, fetch complete bed data
+    if (Array.isArray(wards) && wards.length > 0) {
+      const wardsWithCompleteBeds = await Promise.all(
+        wards.map(async (ward: any) => {
+          if (ward.beds && ward.beds.length > 0) {
+            // Check if beds are missing crucial data
+            const firstBed = ward.beds[0];
+            if (firstBed.dailyRate === undefined || firstBed.wardId === undefined) {
+              try {
+                // Fetch complete ward details including full bed data
+                const completeWard = await ApiClient.get(`/ipd/wards/${ward.id}`) as any;
+                return { ...ward, beds: completeWard.beds };
+              } catch (error) {
+                console.warn(`Failed to fetch complete data for ward ${ward.id}:`, error);
+                return ward;
+              }
+            }
+          }
+          return ward;
+        })
+      );
+      return wardsWithCompleteBeds;
+    }
+    
+    return wards;
   }
 
   static async getWard(id: string) {
@@ -432,5 +483,55 @@ export class IPDService {
     }
     const query = params.toString() ? `?${params.toString()}` : '';
     return ApiClient.get(`/ipd/statistics${query}`);
+  }
+
+  // Additional helper functions needed by frontend
+  static async getDepartments() {
+    return ApiClient.get('/departments');
+  }
+
+  static async getDoctorsByDepartment(departmentId: string) {
+    return ApiClient.get(`/doctors?departmentId=${departmentId}`);
+  }
+
+  static async uploadDocuments(files: FileList, patientId: string, category?: string, uploadedBy?: string) {
+    const formData = new FormData();
+    
+    // Add files to form data
+    Array.from(files).forEach((file, index) => {
+      formData.append('documents', file);
+    });
+    
+    // Add query parameters
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (uploadedBy) params.append('uploadedBy', uploadedBy);
+    
+    const query = params.toString() ? `?${params.toString()}` : '';
+    
+    // Use fetch directly for file upload instead of ApiClient
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    
+    const response = await fetch(`${API_URL}/files/upload/documents/${patientId}${query}`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        message: response.statusText,
+      }));
+      throw new Error(error.message || "Failed to upload documents");
+    }
+    
+    return response.json();
+  }
+
+  static async getPatientDocuments(patientId: string) {
+    return ApiClient.get(`/files/documents/${patientId}`);
   }
 }

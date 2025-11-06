@@ -85,6 +85,11 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: TestTube,
       },
       {
+        title: "Ward & Bed Management",
+        url:"/wards",
+        icon:MapPin,
+      },
+      {
         title: "Billing & Payments",
         url: "/billing",
         icon: CreditCard,

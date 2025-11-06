@@ -2,23 +2,51 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Plus, User, Search, Calendar, MapPin, DollarSign, Users, ArrowLeft } from "lucide-react"
+import { Plus, User, Search, Calendar, MapPin, DollarSign, Users, ArrowLeft, Activity, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { PatientSearch, AdmissionForm, NewPatientForm, ComprehensiveAdmissionForm } from "@/components/ipd"
+import { PatientSearch, AdmissionForm, NewPatientForm, ComprehensiveAdmissionForm, AdmittedPatientsList, PatientDetailsModal } from "@/components/ipd"
 import { EnhancedAdmissionForm } from "@/components/ipd/enhanced-admission-form"
 import { Patient } from "@/lib/ipd-types"
 import { AppLayout } from "@/components/app-shell/app-layout"
 import { AuthProvider } from "@/hooks/use-auth"
+import { IPDService } from "@/lib/ipd-service"
+import { useToast } from "@/hooks/use-toast"
 
-type ViewMode = "search" | "new-admission"
+type ViewMode = "search" | "new-admission" | "admitted-patients"
 
 export default function AdmissionPage() {
   const router = useRouter()
-  const [viewMode, setViewMode] = useState<ViewMode>("search")
+  const [viewMode, setViewMode] = useState<ViewMode>("admitted-patients")
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
+  const [selectedAdmittedPatient, setSelectedAdmittedPatient] = useState<any>(null)
+  const [showPatientModal, setShowPatientModal] = useState(false)
+  const [dashboardStats, setDashboardStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
   const searchParams = useSearchParams()
+
+  // Fetch dashboard statistics
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        const response = await IPDService.getDashboardStats() as any
+        setDashboardStats(response.summary || response)
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error)
+        toast({
+          title: "Warning",
+          description: "Could not load real-time statistics",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardStats()
+  }, [toast])
 
   // Check for pre-selected patient from URL parameters
   useEffect(() => {
@@ -62,8 +90,39 @@ export default function AdmissionPage() {
   }
 
   const handleBackToSearch = () => {
-    setViewMode("search")
+    setViewMode("admitted-patients")
     setSelectedPatient(null)
+  }
+
+  const handlePatientSelect = (patient: any) => {
+    setSelectedAdmittedPatient(patient)
+    setShowPatientModal(true)
+  }
+
+  const handleCloseModal = () => {
+    setShowPatientModal(false)
+    setSelectedAdmittedPatient(null)
+  }
+
+  const refreshStats = async () => {
+    try {
+      setLoading(true)
+      const response = await IPDService.getDashboardStats() as any
+      setDashboardStats(response.summary || response)
+      toast({
+        title: "Success",
+        description: "Statistics refreshed successfully",
+      })
+    } catch (error) {
+      console.error('Error refreshing stats:', error)
+      toast({
+        title: "Error",
+        description: "Failed to refresh statistics",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -80,7 +139,7 @@ export default function AdmissionPage() {
               {viewMode === "new-admission" ? (
                 <Button variant="outline" onClick={handleBackToSearch}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Search
+                  Back to Patients
                 </Button>
               ) : (
                 <>
@@ -88,10 +147,21 @@ export default function AdmissionPage() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Dashboard
                   </Button>
-                  <Button variant="outline" size="sm">
-                    <Search className="h-4 w-4 mr-2" />
-                    Search Records
+                  <Button variant="outline" size="sm" onClick={refreshStats} disabled={loading}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
                   </Button>
+                  {viewMode === "search" ? (
+                    <Button variant="outline" size="sm" onClick={() => setViewMode("admitted-patients")}>
+                      <Users className="h-4 w-4 mr-2" />
+                      Admitted Patients
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => setViewMode("search")}>
+                      <Search className="h-4 w-4 mr-2" />
+                      Search Patients
+                    </Button>
+                  )}
                   <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleNewAdmission}>
                     <Plus className="h-4 w-4 mr-2" />
                     New Patient Admission
@@ -101,54 +171,68 @@ export default function AdmissionPage() {
             </div>
           </div>
 
-          {/* Stats Cards - Only show in search view */}
-          {viewMode === "search" && (
+          {/* Stats Cards - Only show in search and admitted patients view */}
+          {(viewMode === "search" || viewMode === "admitted-patients") && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Available Beds</CardTitle>
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Current Admissions</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">23</div>
-                  <p className="text-xs text-muted-foreground">+2 from yesterday</p>
+                  <div className="text-2xl font-bold">
+                    {loading ? "..." : dashboardStats?.totalAdmissions || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Active patients
+                  </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Today's Admissions</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">8</div>
-                  <p className="text-xs text-muted-foreground">+12% from yesterday</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Admissions</CardTitle>
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">3</div>
-                  <p className="text-xs text-muted-foreground">Scheduled today</p>
+                  <div className="text-2xl font-bold">
+                    {loading ? "..." : dashboardStats?.todaysAdmissions || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">New admissions today</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg. Deposit</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Critical Patients</CardTitle>
+                  <Activity className="h-4 w-4 text-red-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$2,450</div>
-                  <p className="text-xs text-muted-foreground">Per admission</p>
+                  <div className="text-2xl font-bold text-red-600">
+                    {loading ? "..." : dashboardStats?.criticalPatients || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Require immediate attention</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Bed Occupancy</CardTitle>
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {loading ? "..." : dashboardStats?.occupancyRate ? `${dashboardStats.occupancyRate}%` : "0%"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {loading ? "Loading..." : `${dashboardStats?.todaysDischarges || 0} discharges today`}
+                  </p>
                 </CardContent>
               </Card>
             </div>
           )}
 
-          {/* Main Content - Search or New Admission Form */}
-          {viewMode === "search" ? (
+          {/* Main Content - Admitted Patients, Search or New Admission Form */}
+          {viewMode === "admitted-patients" ? (
+            <AdmittedPatientsList onPatientSelect={handlePatientSelect} />
+          ) : viewMode === "search" ? (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -190,6 +274,13 @@ export default function AdmissionPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Patient Details Modal */}
+          <PatientDetailsModal
+            patient={selectedAdmittedPatient}
+            isOpen={showPatientModal}
+            onClose={handleCloseModal}
+          />
         </div>
       </AppLayout>
     </AuthProvider>
