@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,20 +10,79 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Download, FileText, AlertTriangle, CheckCircle, Clock, Save } from "lucide-react"
-import { mockLabResults, mockLabOrders } from "@/lib/lab"
+import { Download, FileText, AlertTriangle, CheckCircle, Clock, Save, Loader2 } from "lucide-react"
 import { LabReportPrintLayout } from "./lab-report-print-layout"
+import { LabOrder, LabResult, Priority, LabOrderStatus } from "@/lib/types/lab.types"
+import { useLab } from "@/hooks/useLab"
+import { useToast } from "@/hooks/use-toast"
 
 interface LabResultsViewerProps {
   orderId: string
 }
 
 export function LabResultsViewer({ orderId }: LabResultsViewerProps) {
-  const order = mockLabOrders.find((o) => o.id === orderId)
-  const results = mockLabResults.filter((r) => r.orderId === orderId)
+  const { fetchOrderById, fetchOrderResults, updateOrderReport } = useLab()
+  const [order, setOrder] = useState<LabOrder | null>(null)
+  const [results, setResults] = useState<LabResult[]>([])
   const [report, setReport] = useState("")
   const [isSaved, setIsSaved] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSavingReport, setIsSavingReport] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const fetchOrderData = async () => {
+      try {
+        setIsLoading(true)
+        const orderData = await fetchOrderById(orderId)
+        const resultsData = await fetchOrderResults(orderId)
+        
+        setOrder(orderData)
+        setResults(resultsData)
+        
+        // Set existing report if available
+        if (orderData.reportContent) {
+          setReport(orderData.reportContent)
+          setIsSaved(true)
+        }
+      } catch (error) {
+        console.error('Failed to fetch order data:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load order details. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchOrderData()
+  }, [orderId, fetchOrderById, fetchOrderResults, toast])
+
+  const handleSaveReport = async () => {
+    if (!order) return
+    
+    setIsSavingReport(true)
+    try {
+      await updateOrderReport(orderId, report)
+      setIsSaved(true)
+      toast({
+        title: "Report Saved",
+        description: "Lab report has been saved successfully.",
+      })
+    } catch (error) {
+      console.error('Failed to save report:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save report. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingReport(false)
+    }
+  }
 
   const handlePrint = () => {
     if (printRef.current) {
@@ -56,8 +115,22 @@ export function LabResultsViewer({ orderId }: LabResultsViewerProps) {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading order details...</span>
+      </div>
+    )
+  }
+
   if (!order) {
-    return <div>Order not found</div>
+    return (
+      <div className="text-center p-8">
+        <h3 className="text-lg font-medium text-muted-foreground">Order not found</h3>
+        <p className="text-sm text-muted-foreground">The requested lab order could not be found.</p>
+      </div>
+    )
   }
 
   const getStatusIcon = (status: string) => {
@@ -111,24 +184,28 @@ export function LabResultsViewer({ orderId }: LabResultsViewerProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Patient</Label>
-              <p className="font-medium">{order.patientName}</p>
+              <p className="font-medium">
+                {order.patient ? `${order.patient.firstName} ${order.patient.lastName}` : 'Unknown Patient'}
+              </p>
             </div>
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Ordering Doctor</Label>
-              <p className="font-medium">{order.doctorName}</p>
+              <p className="font-medium">
+                {order.doctor ? `${order.doctor.firstName} ${order.doctor.lastName}` : 'Unknown Doctor'}
+              </p>
             </div>
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Order Date</Label>
-              <p className="font-medium">{order.orderedAt.toLocaleDateString()}</p>
+              <p className="font-medium">{order.createdAt.toLocaleDateString()}</p>
             </div>
             <div>
               <Label className="text-sm font-medium text-muted-foreground">Priority</Label>
               <Badge
                 variant={
-                  order.priority === "stat" ? "destructive" : order.priority === "urgent" ? "default" : "secondary"
+                  order.priority === Priority.URGENT ? "destructive" : order.priority === Priority.HIGH ? "default" : "secondary"
                 }
               >
-                {order.priority.toUpperCase()}
+                {order.priority}
               </Badge>
             </div>
           </div>
@@ -154,14 +231,17 @@ export function LabResultsViewer({ orderId }: LabResultsViewerProps) {
                 <Textarea
                   value={results.length > 0 
                     ? results.map((result) => {
-                        let text = `Test: ${result.testName}\n`;
+                        let text = `Test: ${result.test?.name || 'Unknown Test'}\n`;
                         text += `Status: ${result.status.toUpperCase()}\n`;
                         text += `Result: ${result.value}\n`;
                         if (result.normalRange) text += `Normal Range: ${result.normalRange}\n`;
-                        if (result.units) text += `Units: ${result.units}\n`;
+                        if (result.unit) text += `Units: ${result.unit}\n`;
                         if (result.notes) text += `Notes: ${result.notes}\n`;
-                        text += `Completed: ${result.completedAt.toLocaleDateString()} by ${result.technician}\n`;
-                        if (result.verifiedBy) text += `Verified by: ${result.verifiedBy}\n`;
+                        text += `Tested: ${result.testedAt.toLocaleDateString()}\n`;
+                        text += `Technician: ${result.technicianUser ? 
+                          `${result.technicianUser.firstName} ${result.technicianUser.lastName}` : 
+                          result.technician}\n`;
+                        if (result.verifier) text += `Verified by: ${result.verifier.firstName} ${result.verifier.lastName}\n`;
                         return text;
                       }).join('\n---\n\n')
                     : 'No results available yet. Results will appear here once tests are completed.'
@@ -242,26 +322,26 @@ export function LabResultsViewer({ orderId }: LabResultsViewerProps) {
                   <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                   <div>
                     <p className="font-medium">Order Created</p>
-                    <p className="text-sm text-muted-foreground">{order.orderedAt.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground">{order.createdAt.toLocaleString()}</p>
                   </div>
                 </div>
 
-                {order.collectedAt && (
+                {order.status !== LabOrderStatus.PENDING && (
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-yellow-600 rounded-full"></div>
                     <div>
-                      <p className="font-medium">Sample Collected</p>
-                      <p className="text-sm text-muted-foreground">{order.collectedAt.toLocaleString()}</p>
+                      <p className="font-medium">In Progress</p>
+                      <p className="text-sm text-muted-foreground">Processing started</p>
                     </div>
                   </div>
                 )}
 
-                {order.completedAt && (
+                {order.status === LabOrderStatus.COMPLETED && (
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-green-600 rounded-full"></div>
                     <div>
                       <p className="font-medium">Results Available</p>
-                      <p className="text-sm text-muted-foreground">{order.completedAt.toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">{order.updatedAt.toLocaleString()}</p>
                     </div>
                   </div>
                 )}
@@ -276,30 +356,36 @@ export function LabResultsViewer({ orderId }: LabResultsViewerProps) {
         <LabReportPrintLayout
           ref={printRef}
           patientInfo={{
-            name: order.patientName,
-            uhid: order.patientId,
-            age: "N/A", // You can add this to mock data
-            gender: "N/A", // You can add this to mock data
+            name: order.patient ? `${order.patient.firstName} ${order.patient.lastName}` : 'Unknown Patient',
+            uhid: order.patient?.patientId || order.patientId,
+            age: order.patient?.dateOfBirth ? 
+              Math.floor((Date.now() - order.patient.dateOfBirth.getTime()) / (365.25 * 24 * 60 * 60 * 1000)).toString() : 
+              "N/A",
+            gender: order.patient?.gender || "N/A",
             address: undefined,
           }}
           orderInfo={{
-            orderId: order.id,
-            orderDate: order.orderedAt.toLocaleDateString(),
-            collectionDate: order.collectedAt?.toLocaleDateString(),
-            reportDate: order.completedAt?.toLocaleDateString() || new Date().toLocaleDateString(),
-            doctorName: order.doctorName,
-            priority: order.priority.toUpperCase(),
+            orderId: order.orderNumber || order.id,
+            orderDate: order.createdAt.toLocaleDateString(),
+            collectionDate: undefined,
+            reportDate: new Date().toLocaleDateString(),
+            doctorName: order.doctor ? `${order.doctor.firstName} ${order.doctor.lastName}` : 'Unknown Doctor',
+            priority: order.priority,
           }}
           tests={results.map((result) => ({
-            testName: result.testName,
+            testName: result.test?.name || 'Unknown Test',
             value: result.value,
-            units: result.units,
+            units: result.unit,
             normalRange: result.normalRange,
-            status: result.status,
+            status: result.status as "normal" | "abnormal" | "critical",
             notes: result.notes,
-            completedAt: result.completedAt,
-            technician: result.technician,
-            verifiedBy: result.verifiedBy,
+            completedAt: result.testedAt,
+            technician: result.technicianUser ? 
+              `${result.technicianUser.firstName} ${result.technicianUser.lastName}` : 
+              result.technician,
+            verifiedBy: result.verifier ? 
+              `${result.verifier.firstName} ${result.verifier.lastName}` : 
+              undefined,
           }))}
           report={report || undefined}
         />

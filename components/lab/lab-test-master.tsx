@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,80 +21,172 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Trash2, TestTube } from "lucide-react"
-
-const LAB_DEPARTMENTS = [
-  "Hematology",
-  "Endocrinology",
-  "Biochemistry",
-  "Serology",
-  "Cytology",
-  "Microbiology",
-  "Histopathology",
-  "Clinical Pathology",
-] as const
-
-type LabTest = {
-  id: string
-  name: string
-  department: string
-  description: string
-  createdAt: Date
-}
+import { Plus, Trash2, TestTube, Loader2, Edit } from "lucide-react"
+import { useLab } from "@/hooks/useLab"
+import { CreateLabTestRequest } from "@/lib/types/lab.types"
 
 export function LabTestMaster() {
-  const [tests, setTests] = useState<LabTest[]>([
-    {
-      id: "1",
-      name: "Complete Blood Count (CBC)",
-      department: "Hematology",
-      description: "Comprehensive blood cell analysis",
-      createdAt: new Date(),
-    },
-    {
-      id: "2",
-      name: "Thyroid Function Test",
-      department: "Endocrinology",
-      description: "TSH, T3, T4 levels",
-      createdAt: new Date(),
-    },
-    {
-      id: "3",
-      name: "Liver Function Test",
-      department: "Biochemistry",
-      description: "ALT, AST, Bilirubin levels",
-      createdAt: new Date(),
-    },
-  ])
-
-  const [formData, setFormData] = useState({
+  const { 
+    tests, 
+    departments, 
+    loading, 
+    createTest, 
+    updateTest, 
+    deleteTest,
+    fetchTests 
+  } = useLab()
+  
+  const [showForm, setShowForm] = useState(false)
+  const [editingTest, setEditingTest] = useState<string | null>(null)
+  const [formData, setFormData] = useState<CreateLabTestRequest>({
     name: "",
+    code: "",
+    category: "",
     department: "",
     description: "",
+    methodology: "",
+    sampleType: "",
+    price: 0,
+    normalRange: "",
   })
 
-  const handleAddTest = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      code: "",
+      category: "",
+      department: "",
+      description: "",
+      methodology: "",
+      sampleType: "",
+      price: 0,
+      normalRange: "",
+    })
+    setEditingTest(null)
+    setShowForm(false)
+  }
+
+  // Auto-generate test code when name or department changes (only if code is empty)
+  useEffect(() => {
+    if (formData.name && formData.department && !formData.code && !editingTest) {
+      const timer = setTimeout(() => {
+        // Auto-generate code logic
+        const department = departments.find(d => d.code === formData.department)
+        if (!department) return
+
+        const deptCode = department.code.substring(0, 4).toUpperCase()
+        const testWords = formData.name.split(' ')
+        let testCode = ''
+        
+        if (testWords.length === 1) {
+          testCode = testWords[0].substring(0, 3).toUpperCase()
+        } else if (testWords.length <= 3) {
+          testCode = testWords.map(word => word.charAt(0)).join('').toUpperCase()
+        } else {
+          testCode = testWords.slice(0, 3).map(word => word.charAt(0)).join('').toUpperCase()
+        }
+
+        const randomNum = Math.floor(Math.random() * 999) + 1
+        const paddedNum = randomNum.toString().padStart(3, '0')
+        const generatedCode = `${deptCode}-${testCode}${paddedNum}`
+        
+        setFormData(prev => ({ ...prev, code: generatedCode }))
+      }, 800) // Debounce to avoid too frequent updates
+      
+      return () => clearTimeout(timer)
+    }
+  }, [formData.name, formData.department, formData.code, editingTest, departments])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    try {
+      if (editingTest) {
+        await updateTest(editingTest, formData)
+      } else {
+        await createTest(formData)
+      }
+      resetForm()
+    } catch (error) {
+      console.error('Failed to save test:', error)
+    }
+  }
+
+  const handleEdit = (test: any) => {
+    setFormData({
+      name: test.name,
+      code: test.code,
+      category: test.category,
+      department: test.department || "",
+      description: test.description || "",
+      methodology: test.methodology || "",
+      sampleType: test.sampleType || "",
+      price: test.price,
+      normalRange: test.normalRange || "",
+    })
+    setEditingTest(test.id)
+    setShowForm(true)
+  }
+
+  const handleDelete = async (testId: string) => {
+    if (confirm('Are you sure you want to delete this test?')) {
+      try {
+        await deleteTest(testId)
+      } catch (error) {
+        console.error('Failed to delete test:', error)
+      }
+    }
+  }
+
+  const generateTestCode = () => {
     if (!formData.name || !formData.department) {
-      alert("Please fill in test name and department")
       return
     }
 
-    const newTest: LabTest = {
-      id: Date.now().toString(),
-      name: formData.name,
-      department: formData.department,
-      description: formData.description,
-      createdAt: new Date(),
+    const department = departments.find(d => d.code === formData.department)
+    if (!department) {
+      return
     }
 
-    setTests([...tests, newTest])
-    setFormData({ name: "", department: "", description: "" })
+    // Generate code based on department code and test name
+    const deptCode = department.code.substring(0, 4).toUpperCase() // First 4 chars of dept code
+    const testWords = formData.name.split(' ')
+    let testCode = ''
+    
+    // Create abbreviation from test name
+    if (testWords.length === 1) {
+      testCode = testWords[0].substring(0, 3).toUpperCase()
+    } else if (testWords.length <= 3) {
+      testCode = testWords.map(word => word.charAt(0)).join('').toUpperCase()
+    } else {
+      // For longer names, take first letter of first 3 words
+      testCode = testWords.slice(0, 3).map(word => word.charAt(0)).join('').toUpperCase()
+    }
+
+    // Add random number to ensure uniqueness
+    const randomNum = Math.floor(Math.random() * 999) + 1
+    const paddedNum = randomNum.toString().padStart(3, '0')
+    
+    const generatedCode = `${deptCode}-${testCode}${paddedNum}`
+    
+    setFormData({ ...formData, code: generatedCode })
   }
 
-  const handleDeleteTest = (id: string) => {
-    setTests(tests.filter((test) => test.id !== id))
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.name || !formData.department || !formData.code || !formData.category) {
+      alert("Please fill in all required fields: name, code, category, and department")
+      return
+    }
+
+    try {
+      await createTest(formData)
+      // Reset form on success
+      resetForm()
+    } catch (error) {
+      console.error('Failed to create test:', error)
+    }
   }
 
   const getDepartmentColor = (department: string) => {
@@ -123,7 +215,7 @@ export function LabTestMaster() {
           <CardDescription>Define a new laboratory test</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleAddTest} className="space-y-4">
+          <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="testName">Test Name *</Label>
               <Input
@@ -131,6 +223,40 @@ export function LabTestMaster() {
                 placeholder="e.g., Complete Blood Count"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="testCode">Test Code *</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="testCode"
+                  placeholder="e.g., HEMA-CBC001"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  required
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={generateTestCode}
+                  disabled={!formData.name || !formData.department}
+                  className="whitespace-nowrap"
+                >
+                  Auto Generate
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Category *</Label>
+              <Input
+                id="category"
+                placeholder="e.g., Blood Test"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 required
               />
             </div>
@@ -146,9 +272,9 @@ export function LabTestMaster() {
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  {LAB_DEPARTMENTS.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept}
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.code}>
+                      {dept.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -156,18 +282,31 @@ export function LabTestMaster() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="price">Price *</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                placeholder="e.g., 25.50"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Input
                 id="description"
                 placeholder="Brief description (optional)"
-                value={formData.description}
+                value={formData.description || ''}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
 
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={loading}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Test
+              {loading ? 'Adding...' : 'Add Test'}
             </Button>
           </form>
         </CardContent>
@@ -203,9 +342,16 @@ export function LabTestMaster() {
                   <TableRow key={test.id}>
                     <TableCell className="font-medium">{test.name}</TableCell>
                     <TableCell>
-                      <Badge className={getDepartmentColor(test.department)} variant="secondary">
-                        {test.department}
-                      </Badge>
+                      {(() => {
+                        // Find department by code since test.department is just a string code
+                        const dept = departments.find(d => d.code === test.department);
+                        const deptName = dept?.name || 'N/A';
+                        return (
+                          <Badge className={getDepartmentColor(deptName)} variant="secondary">
+                            {deptName}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {test.description || "-"}
@@ -214,7 +360,7 @@ export function LabTestMaster() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteTest(test.id)}
+                        onClick={() => handleDelete(test.id)}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
