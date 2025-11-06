@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -14,7 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useToast } from "@/hooks/use-toast"
 import { Admission } from "@/lib/ipd-types"
+import { 
+  createDischarge, 
+  prepareDischarge, 
+  transformDischargeFormToDTO,
+  DischargePreparationResponse 
+} from "@/lib/services/ipd-discharge-service"
 
 const dischargeSchema = z.object({
   finalDiagnosis: z.string().min(10, "Final diagnosis must be at least 10 characters"),
@@ -35,7 +42,7 @@ const dischargeSchema = z.object({
 
 interface DischargeFormProps {
   admission: Admission
-  estimatedCharges: {
+  estimatedCharges?: {
     days: number
     bedCharges: number
     medicalCharges: number
@@ -46,6 +53,37 @@ interface DischargeFormProps {
 export function DischargeForm({ admission, estimatedCharges }: DischargeFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState("diagnosis")
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [billingData, setBillingData] = useState<DischargePreparationResponse['billingDetails']>(
+    estimatedCharges || { days: 0, bedCharges: 0, medicalCharges: 0, totalCharges: 0 }
+  )
+  const { toast } = useToast()
+
+  // Load discharge preparation data on mount
+  useEffect(() => {
+    const loadDischargeData = async () => {
+      setIsLoadingData(true)
+      try {
+        const preparationData = await prepareDischarge(admission.admissionId)
+        setBillingData(preparationData.billingDetails)
+      } catch (error) {
+        console.error('Error loading discharge preparation data:', error)
+        toast({
+          title: "Error Loading Data",
+          description: "Failed to load billing and preparation data.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    if (admission.admissionId && !estimatedCharges) {
+      loadDischargeData()
+    } else {
+      setIsLoadingData(false)
+    }
+  }, [admission.admissionId, estimatedCharges, toast])
 
   const form = useForm<z.infer<typeof dischargeSchema>>({
     resolver: zodResolver(dischargeSchema),
@@ -67,30 +105,34 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
   const onSubmit = async (data: z.infer<typeof dischargeSchema>) => {
     setIsSubmitting(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Get current doctor ID from auth context (placeholder)
+      const currentDoctorId = admission.consultingDoctorId || "default-doctor-id"
+      
+      // Transform form data to backend DTO format
+      const dischargeDTO = transformDischargeFormToDTO(data, admission.admissionId, currentDoctorId)
 
-      const dischargeData = {
-        admissionId: admission.admissionId,
-        dischargeDate: new Date().toISOString().split("T")[0],
-        dischargeTime: new Date().toTimeString().split(" ")[0].substring(0, 5),
-        ...data,
-        billingAmount: estimatedCharges.totalCharges,
-        dischargedBy: "Current User", // This would come from auth context
-        approvedBy: "Department Head", // This would be set based on approval workflow
-        createdAt: new Date().toISOString(),
-      }
+      console.log("Discharge DTO:", dischargeDTO)
 
-      console.log("Discharge completed:", dischargeData)
-      alert("Patient discharged successfully!")
+      // Call real backend API
+      const response = await createDischarge(dischargeDTO)
 
-      // Here you would typically:
-      // 1. Update the admission status
-      // 2. Free up the bed
-      // 3. Generate PDF discharge summary
-      // 4. Send notifications
+      toast({
+        title: "Discharge Successful",
+        description: `Patient ${admission.patientName} has been discharged successfully.`,
+      })
+
+      // Generate PDF discharge summary (placeholder)
+      generatePDF()
+
+      console.log("Discharge completed:", response)
+      
     } catch (error) {
       console.error("Discharge failed:", error)
+      toast({
+        title: "Discharge Failed",
+        description: error instanceof Error ? error.message : "There was an error processing the discharge. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -117,6 +159,15 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
     { name: "Ibuprofen 400mg", dosage: "1 tablet", frequency: "As needed", duration: "3 days" },
     { name: "Omeprazole 20mg", dosage: "1 capsule", frequency: "Once daily", duration: "14 days" },
   ]
+
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-lg text-slate-600">Loading discharge data...</span>
+      </div>
+    )
+  }
 
   return (
     <Form {...form}>
@@ -145,7 +196,7 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
               </div>
               <div>
                 <Label className="text-sm font-medium text-blue-800">Length of Stay</Label>
-                <div className="text-blue-700">{estimatedCharges.days} days</div>
+                <div className="text-blue-700">{billingData.days} days</div>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -410,12 +461,12 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span>Bed Charges ({estimatedCharges.days} days):</span>
-                        <span>${estimatedCharges.bedCharges.toLocaleString()}</span>
+                        <span>Bed Charges ({billingData.days} days):</span>
+                        <span>${billingData.bedCharges.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Medical Charges:</span>
-                        <span>${estimatedCharges.medicalCharges.toLocaleString()}</span>
+                        <span>${billingData.medicalCharges.toLocaleString()}</span>
                       </div>
                       {admission.initialDeposit && (
                         <div className="flex justify-between text-green-600">
@@ -426,7 +477,7 @@ export function DischargeForm({ admission, estimatedCharges }: DischargeFormProp
                       <Separator />
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total Amount:</span>
-                        <span>${estimatedCharges.totalCharges.toLocaleString()}</span>
+                        <span>${billingData.totalCharges.toLocaleString()}</span>
                       </div>
                     </div>
                     <div className="pl-4 border-l">

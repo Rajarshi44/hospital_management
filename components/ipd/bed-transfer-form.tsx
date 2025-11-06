@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -13,8 +13,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { mockWards, mockBeds, getAvailableBeds } from "@/lib/ipd-mock-data"
+import { useToast } from "@/hooks/use-toast"
 import { Admission } from "@/lib/ipd-types"
+import { 
+  createBedTransfer, 
+  getAvailableBedsForTransfer, 
+  transformTransferFormToDTO 
+} from "@/lib/services/ipd-bed-transfer-service"
 
 const transferSchema = z.object({
   toWardId: z.string().min(1, "Please select a ward"),
@@ -29,7 +34,47 @@ interface BedTransferFormProps {
 export function BedTransferForm({ admission }: BedTransferFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedWard, setSelectedWard] = useState("")
-  const [availableBeds, setAvailableBeds] = useState(getAvailableBeds())
+  const [availableBeds, setAvailableBeds] = useState<any[]>([])
+  const [availableWards, setAvailableWards] = useState<any[]>([])
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const { toast } = useToast()
+
+  // Load available beds and wards on mount
+  useEffect(() => {
+    const loadTransferData = async () => {
+      setIsLoadingData(true)
+      try {
+        // Get available beds (excluding current bed)
+        const beds = await getAvailableBedsForTransfer(admission.bedId)
+        setAvailableBeds(beds)
+
+        // Extract unique wards from available beds
+        const uniqueWards = beds.reduce((wards: any[], bed: any) => {
+          const ward = bed.ward
+          if (ward && !wards.find(w => w.id === ward.id)) {
+            // Exclude current ward
+            if (ward.id !== admission.wardId) {
+              wards.push(ward)
+            }
+          }
+          return wards
+        }, [])
+        setAvailableWards(uniqueWards)
+
+      } catch (error) {
+        console.error('Error loading transfer data:', error)
+        toast({
+          title: "Error Loading Data",
+          description: "Failed to load available beds and wards.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    loadTransferData()
+  }, [admission.bedId, admission.wardId, toast])
 
   const form = useForm<z.infer<typeof transferSchema>>({
     resolver: zodResolver(transferSchema),
@@ -42,46 +87,60 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
 
   const handleWardChange = (wardId: string) => {
     setSelectedWard(wardId)
-    setAvailableBeds(getAvailableBeds(wardId))
     form.setValue("toBedId", "") // Reset bed selection
   }
 
   const onSubmit = async (data: z.infer<typeof transferSchema>) => {
     setIsSubmitting(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Get current user/doctor ID from auth context (placeholder)
+      const currentUserId = "current-user-id" // This would come from auth context
+      
+      // Transform form data to backend DTO format
+      const transferDTO = transformTransferFormToDTO(data, admission.admissionId, currentUserId)
 
-      const transferData = {
-        admissionId: admission.admissionId,
-        fromWardId: admission.wardId,
-        fromBedId: admission.bedId,
-        toWardId: data.toWardId,
-        toBedId: data.toBedId,
-        reason: data.reason,
-        transferDate: new Date().toISOString().split("T")[0],
-        transferTime: new Date().toTimeString().split(" ")[0].substring(0, 5),
-        transferredBy: "Current User", // This would come from auth context
-        approvedBy: "Admin", // This would be set based on approval workflow
-      }
+      console.log("Transfer DTO:", transferDTO)
 
-      console.log("Bed transfer completed:", transferData)
-      alert("Patient transferred successfully!")
+      // Call real backend API
+      const response = await createBedTransfer(transferDTO)
+
+      toast({
+        title: "Transfer Successful",
+        description: `Patient ${admission.patientName} has been transferred successfully.`,
+      })
+
+      // Reset form
       form.reset()
+      setSelectedWard("")
+
+      console.log("Bed transfer completed:", response)
+      
     } catch (error) {
       console.error("Transfer failed:", error)
+      toast({
+        title: "Transfer Failed",
+        description: error instanceof Error ? error.message : "There was an error processing the transfer. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const currentWard = mockWards.find(w => w.id === admission.wardId)
-  const currentBed = mockBeds.find(b => b.id === admission.bedId)
-  const targetWard = mockWards.find(w => w.id === selectedWard)
-  const targetBed = mockBeds.find(b => b.id === form.watch("toBedId"))
+  // Find current ward/bed and target ward/bed from the loaded data
+  const currentWard = { id: admission.wardId, name: admission.wardName || 'Current Ward' }
+  const currentBed = { id: admission.bedId, bedNumber: admission.bedNumber || 'Current Bed' }
+  const targetWard = availableWards.find((w: any) => w.id === selectedWard)
+  const targetBed = availableBeds.find((b: any) => b.id === form.watch("toBedId"))
 
-  // Filter out current ward from available wards
-  const availableWards = mockWards.filter(ward => ward.id !== admission.wardId)
+  if (isLoadingData) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-lg text-slate-600">Loading transfer options...</span>
+      </div>
+    )
+  }
 
   return (
     <Form {...form}>
@@ -111,7 +170,7 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
               {currentWard && (
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Daily Charges:</span>
-                  <span>${currentWard.chargesPerDay}/day</span>
+                  <span>Current Ward</span>
                 </div>
               )}
             </div>
@@ -211,17 +270,7 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
                       <strong>New Location:</strong> {targetWard.name} - Bed {targetBed.bedNumber}
                     </div>
                     <div>
-                      <strong>Cost Change:</strong>
-                      {currentWard && (
-                        <span
-                          className={
-                            targetWard.chargesPerDay > currentWard.chargesPerDay ? "text-red-600" : "text-green-600"
-                          }
-                        >
-                          {targetWard.chargesPerDay > currentWard.chargesPerDay ? "+" : ""}$
-                          {targetWard.chargesPerDay - currentWard.chargesPerDay}/day
-                        </span>
-                      )}
+                      <strong>New Ward:</strong> {targetWard?.name || 'Selected Ward'}
                     </div>
                     <div>
                       <strong>Amenities:</strong> {targetBed.amenities.join(", ")}
@@ -284,16 +333,9 @@ export function BedTransferForm({ admission }: BedTransferFormProps) {
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Cost Impact:</span>
-                  <span
-                    className={
-                      targetWard.chargesPerDay > currentWard.chargesPerDay
-                        ? "text-red-600 font-medium"
-                        : "text-green-600 font-medium"
-                    }
-                  >
-                    {targetWard.chargesPerDay > currentWard.chargesPerDay ? "+" : ""}$
-                    {targetWard.chargesPerDay - currentWard.chargesPerDay}/day
+                  <span>Transfer Type:</span>
+                  <span className="text-blue-600 font-medium">
+                    Bed Transfer
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

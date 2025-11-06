@@ -32,8 +32,10 @@ import {
   Bed,
   DollarSign,
 } from "lucide-react"
-import { mockPatients, mockDoctors, mockDepartments, Patient } from "@/lib/mock-data"
-import { calculateAge, getAvailableBeds } from "@/lib/mock-services"
+import { useAdmissions, useWards } from "@/hooks/useIPD"
+import { useDoctor } from "@/hooks/doctor/use-doctor"
+import { useDepartments } from "@/hooks/doctor/use-departments"
+import { usePatient, type EnhancedPatient } from "@/hooks/usePatient"
 
 // Enhanced Schema with all required fields
 const admissionSchema = z
@@ -93,11 +95,32 @@ interface ComprehensiveAdmissionFormProps {
 export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: ComprehensiveAdmissionFormProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
+  const [selectedPatient, setSelectedPatient] = useState<EnhancedPatient | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredPatients, setFilteredPatients] = useState(mockPatients)
-  const [availableBeds, setAvailableBeds] = useState(getAvailableBeds())
-  const [filteredDoctors, setFilteredDoctors] = useState(mockDoctors)
+
+  // Backend hooks
+  const { createAdmission, loading: admissionLoading, error: admissionError } = useAdmissions()
+  const { wards, refetch: fetchWards, getAllAvailableBeds, loading: wardsLoading } = useWards()
+  const { doctors, fetchDoctors, getDoctorsByDepartment, loading: doctorsLoading } = useDoctor()
+  const { departments, fetchDepartments, loading: departmentsLoading } = useDepartments()
+  const { patients, searchPatients, isLoading: patientsLoading } = usePatient({ autoFetch: true })
+
+  // Local state for filtered data
+  const [filteredPatients, setFilteredPatients] = useState<EnhancedPatient[]>([])
+  const [filteredDoctors, setFilteredDoctors] = useState<any[]>([])
+  const [availableBeds, setAvailableBeds] = useState<any[]>([])
+
+  // Initialize data on mount
+  useEffect(() => {
+    fetchDepartments()
+    fetchDoctors()
+    fetchWards()
+  }, [fetchDepartments, fetchDoctors, fetchWards])
+
+  // Update filtered patients when patients data changes
+  useEffect(() => {
+    setFilteredPatients(patients)
+  }, [patients])
 
   const form = useForm<z.infer<typeof admissionSchema>>({
     resolver: zodResolver(admissionSchema),
@@ -135,54 +158,74 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
   // Patient search functionality
   useEffect(() => {
     if (searchQuery) {
-      const filtered = mockPatients.filter(
+      const filtered = patients.filter(
         patient =>
-          patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          patient.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           patient.phone.includes(searchQuery) ||
           patient.patientId.toLowerCase().includes(searchQuery.toLowerCase())
       )
       setFilteredPatients(filtered)
     } else {
-      setFilteredPatients(mockPatients)
+      setFilteredPatients(patients)
     }
-  }, [searchQuery])
+  }, [searchQuery, patients])
+
+  // Calculate age from DOB
+  const calculateAge = (dateOfBirth: string): number => {
+    const today = new Date()
+    const birthDate = new Date(dateOfBirth)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
 
   // Auto-fill patient data when selected
-  const handlePatientSelect = (patient: Patient) => {
+  const handlePatientSelect = (patient: EnhancedPatient) => {
     setSelectedPatient(patient)
     form.setValue("selectedPatientId", patient.id)
     form.setValue("isNewPatient", false)
-    form.setValue("fullName", patient.name)
+    form.setValue("fullName", patient.fullName)
     form.setValue("contactNumber", patient.phone)
     form.setValue("email", patient.email || "")
     form.setValue("address", patient.address)
-    form.setValue("bloodGroup", patient.bloodGroup)
+    form.setValue("bloodGroup", patient.bloodGroup || "")
     form.setValue("allergies", patient.allergies || "")
-    form.setValue("medicalHistory", patient.medicalHistory || "")
+    form.setValue("medicalHistory", patient.medicalHistory?.chronicConditions || "")
 
     if (patient.dateOfBirth) {
       form.setValue("dateOfBirth", patient.dateOfBirth)
       form.setValue("age", calculateAge(patient.dateOfBirth))
     }
     if (patient.gender) {
-      form.setValue("gender", patient.gender as "male" | "female" | "other")
+      form.setValue("gender", patient.gender.toLowerCase() as "male" | "female" | "other")
     }
   }
 
   // Department change handler
-  const handleDepartmentChange = (departmentId: string) => {
+  const handleDepartmentChange = async (departmentId: string) => {
     form.setValue("departmentId", departmentId)
-    const filtered = mockDoctors.filter(doctor => doctor.departmentId === departmentId)
-    setFilteredDoctors(filtered)
-    form.setValue("doctorId", "")
+    try {
+      const filtered = await getDoctorsByDepartment(departmentId)
+      setFilteredDoctors(filtered)
+      form.setValue("doctorId", "")
+    } catch (error) {
+      console.error("Error fetching doctors by department:", error)
+    }
   }
 
   // Ward type change handler
-  const handleWardTypeChange = (wardType: string) => {
+  const handleWardTypeChange = async (wardType: string) => {
     form.setValue("wardType", wardType)
-    const beds = getAvailableBeds().filter(bed => bed.type === wardType)
-    setAvailableBeds(beds)
-    form.setValue("bedNumber", "")
+    try {
+      const beds = await getAllAvailableBeds({ wardType })
+      setAvailableBeds(beds as any[])
+      form.setValue("bedNumber", "")
+    } catch (error) {
+      console.error("Error fetching available beds:", error)
+    }
   }
 
   // Calculate age from DOB
@@ -196,19 +239,61 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
   const handleSubmit = async (data: z.infer<typeof admissionSchema>) => {
     setIsSubmitting(true)
     try {
-      const admissionId = `ADM${Date.now()}`
-      const submissionData = {
-        ...data,
-        admissionId,
-        patientId: selectedPatient?.id || `PAT${Date.now()}`,
-        submittedAt: new Date().toISOString(),
+      // Prepare admission data for backend
+      const admissionData = {
+        patientId: selectedPatient?.id || data.selectedPatientId,
+        doctorId: data.doctorId,
+        departmentId: data.departmentId,
+        wardId: data.wardType, // Assuming wardType maps to wardId
+        bedNumber: data.bedNumber,
+        admissionDate: data.admissionDate,
+        admissionTime: data.admissionTime,
+        admissionType: data.admissionType,
+        urgency: data.urgency,
+        chiefComplaint: data.chiefComplaint,
+        provisionalDiagnosis: data.provisionalDiagnosis,
+        allergies: data.allergies,
+        currentMedications: data.currentMedications,
+        vitalSigns: {
+          bloodPressure: data.bloodPressure,
+          pulse: data.pulse,
+          temperature: data.temperature,
+          respiratoryRate: data.respiratoryRate,
+          oxygenSaturation: data.oxygenSaturation
+        },
+        insurance: data.paymentMode === "insurance" || data.paymentMode === "tpa" ? {
+          provider: data.insuranceName,
+          policyNumber: data.policyNumber
+        } : undefined,
+        billing: {
+          paymentMode: data.paymentMode,
+          initialDeposit: data.initialDeposit,
+          notes: data.billingNotes
+        },
+        notes: data.specialInstructions || "",
+        // Patient data if new patient
+        ...(data.isNewPatient && {
+          newPatientData: {
+            firstName: data.fullName.split(' ')[0],
+            lastName: data.fullName.split(' ').slice(1).join(' '),
+            gender: data.gender.toUpperCase(),
+            dateOfBirth: data.dateOfBirth,
+            phone: data.contactNumber,
+            email: data.email,
+            address: data.address,
+            bloodType: data.bloodGroup,
+            allergies: data.allergies
+          }
+        })
       }
 
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      console.log("Admission Data:", submissionData)
-
-      if (onSubmit) {
-        onSubmit(submissionData)
+      const result = await createAdmission(admissionData)
+      
+      if (result) {
+        console.log("Admission created successfully:", result)
+        if (onSubmit) {
+          onSubmit(result)
+        }
       }
     } catch (error) {
       console.error("Submission error:", error)
@@ -312,7 +397,7 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
                           >
                             <div className="flex justify-between items-center">
                               <div>
-                                <p className="font-medium text-gray-900">{patient.name}</p>
+                                <p className="font-medium text-gray-900">{patient.firstName}</p>
                                 <p className="text-sm text-gray-600">
                                   {patient.phone} • {patient.patientId}
                                 </p>
@@ -588,7 +673,7 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {mockDepartments.map(dept => (
+                              {departments.map(dept => (
                                 <SelectItem key={dept.id} value={dept.id}>
                                   {dept.name}
                                 </SelectItem>

@@ -18,8 +18,17 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useToast } from "@/hooks/use-toast"
-import { mockDoctors, mockDepartments } from "@/lib/schedule-mock-data"
-import { mockWards, getAvailableBeds } from "@/lib/ipd-mock-data"
+import { 
+  getDepartments, 
+  getDoctors, 
+  getDoctorsByDepartment,
+  getWards,
+  getAvailableBeds,
+  getBedsByWardType,
+  uploadDocuments,
+  createEnhancedAdmission,
+  transformEnhancedFormToDTO
+} from "@/lib/services/enhanced-admission-service"
 
 // Comprehensive schema based on your specification
 const enhancedAdmissionSchema = z.object({
@@ -86,8 +95,16 @@ interface EnhancedAdmissionFormProps {
 export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  
+  // Backend data states
+  const [departments, setDepartments] = useState<any[]>([])
+  const [doctors, setDoctors] = useState<any[]>([])
+  const [filteredDoctors, setFilteredDoctors] = useState<any[]>([])
+  const [wards, setWards] = useState<any[]>([])
   const [availableRooms, setAvailableRooms] = useState<string[]>([])
   const [availableBeds, setAvailableBeds] = useState<any[]>([])
+  const [uploadedDocuments, setUploadedDocuments] = useState<string[]>([])
 
   // Collapsible sections state
   const [openSections, setOpenSections] = useState({
@@ -103,6 +120,43 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
+
+  // Load initial data from backend
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsLoadingData(true)
+      try {
+        const [departmentsData, doctorsData, wardsData, bedsData] = await Promise.all([
+          getDepartments(),
+          getDoctors(),
+          getWards(),
+          getAvailableBeds()
+        ])
+        
+        setDepartments(departmentsData)
+        setDoctors(doctorsData)
+        setFilteredDoctors(doctorsData)
+        setWards(wardsData)
+        setAvailableBeds(bedsData)
+
+        // Extract unique room numbers from available beds
+        const rooms = [...new Set(bedsData.map((bed: any) => bed.roomNumber || bed.ward?.name).filter(Boolean))]
+        setAvailableRooms(rooms as string[])
+        
+      } catch (error) {
+        console.error('Error loading initial data:', error)
+        toast({
+          title: "Error Loading Data",
+          description: "Failed to load form data. Please refresh the page.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    loadInitialData()
+  }, [toast])
 
   const form = useForm<EnhancedAdmissionFormData>({
     resolver: zodResolver(enhancedAdmissionSchema),
@@ -156,15 +210,37 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
     return () => subscription.unsubscribe()
   }, [form])
 
+  // Handle department change to filter doctors
+  const handleDepartmentChange = (departmentId: string) => {
+    form.setValue("department", departmentId)
+    form.setValue("admittingDoctor", "") // Reset doctor selection
+    
+    // Filter doctors by department
+    getDoctorsByDepartment(departmentId).then((filteredDocs) => {
+      setFilteredDoctors(filteredDocs)
+    }).catch((error) => {
+      console.error('Error filtering doctors:', error)
+    })
+  }
+
   // Load beds based on ward type
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === "wardType" && value.wardType) {
-        const ward = mockWards.find(w => w.name.includes(value.wardType!))
-        if (ward) {
-          const beds = getAvailableBeds(ward.id)
+        // Load beds for selected ward type
+        getBedsByWardType(value.wardType).then((beds) => {
           setAvailableBeds(beds)
-        }
+          
+          // Extract unique room numbers from filtered beds
+          const rooms = [...new Set(beds.map((bed: any) => bed.roomNumber || bed.ward?.name).filter(Boolean))]
+          setAvailableRooms(rooms as string[])
+          
+          // Reset bed selection
+          form.setValue("bedNo", "")
+          form.setValue("roomNo", "")
+        }).catch((error) => {
+          console.error('Error loading beds for ward type:', error)
+        })
       }
     })
     return () => subscription.unsubscribe()
@@ -173,23 +249,49 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
   const handleFormSubmit = async (data: EnhancedAdmissionFormData) => {
     setIsSubmitting(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
+      // Transform form data to backend DTO format
+      const admissionDTO = transformEnhancedFormToDTO(data)
+
+      console.log("Enhanced Admission DTO:", admissionDTO)
+
+      // Call real backend API
+      const response = await createEnhancedAdmission(admissionDTO)
+
       toast({
         title: "Success!",
-        description: `Patient ${data.fullName} has been admitted successfully.`,
+        description: `Patient ${data.fullName} has been admitted successfully. Admission ID: ${response.admissionId}`,
       })
       
-      onSubmit(data)
+      onSubmit(response)
     } catch (error) {
+      console.error("Enhanced admission failed:", error)
       toast({
         title: "Error",
-        description: "Failed to complete admission. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to complete admission. Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  // Handle document uploads
+  const handleDocumentUpload = async (files: FileList) => {
+    try {
+      const uploadedFiles = await uploadDocuments(files)
+      setUploadedDocuments(prev => [...prev, ...uploadedFiles])
+      
+      toast({
+        title: "Documents Uploaded",
+        description: `${uploadedFiles.length} document(s) uploaded successfully.`,
+      })
+    } catch (error) {
+      console.error("Document upload failed:", error)
+      toast({
+        title: "Upload Failed", 
+        description: "Failed to upload documents. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -475,14 +577,14 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Department *</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select value={field.value} onValueChange={handleDepartmentChange}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select department" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {mockDepartments.map((dept) => (
+                            {departments.map((dept: any) => (
                               <SelectItem key={dept.id} value={dept.id}>
                                 {dept.name}
                               </SelectItem>
@@ -507,7 +609,7 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {mockDoctors.map((doctor) => (
+                            {filteredDoctors.map((doctor: any) => (
                               <SelectItem key={doctor.id} value={doctor.id}>
                                 Dr. {doctor.name} - {doctor.specialization}
                               </SelectItem>
@@ -532,7 +634,7 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {mockDoctors.map((doctor) => (
+                            {filteredDoctors.map((doctor: any) => (
                               <SelectItem key={doctor.id} value={doctor.id}>
                                 Dr. {doctor.name} - {doctor.specialization}
                               </SelectItem>
