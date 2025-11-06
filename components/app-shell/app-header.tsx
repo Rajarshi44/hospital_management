@@ -84,63 +84,55 @@ export function AppHeader() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Quick Actions */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                <Plus className="h-4 w-4" />
-                Quick Actions
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>Quick Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {getQuickActions().map((action, index) => (
-                <DropdownMenuItem key={index} onClick={action.action}>
-                  {action.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex items-center gap-3">
+          {/* User Profile Info */}
+          <div className="hidden md:flex flex-col items-end mr-2">
+            <p className="text-sm font-semibold">{getUserFullName(user)}</p>
+            <p className="text-xs text-muted-foreground capitalize">{user.role.toLowerCase().replace("_", " ")}</p>
+          </div>
 
-          <NotificationCenter />
-
-          {/* User Menu */}
-          <DropdownMenu>
+          {/* User Menu Dropdown */}
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
+              <button className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-primary p-1">
+                <Avatar className="h-10 w-10 border-2 border-primary cursor-pointer hover:border-primary/80 transition-colors">
                   <AvatarImage src={user.avatar || undefined} alt={getUserFullName(user)} />
-                  <AvatarFallback>
+                  <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
                     {getUserInitials(user)}
                   </AvatarFallback>
                 </Avatar>
-              </Button>
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{getUserFullName(user)}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                  <p className="text-xs leading-none text-muted-foreground capitalize">
-                    {user.role.toLowerCase().replace('_', ' ')}
-                  </p>
+            <DropdownMenuContent
+              className="w-64 mr-4 mt-2 z-[100] bg-white shadow-xl border-2"
+              align="end"
+              sideOffset={8}
+              alignOffset={-5}
+            >
+              <DropdownMenuLabel className="pb-3">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-12 w-12 mt-1">
+                    <AvatarImage src={user.avatar || undefined} alt={getUserFullName(user)} />
+                    <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                      {getUserInitials(user)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col space-y-1.5 flex-1">
+                    <p className="text-base font-bold leading-none">{getUserFullName(user)}</p>
+                    <p className="text-xs text-muted-foreground leading-none">{user.email}</p>
+                    <p className="text-xs font-medium text-primary capitalize mt-1">
+                      {user.role.toLowerCase().replace("_", " ")}
+                    </p>
+                  </div>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push("/settings")}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/settings")}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+              <DropdownMenuSeparator className="my-2" />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="py-3 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer focus:bg-red-50 focus:text-red-700"
+              >
+                <LogOut className="mr-3 h-5 w-5" />
+                <span className="font-semibold text-base">Log Out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

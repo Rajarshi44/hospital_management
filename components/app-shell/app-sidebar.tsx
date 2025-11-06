@@ -87,8 +87,7 @@ export function AppSidebar() {
                 <Heart className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Hospital HMS</span>
-                <span className="truncate text-xs">Management System</span>
+                <span className="truncate font-semibold">Srijani Healing Home</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -2,7 +2,19 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Users, Bed, Filter, Search, Plus, Activity, FileText, ArrowUpDown, AlertTriangle, Check, ArrowLeft } from "lucide-react"
+import {
+  Users,
+  Bed,
+  Filter,
+  Search,
+  Plus,
+  Activity,
+  FileText,
+  ArrowUpDown,
+  AlertTriangle,
+  Check,
+  ArrowLeft,
+} from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -88,17 +100,13 @@ export default function InpatientListPage() {
               <p className="text-muted-foreground">Monitor and manage all admitted patients</p>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" onClick={() => router.push("/admin/ipd")}>
+              <Button variant="outline" onClick={() => router.push("/ipd")}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Dashboard
               </Button>
               <Button variant="outline" size="sm">
                 <FileText className="h-4 w-4 mr-2" />
                 Export Report
-              </Button>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                New Admission
               </Button>
             </div>
           </div>
@@ -242,7 +250,6 @@ export default function InpatientListPage() {
                       <TableHead>Ward/Bed</TableHead>
                       <TableHead>Consulting Doctor</TableHead>
                       <TableHead>Days Admitted</TableHead>
-                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -275,72 +282,10 @@ export default function InpatientListPage() {
                         <TableCell>
                           <Badge variant="secondary">{getDaysAdmitted(admission.admissionDate)} days</Badge>
                         </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={getStatusBadgeColor(admission.status)}
-                            className="flex items-center gap-1 w-fit"
-                          >
-                            {getStatusIcon(admission.status)}
-                            {admission.status.charAt(0).toUpperCase() + admission.status.slice(1)}
-                          </Badge>
-                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-1">
                             <Button variant="ghost" size="sm">
                               View
-                            </Button>
-
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  Transfer
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-lg">
-                                <DialogHeader>
-                                  <DialogTitle>Transfer Patient</DialogTitle>
-                                  <DialogDescription>
-                                    Transfer {admission.patientName} to a different ward/bed
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <BedTransferForm admission={admission} />
-                              </DialogContent>
-                            </Dialog>
-
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  Vitals
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-2xl">
-                                <DialogHeader>
-                                  <DialogTitle>Record Vitals</DialogTitle>
-                                  <DialogDescription>Record vital signs for {admission.patientName}</DialogDescription>
-                                </DialogHeader>
-                                <VitalsForm admissionId={admission.admissionId} />
-                              </DialogContent>
-                            </Dialog>
-
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  Treatment
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-2xl">
-                                <DialogHeader>
-                                  <DialogTitle>Add Treatment</DialogTitle>
-                                  <DialogDescription>
-                                    Add medication, procedure, or lab order for {admission.patientName}
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <TreatmentForm admissionId={admission.admissionId} />
-                              </DialogContent>
-                            </Dialog>
-
-                            <Button variant="outline" size="sm">
-                              Discharge
                             </Button>
                           </div>
                         </TableCell>

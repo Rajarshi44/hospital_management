@@ -129,6 +129,7 @@ function SidebarProvider({
   return (
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
+        {/* eslint-disable-next-line react/forbid-dom-props */}
         <div
           data-slot="sidebar-wrapper"
           style={

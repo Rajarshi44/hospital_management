@@ -72,7 +72,6 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
               { title: "Discharge", url: "/ipd/discharge", icon: FileText },
             ],
           },
-          { title: "Patient History", url: "/patients/history", icon: FileText },
         ],
       },
       {
@@ -84,10 +83,6 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         title: "Lab Management",
         url: "/lab",
         icon: TestTube,
-        items: [
-          { title: "Tests", url: "/lab", icon: TestTube },
-          { title: "Reports", url: "/lab/reports", icon: FileText },
-        ],
       },
       {
         title: "Billing & Payments",
@@ -95,50 +90,9 @@ export const getNavigationForRole = (role: UserRole): NavigationItem[] => {
         icon: CreditCard,
       },
       {
-        title: "Ward/Bed Management",
-        url: "/wards",
-        icon: Bed,
-      },
-      {
-        title: "Staff/HR Management",
-        url: "/staff",
-        icon: UserCog,
-        items: [
-          { title: "Nurses", url: "/staff/nurses", icon: Users },
-          { title: "Receptionists", url: "/staff/receptionists", icon: Users },
-          { title: "Technicians", url: "/staff/technicians", icon: Users },
-          { title: "Duty Roster", url: "/staff/roster", icon: Clock },
-        ],
-      },
-      {
         title: "Insurance / TPA",
         url: "/insurance",
         icon: Shield,
-      },
-      {
-        title: "Documents",
-        url: "/documents",
-        icon: FolderOpen,
-      },
-      {
-        title: "Reports",
-        url: "/reports",
-        icon: TrendingUp,
-        items: [
-          { title: "Revenue", url: "/reports/revenue", icon: Receipt },
-          { title: "Operations", url: "/reports/operations", icon: Activity },
-          { title: "Staff Performance", url: "/reports/staff", icon: Users },
-        ],
-      },
-      {
-        title: "Notifications / Alerts",
-        url: "/notifications",
-        icon: Bell,
-      },
-      {
-        title: "Settings",
-        url: "/settings",
-        icon: Settings,
       },
     ],
     DOCTOR: [

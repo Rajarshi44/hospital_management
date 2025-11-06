@@ -516,8 +516,7 @@ export function DepartmentManagement() {
                       </div>
                       <div className="w-full bg-secondary rounded-full h-2">
                         <div 
-                          className={`h-2 rounded-full ${dept.headDoctor ? "bg-green-500" : "bg-yellow-500"}`}
-                          style={{ width: dept.headDoctor ? "100%" : "80%" }}
+                          className={`h-2 rounded-full ${dept.headDoctor ? "bg-green-500 w-full" : "bg-yellow-500 w-4/5"}`}
                         ></div>
                       </div>
                     </div>

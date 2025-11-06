@@ -26,6 +26,50 @@ export default function DischargePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedAdmission, setSelectedAdmission] = useState<string | null>(null)
 
+  // Export admitted patients to Excel
+  const exportToExcel = () => {
+    // Get all admitted patients (not discharged)
+    const admittedPatients = mockAdmissions.filter(admission => admission.status !== "discharged")
+
+    // Create CSV content
+    const headers = ["Patient Name", "UHID", "Admission ID", "Ward", "Bed Number", "Consulting Doctor", "Department", "Admission Date", "Days Admitted", "Diagnosis", "Status"]
+    
+    const csvRows = [
+      headers.join(","),
+      ...admittedPatients.map(admission => {
+        const days = getDaysAdmitted(admission.admissionDate)
+        return [
+          `"${admission.patientName}"`,
+          admission.uhid,
+          admission.admissionId,
+          `"${admission.wardName}"`,
+          admission.bedNumber,
+          `"${admission.consultingDoctorName}"`,
+          `"${admission.departmentName}"`,
+          admission.admissionDate,
+          days,
+          `"${admission.tentativeDiagnosis}"`,
+          admission.status.charAt(0).toUpperCase() + admission.status.slice(1)
+        ].join(",")
+      })
+    ]
+
+    const csvContent = csvRows.join("\n")
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    
+    link.setAttribute("href", url)
+    link.setAttribute("download", `admitted-patients-${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   // Filter admissions that can be discharged (not already discharged)
   const dischargeableAdmissions = mockAdmissions.filter(admission => admission.status !== "discharged")
 
@@ -91,11 +135,11 @@ export default function DischargePage() {
               <p className="text-muted-foreground">Process patient discharges and generate discharge summaries</p>
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="outline" onClick={() => router.push("/admin/ipd")}>
+              <Button variant="outline" onClick={() => router.push("/ipd")}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Dashboard
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={exportToExcel}>
                 <Download className="h-4 w-4 mr-2" />
                 Discharge Reports
               </Button>
@@ -188,7 +232,6 @@ export default function DischargePage() {
                       <TableHead>Admission Details</TableHead>
                       <TableHead>Current Status</TableHead>
                       <TableHead>Stay Duration</TableHead>
-                      <TableHead>Est. Charges</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -200,9 +243,6 @@ export default function DischargePage() {
                           <TableCell>
                             <div className="space-y-1">
                               <div className="font-medium">{admission.patientName}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {admission.admissionId} • {admission.uhid}
-                              </div>
                               <div className="text-xs text-muted-foreground">Dr. {admission.consultingDoctorName}</div>
                             </div>
                           </TableCell>
@@ -232,23 +272,8 @@ export default function DischargePage() {
                           <TableCell>
                             <Badge variant="secondary">{charges.days} days</Badge>
                           </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium">${charges.totalCharges.toLocaleString()}</div>
-                              <div className="text-xs text-muted-foreground">
-                                Bed: ${charges.bedCharges} • Medical: ${charges.medicalCharges}
-                              </div>
-                              {admission.initialDeposit && (
-                                <div className="text-xs text-green-600">Deposit: ${admission.initialDeposit}</div>
-                              )}
-                            </div>
-                          </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end space-x-2">
-                              <Button variant="ghost" size="sm">
-                                View Details
-                              </Button>
-
                               <Dialog>
                                 <DialogTrigger asChild>
                                   <Button

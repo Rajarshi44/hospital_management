@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Plus, FileText, Clock, CheckCircle, AlertTriangle } from "lucide-react"
+import { Search, Plus, FileText, Clock, CheckCircle, AlertTriangle, Edit } from "lucide-react"
 import { AppLayout } from "@/components/app-shell/app-layout"
 import { LabOrderForm } from "@/components/lab/lab-order-form"
 import { LabResultsViewer } from "@/components/lab/lab-results-viewer"
+import { LabTestMaster } from "@/components/lab/lab-test-master"
+import { LabOrderStatusDialog } from "@/components/lab/lab-order-status-dialog"
 import { mockLabOrders } from "@/lib/lab"
 
 export default function LabPage() {
@@ -18,13 +20,22 @@ export default function LabPage() {
   const [showOrderForm, setShowOrderForm] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null)
+  const [orders, setOrders] = useState(mockLabOrders)
 
-  const filteredOrders = mockLabOrders.filter(
+  const filteredOrders = orders.filter(
     (order) =>
       order.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.id.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+
+  const handleStatusUpdate = (orderId: string, newStatus: "pending" | "collected" | "processing" | "completed" | "cancelled") => {
+    setOrders(orders.map(order => 
+      order.id === orderId ? { ...order, status: newStatus } : order
+    ))
+    setEditingOrderId(null)
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -116,7 +127,7 @@ export default function LabPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Pending Orders</p>
-                  <p className="text-2xl font-bold">{mockLabOrders.filter((o) => o.status === "pending").length}</p>
+                  <p className="text-2xl font-bold">{orders.filter((o) => o.status === "pending").length}</p>
                 </div>
                 <Clock className="h-8 w-8 text-yellow-600" />
               </div>
@@ -128,7 +139,7 @@ export default function LabPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Processing</p>
-                  <p className="text-2xl font-bold">{mockLabOrders.filter((o) => o.status === "processing").length}</p>
+                  <p className="text-2xl font-bold">{orders.filter((o) => o.status === "processing").length}</p>
                 </div>
                 <Clock className="h-8 w-8 text-blue-600" />
               </div>
@@ -140,7 +151,7 @@ export default function LabPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Completed Today</p>
-                  <p className="text-2xl font-bold">{mockLabOrders.filter((o) => o.status === "completed").length}</p>
+                  <p className="text-2xl font-bold">{orders.filter((o) => o.status === "completed").length}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
@@ -152,7 +163,7 @@ export default function LabPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">STAT Orders</p>
-                  <p className="text-2xl font-bold">{mockLabOrders.filter((o) => o.priority === "stat").length}</p>
+                  <p className="text-2xl font-bold">{orders.filter((o) => o.priority === "stat").length}</p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-red-600" />
               </div>
@@ -165,7 +176,7 @@ export default function LabPage() {
           <TabsList>
             <TabsTrigger value="orders">Lab Orders</TabsTrigger>
             <TabsTrigger value="results">Results</TabsTrigger>
-            <TabsTrigger value="tests">Test Catalog</TabsTrigger>
+            <TabsTrigger value="tests">Lab Master</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-4">
@@ -234,10 +245,14 @@ export default function LabPage() {
                         </TableCell>
                         <TableCell>{order.orderedAt.toLocaleDateString()}</TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedOrderId(order.id)}>
-                            <FileText className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => setEditingOrderId(order.id)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedOrderId(order.id)}>
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -245,6 +260,15 @@ export default function LabPage() {
                 </Table>
               </CardContent>
             </Card>
+
+            {editingOrderId && (
+              <LabOrderStatusDialog
+                orderId={editingOrderId}
+                currentStatus={orders.find(o => o.id === editingOrderId)?.status || "pending"}
+                onStatusUpdate={handleStatusUpdate}
+                onClose={() => setEditingOrderId(null)}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="results">
@@ -264,19 +288,7 @@ export default function LabPage() {
           </TabsContent>
 
           <TabsContent value="tests">
-            <Card>
-              <CardHeader>
-                <CardTitle>Test Catalog</CardTitle>
-                <CardDescription>Browse available laboratory tests</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-medium">Test Catalog</h3>
-                  <p className="text-sm text-muted-foreground">View available tests and their information</p>
-                </div>
-              </CardContent>
-            </Card>
+            <LabTestMaster />
           </TabsContent>
         </Tabs>
       </div>
