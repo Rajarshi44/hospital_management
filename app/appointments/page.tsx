@@ -22,17 +22,9 @@ import {
   Video,
   MapPin,
   AlertCircle,
-  MoreVertical,
   RefreshCw,
   Eye,
 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,

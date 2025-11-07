@@ -57,6 +57,7 @@ import {
   MoreVertical,
   Edit,
   Eye,
+  Upload,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { AppLayout } from "@/components/app-shell/app-layout"
@@ -246,10 +247,11 @@ export default function BillingPage() {
   const [showOPDDialog, setShowOPDDialog] = useState(false)
   const [showAdvanceDialog, setShowAdvanceDialog] = useState(false)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
+  const [showNewClaimDialog, setShowNewClaimDialog] = useState(false)
   const [dateFilter, setDateFilter] = useState("today")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [paymentModeFilter, setPaymentModeFilter] = useState("all")
-  
+
   // Billing categories state
   const [billingCategories, setBillingCategories] = useState<BillingCategory[]>([
     {
@@ -340,7 +342,7 @@ export default function BillingPage() {
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [showPrintPreview, setShowPrintPreview] = useState(false)
-  
+
   // Patient and visit info state
   const [patientInfo, setPatientInfo] = useState({
     name: "",
@@ -351,7 +353,7 @@ export default function BillingPage() {
     cin: "",
     address: "",
   })
-  
+
   const [visitInfo, setVisitInfo] = useState({
     admissionDate: "",
     dischargeDate: "",
@@ -359,9 +361,19 @@ export default function BillingPage() {
     diagnosis: "",
   })
 
+  // Claim form state
+  const [claimInfo, setClaimInfo] = useState({
+    patient: "",
+    tpa: "",
+    policyNo: "",
+    claimedAmount: "",
+    approvedAmount: "",
+    status: "Pending",
+  })
+
   // Print ref
   const printRef = useRef<HTMLDivElement>(null)
-  
+
   const handlePrint = () => {
     if (typeof window !== "undefined") {
       window.print()
@@ -370,7 +382,7 @@ export default function BillingPage() {
 
   const addCategory = () => {
     if (!newCategoryName.trim()) return
-    
+
     const newCategory: BillingCategory = {
       id: `cat-${Date.now()}`,
       name: newCategoryName.toUpperCase(),
@@ -385,11 +397,11 @@ export default function BillingPage() {
         },
       ],
     }
-    
+
     setBillingCategories([...billingCategories, newCategory])
     setNewCategoryName("")
     setShowAddCategoryDialog(false)
-    
+
     toast({
       title: "Category Added",
       description: `${newCategoryName} category has been added`,
@@ -442,12 +454,7 @@ export default function BillingPage() {
     )
   }
 
-  const updateLineItem = (
-    categoryId: string,
-    itemId: string,
-    field: keyof BillingLineItem,
-    value: any
-  ) => {
+  const updateLineItem = (categoryId: string, itemId: string, field: keyof BillingLineItem, value: any) => {
     setBillingCategories(
       billingCategories.map(category => {
         if (category.id === categoryId) {
@@ -473,16 +480,14 @@ export default function BillingPage() {
 
   const calculateTotal = () => {
     return billingCategories.reduce(
-      (total, category) =>
-        total + category.items.reduce((catTotal, item) => catTotal + item.amount, 0),
+      (total, category) => total + category.items.reduce((catTotal, item) => catTotal + item.amount, 0),
       0
     )
   }
 
   const calculateTotalDiscount = () => {
     return billingCategories.reduce(
-      (total, category) =>
-        total + category.items.reduce((catTotal, item) => catTotal + item.discount, 0),
+      (total, category) => total + category.items.reduce((catTotal, item) => catTotal + item.discount, 0),
       0
     )
   }
@@ -526,6 +531,23 @@ export default function BillingPage() {
       description: "Refund request has been submitted for approval",
     })
     setShowRefundDialog(false)
+  }
+
+  const handleCreateClaim = () => {
+    toast({
+      title: "Claim Created",
+      description: "Insurance claim has been created successfully",
+    })
+    setShowNewClaimDialog(false)
+    // Reset form
+    setClaimInfo({
+      patient: "",
+      tpa: "",
+      policyNo: "",
+      claimedAmount: "",
+      approvedAmount: "",
+      status: "Pending",
+    })
   }
 
   const getStatusBadge = (status: string) => {
@@ -703,7 +725,14 @@ export default function BillingPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {mockRevenueBySource.map(item => {
-                      const widthClass = item.percentage >= 50 ? 'w-1/2' : item.percentage >= 30 ? 'w-1/3' : item.percentage >= 10 ? 'w-1/6' : 'w-1/12';
+                      const widthClass =
+                        item.percentage >= 50
+                          ? "w-1/2"
+                          : item.percentage >= 30
+                            ? "w-1/3"
+                            : item.percentage >= 10
+                              ? "w-1/6"
+                              : "w-1/12"
                       return (
                         <div key={item.source} className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
@@ -716,7 +745,7 @@ export default function BillingPage() {
                             <div className={`h-full ${item.color} ${widthClass}`} />
                           </div>
                         </div>
-                      );
+                      )
                     })}
                   </CardContent>
                 </Card>
@@ -869,6 +898,10 @@ export default function BillingPage() {
                       <CardTitle>Insurance & TPA Claims</CardTitle>
                       <CardDescription>Manage insurance claims and TPA authorizations</CardDescription>
                     </div>
+                    <Button onClick={() => setShowNewClaimDialog(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Claim
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -905,18 +938,88 @@ export default function BillingPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Viewing Claim",
+                                    description: `Displaying details for ${claim.claimId}`,
+                                  })
+                                }}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Edit Claim",
+                                    description: `Opening editor for ${claim.claimId}`,
+                                  })
+                                }}>
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit Claim
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Documents",
+                                    description: `Viewing documents for ${claim.claimId}`,
+                                  })
+                                }}>
                                   <FileText className="h-4 w-4 mr-2" />
-                                  Documents
+                                  View Documents
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Upload Document",
+                                    description: `Upload document for ${claim.claimId}`,
+                                  })
+                                }}>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Upload Document
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    toast({
+                                      title: "Approve Claim",
+                                      description: `Claim ${claim.claimId} approved`,
+                                    })
+                                  }}
+                                  disabled={claim.status === "Approved"}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Approve Claim
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    toast({
+                                      title: "Reject Claim",
+                                      description: `Claim ${claim.claimId} rejected`,
+                                      variant: "destructive",
+                                    })
+                                  }}
+                                  disabled={claim.status === "Rejected"}
+                                  className="text-red-600"
+                                >
+                                  <X className="h-4 w-4 mr-2" />
+                                  Reject Claim
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Printing Claim",
+                                    description: `Generating PDF for ${claim.claimId}`,
+                                  })
+                                }}>
+                                  <Printer className="h-4 w-4 mr-2" />
+                                  Print Claim
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Download Claim",
+                                    description: `Downloading ${claim.claimId}`,
+                                  })
+                                }}>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -937,7 +1040,7 @@ export default function BillingPage() {
                 <DialogTitle className="text-2xl">Create OPD Bill</DialogTitle>
                 <DialogDescription className="text-base">Generate new outpatient billing invoice</DialogDescription>
               </DialogHeader>
-              
+
               {/* Patient Information */}
               <div className="space-y-4">
                 <div className="text-sm font-semibold">Patient Information</div>
@@ -1063,31 +1166,23 @@ export default function BillingPage() {
                     Add Category
                   </Button>
                 </div>
-                
+
                 {/* Dynamic Categories */}
                 {billingCategories.map((category, categoryIndex) => (
                   <div key={category.id} className="space-y-2 border rounded-lg p-3 bg-muted/20">
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold text-muted-foreground">{category.name}</div>
                       <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => addLineItem(category.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => addLineItem(category.id)}>
                           <Plus className="h-3 w-3 mr-1" />
                           Add Item
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeCategory(category.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => removeCategory(category.id)}>
                           <X className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                    
+
                     {/* Line Items */}
                     {category.items.map((item, itemIndex) => (
                       <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
@@ -1096,18 +1191,14 @@ export default function BillingPage() {
                           <Input
                             placeholder="e.g., Item description"
                             value={item.description}
-                            onChange={e =>
-                              updateLineItem(category.id, item.id, "description", e.target.value)
-                            }
+                            onChange={e => updateLineItem(category.id, item.id, "description", e.target.value)}
                           />
                         </div>
                         <div className="col-span-2">
                           {itemIndex === 0 && <Label className="text-xs">Type</Label>}
                           <Select
                             value={item.type}
-                            onValueChange={value =>
-                              updateLineItem(category.id, item.id, "type", value)
-                            }
+                            onValueChange={value => updateLineItem(category.id, item.id, "type", value)}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -1143,23 +1234,13 @@ export default function BillingPage() {
                             placeholder="0.00"
                             value={item.discount || ""}
                             onChange={e =>
-                              updateLineItem(
-                                category.id,
-                                item.id,
-                                "discount",
-                                parseFloat(e.target.value) || 0
-                              )
+                              updateLineItem(category.id, item.id, "discount", parseFloat(e.target.value) || 0)
                             }
                           />
                         </div>
                         <div className="col-span-1">
                           {itemIndex === 0 && <Label className="text-xs">Amount</Label>}
-                          <Input
-                            type="number"
-                            value={item.amount.toFixed(2)}
-                            disabled
-                            className="bg-muted"
-                          />
+                          <Input type="number" value={item.amount.toFixed(2)} disabled className="bg-muted" />
                         </div>
                         <div className="col-span-1 flex items-center">
                           {itemIndex === 0 && <div className="h-5" />}
@@ -1394,6 +1475,93 @@ export default function BillingPage() {
                   Cancel
                 </Button>
                 <Button onClick={addCategory}>Add Category</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* New Claim Dialog */}
+          <Dialog open={showNewClaimDialog} onOpenChange={setShowNewClaimDialog}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Insurance Claim</DialogTitle>
+                <DialogDescription>Submit a new TPA/Insurance claim request</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Patient Name *</Label>
+                  <Input
+                    placeholder="Search or enter patient name"
+                    value={claimInfo.patient}
+                    onChange={e => setClaimInfo({ ...claimInfo, patient: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>TPA/Insurance Provider *</Label>
+                  <Select value={claimInfo.tpa} onValueChange={value => setClaimInfo({ ...claimInfo, tpa: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select TPA" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Star Health">Star Health</SelectItem>
+                      <SelectItem value="HDFC Ergo">HDFC Ergo</SelectItem>
+                      <SelectItem value="ICICI Lombard">ICICI Lombard</SelectItem>
+                      <SelectItem value="Max Bupa">Max Bupa</SelectItem>
+                      <SelectItem value="Reliance Health">Reliance Health</SelectItem>
+                      <SelectItem value="Care Health">Care Health</SelectItem>
+                      <SelectItem value="Bajaj Allianz">Bajaj Allianz</SelectItem>
+                      <SelectItem value="New India Assurance">New India Assurance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Policy Number *</Label>
+                  <Input
+                    placeholder="Enter policy number"
+                    value={claimInfo.policyNo}
+                    onChange={e => setClaimInfo({ ...claimInfo, policyNo: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Claimed Amount *</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={claimInfo.claimedAmount}
+                    onChange={e => setClaimInfo({ ...claimInfo, claimedAmount: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Approved Amount</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00 (leave blank if pending)"
+                    value={claimInfo.approvedAmount}
+                    onChange={e => setClaimInfo({ ...claimInfo, approvedAmount: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Status *</Label>
+                  <Select
+                    value={claimInfo.status}
+                    onValueChange={value => setClaimInfo({ ...claimInfo, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Approved">Approved</SelectItem>
+                      <SelectItem value="Rejected">Rejected</SelectItem>
+                      <SelectItem value="Under Review">Under Review</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowNewClaimDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateClaim}>Create Claim</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
