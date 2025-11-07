@@ -43,7 +43,8 @@ export interface LabTest {
 
 export interface LabOrder {
   id: string;
-  orderNumber: string;
+  // `orderId` is the human-friendly lab order code (e.g. LAB000001)
+  orderId?: string;
   patientId: string;
   doctorId: string;
   status: LabOrderStatus;
@@ -51,6 +52,8 @@ export interface LabOrder {
   clinicalNotes?: string;
   requestedBy?: string;
   totalAmount: number;
+  // orderedAt is the date/time the order was placed in the system
+  orderedAt?: string | Date;
   createdAt: Date;
   updatedAt: Date;
   tests?: LabOrderTest[];
