@@ -365,6 +365,7 @@ export default function WardsPage() {
     console.log('🔥 Editing ward:', editingWard);
     
     try {
+      // Prepare ward data according to backend CreateWardDto/UpdateWardDto interface
       const wardData = {
         name: data.wardName,
         wardNumber: data.wardCode,
@@ -372,37 +373,36 @@ export default function WardsPage() {
         floor: data.floor.toString(),
         totalBeds: data.rooms.reduce((sum, room) => sum + room.noOfBeds, 0),
         departmentId: data.departmentId,
-        description: `${data.wardType} ward with ${data.totalRooms} rooms`
+        description: data.wing ? `${data.wardType} ward on floor ${data.floor}, wing ${data.wing}` : `${data.wardType} ward on floor ${data.floor}`
       }
       
       console.log('🔥 Prepared ward data:', wardData);
 
+      let result;
       if (editingWard) {
         console.log('🔥 Updating ward with ID:', editingWard.id);
-        const result = await updateWard(editingWard.id, wardData)
+        result = await updateWard(editingWard.id, wardData)
         console.log('🔥 Update result:', result);
-        toast({
-          title: "Ward Updated!",
-          description: `Ward "${data.wardName}" has been updated successfully.`,
-        })
       } else {
         console.log('🔥 Creating new ward');
-        const result = await createWard(wardData)
+        result = await createWard(wardData)
         console.log('🔥 Create result:', result);
-        toast({
-          title: "Ward Setup Complete!",
-          description: `Ward "${data.wardName}" has been created successfully.`,
-        })
       }
       
-      console.log('🔥 Refreshing wards data');
-      // Refresh wards data
-      refetchWards()
+      console.log('🔥 Ward operation completed successfully');
       
-      console.log('🔥 Closing dialog and resetting form');
+      // Close dialog and reset form first
       setShowWardSetup(false)
       setEditingWard(null)
       form.reset()
+      
+      // Show success toast after dialog is closed
+      setTimeout(() => {
+        toast({
+          title: editingWard ? "Ward Updated!" : "Ward Setup Complete!",
+          description: `Ward "${data.wardName}" has been ${editingWard ? 'updated' : 'created'} successfully.`,
+        })
+      }, 100)
       
       console.log('🔥 Form submission completed successfully');
     } catch (error) {
