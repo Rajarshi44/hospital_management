@@ -250,6 +250,7 @@ export default function BillingPage() {
   const [showNewClaimDialog, setShowNewClaimDialog] = useState(false)
   const [showViewIPDBillDialog, setShowViewIPDBillDialog] = useState(false)
   const [selectedIPDBill, setSelectedIPDBill] = useState<any>(null)
+  const [isEditMode, setIsEditMode] = useState(false)
   const [dateFilter, setDateFilter] = useState("today")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [paymentModeFilter, setPaymentModeFilter] = useState("all")
@@ -554,7 +555,22 @@ export default function BillingPage() {
 
   const handleViewIPDBill = (bill: any) => {
     setSelectedIPDBill(bill)
+    setIsEditMode(false)
     setShowViewIPDBillDialog(true)
+  }
+
+  const handleEditIPDBill = (bill: any) => {
+    setSelectedIPDBill(bill)
+    setIsEditMode(true)
+    setShowViewIPDBillDialog(true)
+  }
+
+  const handleSaveIPDBill = () => {
+    toast({
+      title: "IPD Bill Updated",
+      description: "Bill has been updated successfully",
+    })
+    setIsEditMode(false)
   }
 
   const handleGenerateIPDBill = () => {
@@ -900,6 +916,9 @@ export default function BillingPage() {
                             <div className="flex gap-1">
                               <Button variant="ghost" size="sm" onClick={() => handleViewIPDBill(bill)}>
                                 <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleEditIPDBill(bill)}>
+                                <Edit className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -1597,6 +1616,344 @@ export default function BillingPage() {
                 </Button>
                 <Button onClick={handleCreateClaim}>Create Claim</Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* View IPD Bill Dialog */}
+          <Dialog open={showViewIPDBillDialog} onOpenChange={setShowViewIPDBillDialog}>
+            <DialogContent className="max-w-[98vw] w-full h-[98vh] max-h-[98vh] overflow-y-auto p-8">
+              <DialogHeader>
+                <DialogTitle className="text-2xl flex items-center justify-between">
+                  <span>{isEditMode ? "Edit IPD Bill" : "View IPD Bill"}</span>
+                  {!isEditMode && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setIsEditMode(true)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Enable Edit Mode
+                    </Button>
+                  )}
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  {selectedIPDBill && `Bill ID: ${selectedIPDBill.id} | Admission ID: ${selectedIPDBill.admissionId}`}
+                </DialogDescription>
+              </DialogHeader>
+              
+              {selectedIPDBill && (
+                <>
+                  {/* Patient Information */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Patient Information</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Patient Name *</Label>
+                        <Input
+                          placeholder="Enter patient name"
+                          value={selectedIPDBill.patientName}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Admission ID</Label>
+                        <Input
+                          value={selectedIPDBill.admissionId}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Bed Days</Label>
+                        <Input
+                          type="number"
+                          value={selectedIPDBill.bedDays}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Visit Details */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Visit Details</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Admission Date</Label>
+                        <Input
+                          type="datetime-local"
+                          value={visitInfo.admissionDate}
+                          onChange={e => setVisitInfo({ ...visitInfo, admissionDate: e.target.value })}
+                          disabled={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Discharge Date</Label>
+                        <Input
+                          type="datetime-local"
+                          value={visitInfo.dischargeDate}
+                          onChange={e => setVisitInfo({ ...visitInfo, dischargeDate: e.target.value })}
+                          disabled={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Doctor In Charge</Label>
+                        <Input
+                          placeholder="Search doctor..."
+                          value={visitInfo.doctor}
+                          onChange={e => setVisitInfo({ ...visitInfo, doctor: e.target.value })}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Diagnosis</Label>
+                        <Input
+                          placeholder="e.g., KNEE JOINT PAIN"
+                          value={visitInfo.diagnosis}
+                          onChange={e => setVisitInfo({ ...visitInfo, diagnosis: e.target.value })}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Billing Items */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold">Billing Details</div>
+                      {isEditMode && (
+                        <Button variant="outline" size="sm" onClick={() => setShowAddCategoryDialog(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Category
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* Dynamic Categories */}
+                    {billingCategories.map((category, categoryIndex) => (
+                      <div key={category.id} className="space-y-2 border rounded-lg p-3 bg-muted/20">
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs font-semibold text-muted-foreground">{category.name}</div>
+                          {isEditMode && (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => addLineItem(category.id)}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Item
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeCategory(category.id)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Line Items */}
+                        {category.items.map((item, itemIndex) => (
+                          <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
+                            <div className="col-span-4">
+                              {itemIndex === 0 && <Label className="text-xs">Description</Label>}
+                              <Input
+                                placeholder="e.g., Item description"
+                                value={item.description}
+                                onChange={e =>
+                                  updateLineItem(category.id, item.id, "description", e.target.value)
+                                }
+                                readOnly={!isEditMode}
+                                className={!isEditMode ? "bg-muted" : ""}
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              {itemIndex === 0 && <Label className="text-xs">Type</Label>}
+                              <Select
+                                value={item.type}
+                                onValueChange={value =>
+                                  updateLineItem(category.id, item.id, "type", value)
+                                }
+                                disabled={!isEditMode}
+                              >
+                                <SelectTrigger className={!isEditMode ? "bg-muted" : ""}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="days">Days</SelectItem>
+                                  <SelectItem value="unit">Unit</SelectItem>
+                                  <SelectItem value="hour">Hour</SelectItem>
+                                  <SelectItem value="hr">Hr.</SelectItem>
+                                  <SelectItem value="case">Case</SelectItem>
+                                  <SelectItem value="surgery">Surgery</SelectItem>
+                                  <SelectItem value="consultation">Consultation</SelectItem>
+                                  <SelectItem value="lumpsum">Lumpsum</SelectItem>
+                                  <SelectItem value="set">Set</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="col-span-2">
+                              {itemIndex === 0 && <Label className="text-xs">Rate</Label>}
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                value={item.rate || ""}
+                                onChange={e =>
+                                  updateLineItem(category.id, item.id, "rate", parseFloat(e.target.value) || 0)
+                                }
+                                readOnly={!isEditMode}
+                                className={!isEditMode ? "bg-muted" : ""}
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              {itemIndex === 0 && <Label className="text-xs">Discount</Label>}
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                value={item.discount || ""}
+                                onChange={e =>
+                                  updateLineItem(
+                                    category.id,
+                                    item.id,
+                                    "discount",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                readOnly={!isEditMode}
+                                className={!isEditMode ? "bg-muted" : ""}
+                              />
+                            </div>
+                            <div className="col-span-1">
+                              {itemIndex === 0 && <Label className="text-xs">Amount</Label>}
+                              <Input
+                                type="number"
+                                value={item.amount.toFixed(2)}
+                                disabled
+                                className="bg-muted"
+                              />
+                            </div>
+                            <div className="col-span-1 flex items-center">
+                              {itemIndex === 0 && <div className="h-5" />}
+                              {isEditMode && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeLineItem(category.id, item.id)}
+                                  disabled={category.items.length === 1}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  <Separator />
+
+                  {/* Bill Summary */}
+                  <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
+                    <div className="flex justify-between text-sm">
+                      <span>Running Total:</span>
+                      <span className="font-medium">₹{selectedIPDBill.runningTotal.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Total Discount:</span>
+                      <span className="font-medium text-green-600">₹{totalDiscount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Subtotal:</span>
+                      <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Service Charge (15.00%):</span>
+                      <span className="font-medium">₹{serviceCharge.toFixed(2)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between">
+                      <span className="font-semibold">Bill Amount:</span>
+                      <span className="font-semibold">₹{billAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">TPA Status:</span>
+                      <span>{getStatusBadge(selectedIPDBill.tpaStatus)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Bill Status:</span>
+                      <span>{getStatusBadge(selectedIPDBill.status)}</span>
+                    </div>
+                  </div>
+
+                  {/* Payment Details */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Payment Details</div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Payment Mode</Label>
+                        <Select disabled={!isEditMode}>
+                          <SelectTrigger className={!isEditMode ? "bg-muted" : ""}>
+                            <SelectValue placeholder="Select mode" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="card">Card</SelectItem>
+                            <SelectItem value="upi">UPI</SelectItem>
+                            <SelectItem value="cheque">Cheque</SelectItem>
+                            <SelectItem value="insurance">Insurance/TPA</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Transaction Reference</Label>
+                        <Input 
+                          placeholder="Reference number (optional)" 
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowViewIPDBillDialog(false)}>
+                      Close
+                    </Button>
+                    {isEditMode ? (
+                      <>
+                        <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                          Cancel Edit
+                        </Button>
+                        <Button onClick={handleSaveIPDBill}>
+                          Save Changes
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button variant="outline" onClick={handlePrintIPDBill}>
+                          <Printer className="h-4 w-4 mr-2" />
+                          Print Bill
+                        </Button>
+                        <Button onClick={handleGenerateIPDBill}>Generate Bill</Button>
+                      </>
+                    )}
+                  </DialogFooter>
+                </>
+              )}
             </DialogContent>
           </Dialog>
         </div>
