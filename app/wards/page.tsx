@@ -205,10 +205,31 @@ export default function WardsPage() {
       return { totalBeds: 0, occupied: 0, available: 0, underCleaning: 0 }
     }
     
-    const totalBeds = wards.reduce((sum, ward) => sum + (ward.availability?.totalBeds || ward.beds?.length || 0), 0)
-    const occupied = wards.reduce((sum, ward) => sum + (ward.availability?.occupiedBeds || 0), 0)
-    const available = wards.reduce((sum, ward) => sum + (ward.availability?.availableBeds || 0), 0)
-    const underCleaning = wards.reduce((sum, ward) => sum + (ward.availability?.inactiveBeds || 0), 0)
+    // Calculate stats from actual bed data
+    let totalBeds = 0;
+    let occupied = 0;
+    let available = 0;
+    let underCleaning = 0;
+    
+    wards.forEach(ward => {
+      if (ward.beds && ward.beds.length > 0) {
+        totalBeds += ward.beds.length;
+        ward.beds.forEach((bed: { isOccupied: any; isActive: boolean }) => {
+          if (bed.isOccupied) {
+            occupied++;
+          } else if (bed.isActive === false) {
+            underCleaning++;
+          } else {
+            available++;
+          }
+        });
+      } else {
+        // If no beds array, use ward totals
+        totalBeds += ward.totalBeds || 0;
+        occupied += (ward.totalBeds || 0) - (ward.availableBeds || 0);
+        available += ward.availableBeds || 0;
+      }
+    });
     
     return { totalBeds, occupied, available, underCleaning }
   }, [wards])
@@ -220,7 +241,12 @@ export default function WardsPage() {
     let beds: Bed[] = []
     wards.forEach(ward => {
       if (ward.beds) {
-        beds = beds.concat(ward.beds.map((bed: any) => ({ ...bed, wardId: ward.id, id: bed.id || `${ward.id}-${bed.number}` })))
+        beds = beds.concat(ward.beds.map((bed: any) => ({ 
+          ...bed, 
+          wardId: ward.id, 
+          id: bed.id || `${ward.id}-${bed.bedNumber}`,
+          wardName: ward.name
+        })))
       }
     })
     
@@ -525,7 +551,7 @@ export default function WardsPage() {
                                 {getFeatureIcons(bed.amenities || [])}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                ₹{bed.chargesPerDay || bed.dailyRate || 0}/day
+                                ₹{bed.chargesPerDay || bed.dailyRate || 1500}/day
                               </div>
                             </div>
                           </CardContent>

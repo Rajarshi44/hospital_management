@@ -18,8 +18,21 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { useToast } from "@/hooks/use-toast"
-import { mockDoctors, mockDepartments } from "@/lib/schedule-mock-data"
-import { mockWards, getAvailableBeds } from "@/lib/ipd-mock-data"
+import { 
+  getDepartments, 
+  getDoctorsByDepartment,
+  getWardsByType,
+  getAvailableRoomsByWard,
+  getAvailableBedsByRoom,
+  uploadDocuments,
+  createEnhancedAdmission,
+  transformEnhancedFormToDTO,
+  mockDepartments,
+  mockDoctors,
+  mockWards,
+  mockBeds
+} from "@/lib/admission-service"
+import { IPDService } from "@/lib/ipd-service"
 
 // Comprehensive schema based on your specification
 const enhancedAdmissionSchema = z.object({
@@ -86,8 +99,16 @@ interface EnhancedAdmissionFormProps {
 export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  
+  // Backend data states
+  const [departments, setDepartments] = useState<any[]>([])
+  const [doctors, setDoctors] = useState<any[]>([])
+  const [filteredDoctors, setFilteredDoctors] = useState<any[]>([])
+  const [wards, setWards] = useState<any[]>([])
   const [availableRooms, setAvailableRooms] = useState<string[]>([])
   const [availableBeds, setAvailableBeds] = useState<any[]>([])
+  const [uploadedDocuments, setUploadedDocuments] = useState<string[]>([])
 
   // Collapsible sections state
   const [openSections, setOpenSections] = useState({
@@ -103,6 +124,37 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
   const toggleSection = (section: keyof typeof openSections) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }))
   }
+
+  // Load initial data from backend
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsLoadingData(true)
+      try {
+        // Load departments first
+        const departmentsData = await getDepartments().catch(() => mockDepartments) as any[]
+        setDepartments(departmentsData)
+        
+        // Set initial doctors (use mock data as fallback)
+        setDoctors(mockDoctors)
+        setFilteredDoctors(mockDoctors)
+        
+        // Load wards (we'll filter these based on ward type selection)
+        setWards(mockWards) // Use mock data for now, will be loaded when ward type changes
+        
+      } catch (error) {
+        console.error('Error loading initial data:', error)
+        toast({
+          title: "Error Loading Data",
+          description: "Failed to load form data. Please refresh the page.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    loadInitialData()
+  }, [toast])
 
   const form = useForm<EnhancedAdmissionFormData>({
     resolver: zodResolver(enhancedAdmissionSchema),
@@ -156,40 +208,267 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
     return () => subscription.unsubscribe()
   }, [form])
 
-  // Load beds based on ward type
+  // Handle department change to filter doctors
+  const handleDepartmentChange = (departmentId: string) => {
+    form.setValue("department", departmentId)
+    form.setValue("admittingDoctor", "") // Reset doctor selection
+    
+    // Filter doctors by department
+    getDoctorsByDepartment(departmentId).then((filteredDocs) => {
+      setFilteredDoctors(filteredDocs as any[])
+    }).catch((error: any) => {
+      console.error('Error filtering doctors:', error)
+      // Fallback to mock data
+      const fallbackDoctors = mockDoctors.filter(doc => doc.departmentId === departmentId)
+      setFilteredDoctors(fallbackDoctors)
+    })
+  }
+
+  // Load wards and beds based on ward type
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === "wardType" && value.wardType) {
-        const ward = mockWards.find(w => w.name.includes(value.wardType!))
-        if (ward) {
-          const beds = getAvailableBeds(ward.id)
-          setAvailableBeds(beds)
-        }
+        console.log('Ward type changed to:', value.wardType)
+        
+        // Load wards based on ward type
+        getWardsByType(value.wardType).then(async (wardsData: any) => {
+          console.log('Loaded wards for type:', wardsData)
+          setWards(wardsData || [])
+          
+          if (!wardsData || wardsData.length === 0) {
+            console.log('No wards found for type:', value.wardType)
+            setAvailableBeds([])
+            setAvailableRooms([])
+            toast({
+              title: "No Wards Available",
+              description: `No ${value.wardType} wards are currently available.`,
+              variant: "destructive"
+            })
+            return
+          }
+          
+          // Load all available beds from all wards of this type
+          if (wardsData && wardsData.length > 0) {
+            let allBeds: any[] = []
+            let allRooms: string[] = []
+            
+            // Get beds from all wards of this type
+            for (const ward of wardsData) {
+              try {
+                const wardBeds = await IPDService.getBedsByWard(ward.id, { isOccupied: false })
+                console.log(`Beds from ward ${ward.name}:`, wardBeds)
+                
+                // Add ward information to each bed
+                const bedsWithWard = (wardBeds as any[]).map(bed => ({
+                  ...bed,
+                  wardName: ward.name,
+                  wardNumber: ward.wardNumber
+                }))
+                
+                allBeds = [...allBeds, ...bedsWithWard]
+              } catch (error) {
+                console.error(`Error loading beds for ward ${ward.id}:`, error)
+              }
+            }
+            
+            // Generate room numbers based on total beds (every 4 beds = 1 room)
+            const totalBeds = allBeds.length
+            const roomCount = Math.ceil(totalBeds / 4)
+            allRooms = []
+            for (let i = 1; i <= roomCount; i++) {
+              allRooms.push(`Room ${i}`)
+            }
+            
+            console.log('All available beds:', allBeds)
+            console.log('Generated rooms:', allRooms)
+            console.log(`Ward Type "${value.wardType}": ${allBeds.length} beds across ${wardsData.length} wards, ${allRooms.length} rooms`)
+            setAvailableBeds(allBeds)
+            setAvailableRooms(allRooms)
+          } else {
+            setAvailableBeds([])
+            setAvailableRooms([])
+          }
+          
+          // Reset selections when ward type changes
+          form.setValue("roomNo", "")
+          form.setValue("bedNo", "")
+        }).catch((error: any) => {
+          console.error('Error loading wards:', error)
+          // Fallback to mock data
+          const fallbackWards = mockWards.filter(ward => ward.type === value.wardType?.toUpperCase())
+          setWards(fallbackWards)
+          setAvailableRooms(['Room 1', 'Room 2', 'Room 3'])
+          setAvailableBeds([])
+        })
       }
     })
     return () => subscription.unsubscribe()
   }, [form])
 
+  // Handle ward selection to load rooms
+  const handleWardSelection = async (wardId: string) => {
+    try {
+      const rooms = await getAvailableRoomsByWard(wardId)
+      setAvailableRooms(rooms)
+      
+      // Reset room and bed selection
+      form.setValue("roomNo", "")
+      form.setValue("bedNo", "")
+      setAvailableBeds([])
+    } catch (error) {
+      console.error('Error loading rooms for ward:', error)
+    }
+  }
+
+  // Handle room selection to filter beds
+  const handleRoomSelection = (roomNumber: string) => {
+    console.log('Room selected:', roomNumber)
+    
+    // Get room number (e.g., "Room 1" -> 1)
+    const roomNum = parseInt(roomNumber.split(' ')[1] || '1')
+    
+    // Filter beds for this room (every 4 beds = 1 room, starting from 0)
+    const roomStartIndex = (roomNum - 1) * 4
+    const roomEndIndex = roomStartIndex + 4
+    
+    // Use the current ward type to get all beds again
+    const wardType = form.getValues("wardType")
+    
+    // Get all beds from available wards and filter by room
+    let allBedsForType: any[] = []
+    
+    // Recreate the full bed list from current wards
+    const loadRoomBeds = async () => {
+      try {
+        for (const ward of wards) {
+          const wardBeds = await IPDService.getBedsByWard(ward.id, { isOccupied: false }) as any[]
+          const bedsWithWard = wardBeds.map(bed => ({
+            ...bed,
+            wardName: ward.name,
+            wardNumber: ward.wardNumber
+          }))
+          allBedsForType = [...allBedsForType, ...bedsWithWard]
+        }
+        
+        // Filter beds for selected room
+        const roomBeds = allBedsForType.slice(roomStartIndex, roomEndIndex)
+        console.log(`Room ${roomNum}: showing beds ${roomStartIndex + 1}-${roomEndIndex} of ${allBedsForType.length} total`)
+        console.log('Beds for selected room:', roomBeds.map(b => `${b.wardName}-${b.bedNumber}`))
+        
+        setAvailableBeds(roomBeds)
+        
+        // Reset bed selection
+        form.setValue("bedNo", "")
+      } catch (error) {
+        console.error('Error filtering beds by room:', error)
+      }
+    }
+    
+    loadRoomBeds()
+  }
+
   const handleFormSubmit = async (data: EnhancedAdmissionFormData) => {
     setIsSubmitting(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
+      // Transform form data to backend DTO format
+      const admissionDTO = transformEnhancedFormToDTO(data)
+
+      console.log("Enhanced Admission DTO:", admissionDTO)
+
+      // Call real backend API
+      const response = await createEnhancedAdmission(admissionDTO) as any
+
       toast({
         title: "Success!",
-        description: `Patient ${data.fullName} has been admitted successfully.`,
+        description: `Patient ${data.fullName} has been admitted successfully. Admission ID: ${response.admissionId || response.id}`,
       })
       
-      onSubmit(data)
+      onSubmit(response)
     } catch (error) {
+      console.error("Enhanced admission failed:", error)
       toast({
         title: "Error",
-        description: "Failed to complete admission. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to complete admission. Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  // Handle document uploads
+  const handleDocumentUpload = async (files: FileList) => {
+    try {
+      // Validate files
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      
+      const validFiles = Array.from(files).filter(file => {
+        if (file.size > maxSize) {
+          toast({
+            title: "File Too Large",
+            description: `${file.name} is larger than 5MB. Please choose a smaller file.`,
+            variant: "destructive",
+          })
+          return false;
+        }
+        
+        if (!allowedTypes.includes(file.type)) {
+          toast({
+            title: "Invalid File Type",
+            description: `${file.name} is not a supported file type. Please use PDF, JPG, or PNG.`,
+            variant: "destructive",
+          })
+          return false;
+        }
+        
+        return true;
+      });
+
+      if (validFiles.length === 0) {
+        return;
+      }
+
+      // Create a new FileList with valid files
+      const dt = new DataTransfer();
+      validFiles.forEach(file => dt.items.add(file));
+      const validFileList = dt.files;
+
+      console.log('Uploading documents:', validFiles.map(f => f.name));
+      
+      const uploadedFiles = await uploadDocuments(validFileList) as any[];
+      
+      // Extract file names from the response
+      const fileNames = uploadedFiles.map((file: any) => 
+        file.documentName || file.originalName || file.fileName || 'Unknown file'
+      );
+      
+      setUploadedDocuments(prev => [...prev, ...fileNames])
+      
+      toast({
+        title: "Documents Uploaded",
+        description: `${validFiles.length} document(s) uploaded successfully.`,
+      })
+    } catch (error) {
+      console.error("Document upload failed:", error)
+      toast({
+        title: "Upload Failed", 
+        description: error instanceof Error ? error.message : "Failed to upload documents. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Handle drag and drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      handleDocumentUpload(files)
     }
   }
 
@@ -475,14 +754,14 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Department *</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select value={field.value} onValueChange={handleDepartmentChange}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select department" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {mockDepartments.map((dept) => (
+                            {departments.map((dept: any) => (
                               <SelectItem key={dept.id} value={dept.id}>
                                 {dept.name}
                               </SelectItem>
@@ -507,9 +786,9 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {mockDoctors.map((doctor) => (
+                            {filteredDoctors.map((doctor: any) => (
                               <SelectItem key={doctor.id} value={doctor.id}>
-                                Dr. {doctor.name} - {doctor.specialization}
+                                Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -532,9 +811,9 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {mockDoctors.map((doctor) => (
+                            {filteredDoctors.map((doctor: any) => (
                               <SelectItem key={doctor.id} value={doctor.id}>
-                                Dr. {doctor.name} - {doctor.specialization}
+                                Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -634,10 +913,27 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Room Number *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., 101, 201" {...field} />
-                        </FormControl>
-                        <FormDescription>Enter room number manually</FormDescription>
+                        <Select 
+                          value={field.value} 
+                          onValueChange={(value) => {
+                            field.onChange(value)
+                            handleRoomSelection(value)
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select room" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableRooms.map((room) => (
+                              <SelectItem key={room} value={room}>
+                                {room}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>Generated rooms (4 beds per room)</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -656,14 +952,14 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {availableBeds.filter(bed => !bed.isOccupied).map((bed) => (
-                              <SelectItem key={bed.id} value={bed.bedNumber}>
-                                {bed.bedNumber} - ₹{bed.chargesPerDay}/day
+                            {availableBeds.map((bed) => (
+                              <SelectItem key={bed.id} value={bed.id}>
+                                {bed.wardName && `${bed.wardName} - `}{bed.bedNumber || `Bed-${bed.id?.substring(0,8)}`} - {bed.bedType || 'Standard'} - ₹{bed.dailyRate || 1500}/day
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <FormDescription>Available beds in selected ward</FormDescription>
+                        <FormDescription>Select from available beds ({availableBeds.length} available)</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -922,7 +1218,19 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label>ID Proof</Label>
-                    <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                    <div 
+                      className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                      onClick={() => document.getElementById('id-proof-upload')?.click()}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                    >
+                      <input
+                        id="id-proof-upload"
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => e.target.files && handleDocumentUpload(e.target.files)}
+                      />
                       <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">Click to upload or drag and drop</p>
                       <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG (Max 5MB)</p>
@@ -931,7 +1239,19 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
 
                   <div className="space-y-2">
                     <Label>Referral Document</Label>
-                    <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                    <div 
+                      className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                      onClick={() => document.getElementById('referral-upload')?.click()}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                    >
+                      <input
+                        id="referral-upload"
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => e.target.files && handleDocumentUpload(e.target.files)}
+                      />
                       <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">Click to upload or drag and drop</p>
                       <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG (Max 5MB)</p>
@@ -940,13 +1260,45 @@ export function EnhancedAdmissionForm({ onSubmit, onCancel }: EnhancedAdmissionF
 
                   <div className="space-y-2 md:col-span-2">
                     <Label>Insurance Documents</Label>
-                    <div className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                    <div 
+                      className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                      onClick={() => document.getElementById('insurance-upload')?.click()}
+                    >
+                      <input
+                        id="insurance-upload"
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        multiple
+                        onChange={(e) => e.target.files && handleDocumentUpload(e.target.files)}
+                      />
                       <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">Click to upload multiple files</p>
                       <p className="text-xs text-muted-foreground mt-1">PDF, JPG, PNG (Max 5MB each)</p>
                     </div>
                   </div>
                 </div>
+
+                {/* Uploaded Documents List */}
+                {uploadedDocuments.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Uploaded Documents ({uploadedDocuments.length})</Label>
+                    <div className="space-y-2">
+                      {uploadedDocuments.map((doc, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            <span className="text-sm">{doc}</span>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Uploaded
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </CollapsibleContent>
           </Card>

@@ -57,6 +57,7 @@ import {
   MoreVertical,
   Edit,
   Eye,
+  Upload,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { AppLayout } from "@/components/app-shell/app-layout"
@@ -937,18 +938,88 @@ export default function BillingPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Viewing Claim",
+                                    description: `Displaying details for ${claim.claimId}`,
+                                  })
+                                }}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Edit Claim",
+                                    description: `Opening editor for ${claim.claimId}`,
+                                  })
+                                }}>
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit Claim
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Documents",
+                                    description: `Viewing documents for ${claim.claimId}`,
+                                  })
+                                }}>
                                   <FileText className="h-4 w-4 mr-2" />
-                                  Documents
+                                  View Documents
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Upload Document",
+                                    description: `Upload document for ${claim.claimId}`,
+                                  })
+                                }}>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Upload Document
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    toast({
+                                      title: "Approve Claim",
+                                      description: `Claim ${claim.claimId} approved`,
+                                    })
+                                  }}
+                                  disabled={claim.status === "Approved"}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Approve Claim
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    toast({
+                                      title: "Reject Claim",
+                                      description: `Claim ${claim.claimId} rejected`,
+                                      variant: "destructive",
+                                    })
+                                  }}
+                                  disabled={claim.status === "Rejected"}
+                                  className="text-red-600"
+                                >
+                                  <X className="h-4 w-4 mr-2" />
+                                  Reject Claim
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Printing Claim",
+                                    description: `Generating PDF for ${claim.claimId}`,
+                                  })
+                                }}>
+                                  <Printer className="h-4 w-4 mr-2" />
+                                  Print Claim
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  toast({
+                                    title: "Download Claim",
+                                    description: `Downloading ${claim.claimId}`,
+                                  })
+                                }}>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

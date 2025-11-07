@@ -22,17 +22,9 @@ import {
   Video,
   MapPin,
   AlertCircle,
-  MoreVertical,
   RefreshCw,
   Eye,
 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -599,53 +591,56 @@ export default function AppointmentsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => openEditStatusDialog(appointment.id, appointment.status)}
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openEditStatusDialog(appointment.id, appointment.status)}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              {appointment.status === "Scheduled" && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleStatusChange(appointment.id, "Checked-in")}
                                 >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Status
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {appointment.status === "Scheduled" && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "Checked-in")}>
-                                    <User className="h-4 w-4 mr-2" />
-                                    Quick Check-In
-                                  </DropdownMenuItem>
-                                )}
-                                {appointment.status === "Checked-in" && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "In Progress")}>
-                                    <AlertCircle className="h-4 w-4 mr-2" />
-                                    Start Consultation
-                                  </DropdownMenuItem>
-                                )}
-                                {appointment.status === "In Progress" && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "Completed")}>
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Mark Completed
-                                  </DropdownMenuItem>
-                                )}
-                                {appointment.status !== "Cancelled" && appointment.status !== "Completed" && (
-                                  <DropdownMenuItem 
-                                    onClick={() => handleStatusChange(appointment.id, "Cancelled")}
-                                    className="text-red-600"
-                                  >
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Cancel Appointment
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                  <User className="h-4 w-4 mr-1" />
+                                  Check-In
+                                </Button>
+                              )}
+                              {appointment.status === "Checked-in" && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleStatusChange(appointment.id, "In Progress")}
+                                >
+                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                  Start
+                                </Button>
+                              )}
+                              {appointment.status === "In Progress" && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleStatusChange(appointment.id, "Completed")}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Complete
+                                </Button>
+                              )}
+                              {appointment.status !== "Cancelled" && appointment.status !== "Completed" && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleStatusChange(appointment.id, "Cancelled")}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Cancel
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))

@@ -1,19 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Plus, FileText, Clock, CheckCircle, AlertTriangle, Edit } from "lucide-react"
+import { Search, Plus, FileText, Clock, CheckCircle, AlertTriangle, Edit, Loader2 } from "lucide-react"
 import { AppLayout } from "@/components/app-shell/app-layout"
 import { LabOrderForm } from "@/components/lab/lab-order-form"
 import { LabResultsViewer } from "@/components/lab/lab-results-viewer"
 import { LabTestMaster } from "@/components/lab/lab-test-master"
 import { LabOrderStatusDialog } from "@/components/lab/lab-order-status-dialog"
-import { mockLabOrders } from "@/lib/lab"
+import { useLab } from "@/hooks/useLab"
+import { LabOrderStatus, Priority } from "@/lib/types/lab.types"
 
 export default function LabPage() {
   const [activeTab, setActiveTab] = useState("orders")
@@ -21,57 +22,75 @@ export default function LabPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null)
-  const [orders, setOrders] = useState(mockLabOrders)
+  
+  const { orders, loading, fetchOrders, updateOrderStatus } = useLab()
+
+  useEffect(() => {
+    fetchOrders()
+  }, [fetchOrders])
 
   const filteredOrders = orders.filter(
-    (order) =>
-      order.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()),
+    (order) => {
+      const patientName = order.patient ? `${order.patient.firstName} ${order.patient.lastName}` : ''
+      const doctorName = order.doctor ? `${order.doctor.firstName} ${order.doctor.lastName}` : ''
+      const searchLower = searchTerm.toLowerCase()
+      
+      return (
+        patientName.toLowerCase().includes(searchLower) ||
+        doctorName.toLowerCase().includes(searchLower) ||
+        order.id.toLowerCase().includes(searchLower) ||
+        (order.orderId || '').toLowerCase().includes(searchLower)
+      )
+    }
   )
 
-  const handleStatusUpdate = (orderId: string, newStatus: "pending" | "collected" | "processing" | "completed" | "cancelled") => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ))
-    setEditingOrderId(null)
+  const handleStatusUpdate = async (orderId: string, newStatus: LabOrderStatus) => {
+    try {
+      await updateOrderStatus(orderId, {
+        status: newStatus,
+        notes: `Status updated to ${newStatus}`,
+      })
+      setEditingOrderId(null)
+    } catch (error) {
+      console.error('Failed to update order status:', error)
+    }
   }
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: LabOrderStatus) => {
     switch (status) {
-      case "completed":
+      case LabOrderStatus.COMPLETED:
         return <CheckCircle className="h-4 w-4 text-green-600" />
-      case "processing":
+      case LabOrderStatus.IN_PROGRESS:
         return <Clock className="h-4 w-4 text-blue-600" />
-      case "pending":
+      case LabOrderStatus.PENDING:
         return <Clock className="h-4 w-4 text-yellow-600" />
-      case "cancelled":
+      case LabOrderStatus.CANCELLED:
         return <AlertTriangle className="h-4 w-4 text-red-600" />
       default:
         return <Clock className="h-4 w-4 text-gray-600" />
     }
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: LabOrderStatus) => {
     switch (status) {
-      case "completed":
+      case LabOrderStatus.COMPLETED:
         return "bg-green-50 text-green-700 border-green-200"
-      case "processing":
+      case LabOrderStatus.IN_PROGRESS:
         return "bg-blue-50 text-blue-700 border-blue-200"
-      case "pending":
+      case LabOrderStatus.PENDING:
         return "bg-yellow-50 text-yellow-700 border-yellow-200"
-      case "cancelled":
+      case LabOrderStatus.CANCELLED:
         return "bg-red-50 text-red-700 border-red-200"
       default:
         return "bg-gray-50 text-gray-700 border-gray-200"
     }
   }
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: Priority) => {
     switch (priority) {
-      case "stat":
+      case Priority.URGENT:
         return "destructive"
-      case "urgent":
+      case Priority.HIGH:
         return "default"
       default:
         return "secondary"
@@ -127,7 +146,7 @@ export default function LabPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Pending Orders</p>
-                  <p className="text-2xl font-bold">{orders.filter((o) => o.status === "pending").length}</p>
+                  <p className="text-2xl font-bold">{orders.filter((o) => o.status === LabOrderStatus.PENDING).length}</p>
                 </div>
                 <Clock className="h-8 w-8 text-yellow-600" />
               </div>
@@ -139,7 +158,7 @@ export default function LabPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Processing</p>
-                  <p className="text-2xl font-bold">{orders.filter((o) => o.status === "processing").length}</p>
+                  <p className="text-2xl font-bold">{orders.filter((o) => o.status === LabOrderStatus.IN_PROGRESS).length}</p>
                 </div>
                 <Clock className="h-8 w-8 text-blue-600" />
               </div>
@@ -151,7 +170,7 @@ export default function LabPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Completed Today</p>
-                  <p className="text-2xl font-bold">{orders.filter((o) => o.status === "completed").length}</p>
+                  <p className="text-2xl font-bold">{orders.filter((o) => o.status === LabOrderStatus.COMPLETED).length}</p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
@@ -163,7 +182,7 @@ export default function LabPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">STAT Orders</p>
-                  <p className="text-2xl font-bold">{orders.filter((o) => o.priority === "stat").length}</p>
+                  <p className="text-2xl font-bold">{orders.filter((o) => o.priority === Priority.URGENT).length}</p>
                 </div>
                 <AlertTriangle className="h-8 w-8 text-red-600" />
               </div>
@@ -217,33 +236,33 @@ export default function LabPage() {
                   <TableBody>
                     {filteredOrders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="font-mono">{order.id}</TableCell>
-                        <TableCell className="font-medium">{order.patientName}</TableCell>
-                        <TableCell>{order.doctorName}</TableCell>
+                        <TableCell className="font-mono">{order.orderId || order.id}</TableCell>
+                        <TableCell className="font-medium">{order.patient ? `${order.patient.firstName} ${order.patient.lastName}` : '—'}</TableCell>
+                        <TableCell>{order.doctor ? `${order.doctor.firstName} ${order.doctor.lastName}` : '—'}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
-                            {order.tests.slice(0, 2).map((test) => (
+                            {(order.tests || []).slice(0, 2).map((test) => (
                               <Badge key={test.id} variant="outline" className="text-xs">
-                                {test.name.split(" ")[0]}
+                                {test.test?.name?.split(" ")[0] || test.testId}
                               </Badge>
                             ))}
-                            {order.tests.length > 2 && (
+                            {(order.tests || []).length > 2 && (
                               <Badge variant="outline" className="text-xs">
-                                +{order.tests.length - 2}
+                                +{(order.tests || []).length - 2}
                               </Badge>
                             )}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getPriorityColor(order.priority)}>{order.priority.toUpperCase()}</Badge>
+                          <Badge variant={getPriorityColor(order.priority)}>{order.priority}</Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {getStatusIcon(order.status)}
-                            <Badge className={getStatusColor(order.status)}>{order.status.toUpperCase()}</Badge>
+                            <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
                           </div>
                         </TableCell>
-                        <TableCell>{order.orderedAt.toLocaleDateString()}</TableCell>
+                        <TableCell>{order.orderedAt ? new Date(order.orderedAt).toLocaleDateString() : '-'}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" onClick={() => setEditingOrderId(order.id)}>
@@ -263,11 +282,11 @@ export default function LabPage() {
 
             {editingOrderId && (
               <LabOrderStatusDialog
-                orderId={editingOrderId}
-                currentStatus={orders.find(o => o.id === editingOrderId)?.status || "pending"}
-                onStatusUpdate={handleStatusUpdate}
-                onClose={() => setEditingOrderId(null)}
-              />
+                  orderId={editingOrderId}
+                  currentStatus={orders.find(o => o.id === editingOrderId)?.status ?? LabOrderStatus.PENDING}
+                  onStatusUpdate={handleStatusUpdate}
+                  onClose={() => setEditingOrderId(null)}
+                />
             )}
           </TabsContent>
 

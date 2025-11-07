@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import {
   Users,
@@ -14,6 +14,9 @@ import {
   AlertTriangle,
   Check,
   ArrowLeft,
+  Edit,
+  RefreshCw,
+  LogOut,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -29,30 +32,137 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { mockAdmissions, getDaysAdmitted } from "@/lib/ipd-mock-data"
-import { mockDoctors, mockDepartments } from "@/lib/schedule-mock-data"
-import { VitalsForm, TreatmentForm, BedTransferForm } from "@/components/ipd"
+import { VitalsForm, TreatmentForm, BedTransferForm, PatientDetailsModal } from "@/components/ipd"
+import { StatusUpdateModal } from "@/components/ipd/status-update-modal"
+import { DischargeModal } from "@/components/ipd/discharge-modal"
 import { AppLayout } from "@/components/app-shell/app-layout"
 import { AuthProvider } from "@/hooks/use-auth"
+import { IPDService } from "@/lib/ipd-service"
+import { useToast } from "@/hooks/use-toast"
+import { format, differenceInDays } from "date-fns"
+
+interface AdmittedPatient {
+  id: string
+  admissionId: string
+  patient: {
+    id: string
+    firstName: string
+    lastName: string
+    phone: string
+    gender: string
+    dateOfBirth: string
+    bloodGroup?: string
+  }
+  doctor: {
+    id: string
+    firstName: string
+    lastName: string
+    primaryDepartment?: {
+      id: string
+      name: string
+    }
+  }
+  bed: {
+    id: string
+    bedNumber: string
+    dailyRate: number
+    ward: {
+      id: string
+      name: string
+      type: string
+    }
+  }
+  admissionDate: string
+  admissionType: string
+  status: string
+  chiefComplaint: string
+  provisionalDiagnosis: string
+  depositAmount?: number
+  createdAt: string
+}
 
 export default function InpatientListPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [doctorFilter, setDoctorFilter] = useState("all")
   const [wardFilter, setWardFilter] = useState("all")
   const [selectedAdmission, setSelectedAdmission] = useState<string | null>(null)
+  const [admissions, setAdmissions] = useState<AdmittedPatient[]>([])
+  const [doctors, setDoctors] = useState<any[]>([])
+  const [wards, setWards] = useState<any[]>([])
+  const [dashboardStats, setDashboardStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [selectedPatient, setSelectedPatient] = useState<AdmittedPatient | null>(null)
+  const [showPatientModal, setShowPatientModal] = useState(false)
+  const [showStatusModal, setShowStatusModal] = useState(false)
+  const [showDischargeModal, setShowDischargeModal] = useState(false)
 
-  const filteredAdmissions = mockAdmissions.filter(admission => {
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchAllData()
+  }, [])
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true)
+      
+      // Fetch admissions, doctors, wards and stats in parallel
+      const [admissionsRes, doctorsRes, wardsRes, statsRes] = await Promise.allSettled([
+        IPDService.getAdmissions({ status: 'ACTIVE', limit: 100 }),
+        IPDService.getDoctors({ isActive: true }),
+        IPDService.getWards({ isActive: true }),
+        IPDService.getDashboardStats()
+      ])
+
+      if (admissionsRes.status === 'fulfilled') {
+        const response = admissionsRes.value as any
+        setAdmissions(response.data || response || [])
+      }
+
+      if (doctorsRes.status === 'fulfilled') {
+        const response = doctorsRes.value as any
+        setDoctors(response.data || response || [])
+      }
+
+      if (wardsRes.status === 'fulfilled') {
+        const response = wardsRes.value as any
+        setWards(response.data || response || [])
+      }
+
+      if (statsRes.status === 'fulfilled') {
+        const response = statsRes.value as any
+        setDashboardStats(response.summary || response)
+      }
+
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load patient data",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getDaysAdmitted = (admissionDate: string) => {
+    return differenceInDays(new Date(), new Date(admissionDate))
+  }
+
+  const filteredAdmissions = admissions.filter((admission: AdmittedPatient) => {
+    const patientName = `${admission.patient.firstName} ${admission.patient.lastName}`
     const matchesSearch =
       !searchQuery ||
-      admission.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       admission.admissionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      admission.uhid.toLowerCase().includes(searchQuery.toLowerCase())
+      admission.patient.phone.includes(searchQuery)
 
-    const matchesStatus = statusFilter === "all" || admission.status === statusFilter
-    const matchesDoctor = doctorFilter === "all" || admission.consultingDoctorId === doctorFilter
-    const matchesWard = wardFilter === "all" || admission.wardId === wardFilter
+    const matchesStatus = statusFilter === "all" || admission.status.toLowerCase() === statusFilter.toLowerCase()
+    const matchesDoctor = doctorFilter === "all" || admission.doctor.id === doctorFilter
+    const matchesWard = wardFilter === "all" || admission.bed.ward.id === wardFilter
 
     return matchesSearch && matchesStatus && matchesDoctor && matchesWard
   })
@@ -83,11 +193,7 @@ export default function InpatientListPage() {
     }
   }
 
-  const wardOptions = [
-    { id: "1", name: "General Ward A" },
-    { id: "3", name: "Private Ward" },
-    { id: "5", name: "ICU Ward" },
-  ]
+
 
   return (
     <AuthProvider>
@@ -119,7 +225,7 @@ export default function InpatientListPage() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{mockAdmissions.length}</div>
+                <div className="text-2xl font-bold">{loading ? "..." : admissions.length}</div>
                 <p className="text-xs text-muted-foreground">Active admissions</p>
               </CardContent>
             </Card>
@@ -130,7 +236,7 @@ export default function InpatientListPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">
-                  {mockAdmissions.filter(a => a.status === "critical").length}
+                  {loading ? "..." : admissions.filter(a => a.status.toLowerCase() === "critical").length}
                 </div>
                 <p className="text-xs text-muted-foreground">Require immediate attention</p>
               </CardContent>
@@ -141,8 +247,12 @@ export default function InpatientListPage() {
                 <Bed className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">78%</div>
-                <p className="text-xs text-muted-foreground">52 of 67 beds occupied</p>
+                <div className="text-2xl font-bold">
+                  {loading ? "..." : dashboardStats?.occupancyRate ? `${dashboardStats.occupancyRate}%` : "0%"}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {loading ? "Loading..." : `${admissions.length} patients admitted`}
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -203,9 +313,9 @@ export default function InpatientListPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Doctors</SelectItem>
-                      {mockDoctors.map(doctor => (
+                      {doctors.map(doctor => (
                         <SelectItem key={doctor.id} value={doctor.id}>
-                          {doctor.name}
+                          {doctor.firstName} {doctor.lastName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -220,7 +330,7 @@ export default function InpatientListPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Wards</SelectItem>
-                      {wardOptions.map(ward => (
+                      {wards.map(ward => (
                         <SelectItem key={ward.id} value={ward.id}>
                           {ward.name}
                         </SelectItem>
@@ -249,6 +359,7 @@ export default function InpatientListPage() {
                       <TableHead className="w-[200px]">Patient Info</TableHead>
                       <TableHead>Ward/Bed</TableHead>
                       <TableHead>Consulting Doctor</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Days Admitted</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -258,25 +369,36 @@ export default function InpatientListPage() {
                       <TableRow key={admission.id} className="hover:bg-muted/50">
                         <TableCell>
                           <div className="space-y-1">
-                            <div className="font-medium">{admission.patientName}</div>
+                            <div className="font-medium">{admission.patient.firstName} {admission.patient.lastName}</div>
                             <div className="text-sm text-muted-foreground">
-                              {admission.admissionId} • {admission.uhid}
+                              {admission.admissionId} • {admission.patient.phone}
                             </div>
-                            <div className="text-xs text-muted-foreground">{admission.tentativeDiagnosis}</div>
+                            <div className="text-xs text-muted-foreground">{admission.provisionalDiagnosis}</div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            <div className="font-medium">{admission.wardName}</div>
+                            <div className="font-medium">{admission.bed.ward.name}</div>
                             <Badge variant="outline" className="text-xs">
-                              Bed {admission.bedNumber}
+                              Bed {admission.bed.bedNumber}
                             </Badge>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            <div className="font-medium">{admission.consultingDoctorName}</div>
-                            <div className="text-sm text-muted-foreground">{admission.departmentName}</div>
+                            <div className="font-medium">Dr. {admission.doctor.firstName} {admission.doctor.lastName}</div>
+                            <div className="text-sm text-muted-foreground">{admission.doctor.primaryDepartment?.name || 'No Department'}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={getStatusBadgeColor(admission.status)} 
+                              className="flex items-center gap-1"
+                            >
+                              {getStatusIcon(admission.status)}
+                              {admission.status}
+                            </Badge>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -284,8 +406,38 @@ export default function InpatientListPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-1">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPatient(admission)
+                                setShowPatientModal(true)
+                              }}
+                            >
                               View
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPatient(admission)
+                                setShowStatusModal(true)
+                              }}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Status
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-blue-600"
+                              onClick={() => {
+                                setSelectedPatient(admission)
+                                setShowDischargeModal(true)
+                              }}
+                            >
+                              <LogOut className="h-4 w-4 mr-1" />
+                              Discharge
                             </Button>
                           </div>
                         </TableCell>
@@ -308,6 +460,38 @@ export default function InpatientListPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Patient Details Modal */}
+          <PatientDetailsModal
+            patient={selectedPatient}
+            isOpen={showPatientModal}
+            onClose={() => {
+              setShowPatientModal(false)
+              setSelectedPatient(null)
+            }}
+          />
+
+          {/* Status Update Modal */}
+          <StatusUpdateModal
+            patient={selectedPatient}
+            isOpen={showStatusModal}
+            onClose={() => {
+              setShowStatusModal(false)
+              setSelectedPatient(null)
+            }}
+            onStatusUpdate={fetchAllData}
+          />
+
+          {/* Discharge Modal */}
+          <DischargeModal
+            patient={selectedPatient}
+            isOpen={showDischargeModal}
+            onClose={() => {
+              setShowDischargeModal(false)
+              setSelectedPatient(null)
+            }}
+            onDischarge={fetchAllData}
+          />
         </div>
       </AppLayout>
     </AuthProvider>

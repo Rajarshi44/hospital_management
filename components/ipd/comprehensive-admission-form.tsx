@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -41,10 +41,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useToast } from "@/hooks/use-toast"
-import { mockOPDPatients, mockWards, mockBeds, getAvailableBeds } from "@/lib/ipd-mock-data"
-import { mockDoctors, mockDepartments } from "@/lib/schedule-mock-data"
 import { Patient } from "@/lib/ipd-types"
 import { NewPatientForm } from "./new-patient-form"
+import { 
+  createIPDAdmission, 
+  getAvailableBeds as getAvailableBedsAPI, 
+  getDoctorsForIPD, 
+  searchPatients,
+  transformFormDataToDTO 
+} from "@/lib/services/ipd-admission-service"
 
 // Comprehensive admission form schema
 const comprehensiveAdmissionSchema = z
@@ -122,9 +127,31 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [showNewPatientModal, setShowNewPatientModal] = useState(false)
-  const [availableBeds, setAvailableBeds] = useState(getAvailableBeds())
-  const [filteredDoctors, setFilteredDoctors] = useState(mockDoctors)
+  const [availableBeds, setAvailableBeds] = useState<any[]>([])
+  const [filteredDoctors, setFilteredDoctors] = useState<any[]>([])
+  const [allDoctors, setAllDoctors] = useState<any[]>([])
+  const [patientSearchResults, setPatientSearchResults] = useState<any[]>([])
   const [patientSearchOpen, setPatientSearchOpen] = useState(false)
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [departments, setDepartments] = useState<any[]>([])
+
+  // Function to get departments
+  const getDepartments = async () => {
+    try {
+      const token = localStorage.getItem('authToken')
+      if (!token) return []
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/departments`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (!response.ok) return []
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching departments:', error)
+      return []
+    }
+  }
 
   // Section collapse states
   const [patientInfoOpen, setPatientInfoOpen] = useState(true)
@@ -132,6 +159,38 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
   const [paymentDetailsOpen, setPaymentDetailsOpen] = useState(false)
 
   const { toast } = useToast()
+
+  // Load initial data on component mount
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsLoadingData(true)
+      try {
+        // Load available beds, doctors, and departments in parallel
+        const [bedsData, doctorsData, departmentsData] = await Promise.all([
+          getAvailableBedsAPI(),
+          getDoctorsForIPD(),
+          getDepartments()
+        ])
+        
+        setAvailableBeds(bedsData)
+        setAllDoctors(doctorsData)
+        setFilteredDoctors(doctorsData)
+        setDepartments(departmentsData)
+        
+      } catch (error) {
+        console.error('Error loading initial data:', error)
+        toast({
+          title: "Error Loading Data",
+          description: "Failed to load beds and doctors data. Please refresh the page.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    loadInitialData()
+  }, [toast])
 
   const form = useForm<z.infer<typeof comprehensiveAdmissionSchema>>({
     resolver: zodResolver(comprehensiveAdmissionSchema),
@@ -208,7 +267,7 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
     form.setValue("assignedDoctorId", "") // Reset doctor selection
 
     // Filter doctors by department
-    const filtered = mockDoctors.filter(doctor => doctor.departmentId === departmentId)
+    const filtered = allDoctors.filter((doctor: any) => doctor.departmentId === departmentId)
     setFilteredDoctors(filtered)
   }
 
@@ -217,9 +276,13 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
     form.setValue("wardType", wardType)
     form.setValue("bedId", "") // Reset bed selection
 
-    // Filter available beds by ward type
-    const filtered = getAvailableBeds().filter(bed => bed.type === wardType)
-    setAvailableBeds(filtered)
+    // Filter available beds by ward type - re-fetch from API
+    getAvailableBedsAPI().then((allBeds) => {
+      const filtered = allBeds.filter((bed: any) => bed.ward?.type === wardType || bed.type === wardType)
+      setAvailableBeds(filtered)
+    }).catch((error) => {
+      console.error('Error filtering beds:', error)
+    })
   }
 
   // Handle admission type change
@@ -238,32 +301,45 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
     })
   }
 
+  // Handle patient search
+  const handlePatientSearch = async (query: string) => {
+    if (query.trim().length < 2) {
+      setPatientSearchResults([])
+      return
+    }
+
+    try {
+      const results = await searchPatients(query)
+      setPatientSearchResults(results)
+    } catch (error) {
+      console.error('Error searching patients:', error)
+      toast({
+        title: "Search Error",
+        description: "Failed to search patients. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   // Form submission
   const handleSubmit = async (data: z.infer<typeof comprehensiveAdmissionSchema>) => {
     setIsSubmitting(true)
     try {
-      // Generate admission ID
-      const admissionId = `ADM${Date.now()}`
+      // Transform form data to backend DTO format
+      const admissionDTO = transformFormDataToDTO(data)
 
-      const submissionData = {
-        ...data,
-        admissionId,
-        patientId: selectedPatient?.id || `PAT${Date.now()}`,
-        submittedAt: new Date().toISOString(),
-      }
+      console.log("Admission DTO:", admissionDTO)
 
-      console.log("Admission Form Submitted:", submissionData)
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Call real backend API
+      const response = await createIPDAdmission(admissionDTO)
 
       toast({
         title: "Admission Successful",
-        description: `Patient admitted successfully. Admission ID: ${admissionId}`,
+        description: `Patient admitted successfully. Admission ID: ${response.admissionId}`,
       })
 
       if (onSubmit) {
-        onSubmit(submissionData)
+        onSubmit(response)
       }
 
       // Reset form
@@ -276,7 +352,7 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
       console.error("Admission failed:", error)
       toast({
         title: "Admission Failed",
-        description: "There was an error processing the admission. Please try again.",
+        description: error instanceof Error ? error.message : "There was an error processing the admission. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -429,7 +505,11 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
                         </PopoverTrigger>
                         <PopoverContent className="w-[600px] p-0 shadow-2xl border-0 rounded-2xl">
                           <Command className="rounded-2xl">
-                            <CommandInput placeholder="Search patients..." className="h-14 text-lg" />
+                            <CommandInput 
+                              placeholder="Search patients..." 
+                              className="h-14 text-lg" 
+                              onValueChange={handlePatientSearch}
+                            />
                             <CommandEmpty>
                               <div className="p-8 text-center">
                                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -450,10 +530,27 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
                               </div>
                             </CommandEmpty>
                             <CommandGroup>
-                              {mockOPDPatients.map(patient => (
+                              {patientSearchResults.map((patient: any) => (
                                 <CommandItem
                                   key={patient.id}
-                                  onSelect={() => handlePatientSelect(patient)}
+                                  onSelect={() => handlePatientSelect({
+                                    id: patient.id,
+                                    name: `${patient.firstName} ${patient.lastName}`,
+                                    phone: patient.phone,
+                                    email: patient.email,
+                                    age: patient.age || 0,
+                                    gender: patient.gender,
+                                    address: patient.address,
+                                    bloodGroup: patient.bloodGroup,
+                                    allergies: patient.allergies ? [patient.allergies] : [],
+                                    medicalHistory: patient.chronicConditions,
+                                    emergencyContact: {
+                                      name: patient.emergencyContactName || '',
+                                      relation: patient.emergencyContactRelationship || '',
+                                      phone: patient.emergencyContactPhone || ''
+                                    },
+                                    uhid: patient.patientId
+                                  })}
                                   className="cursor-pointer p-4 hover:bg-blue-50 transition-colors"
                                 >
                                   <div className="flex items-center gap-4 w-full">
@@ -461,9 +558,9 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
                                       <User className="h-6 w-6 text-white" />
                                     </div>
                                     <div className="flex-1">
-                                      <div className="font-semibold text-lg text-slate-900">{patient.name}</div>
+                                      <div className="font-semibold text-lg text-slate-900">{patient.firstName} {patient.lastName}</div>
                                       <div className="text-sm text-slate-600">
-                                        UHID: {patient.uhid} • {patient.phone} • Age: {patient.age}
+                                        UHID: {patient.patientId} • {patient.phone} • Age: {patient.age || 'N/A'}
                                       </div>
                                     </div>
                                   </div>
@@ -876,7 +973,7 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {mockDepartments.map(dept => (
+                              {departments.map((dept: any) => (
                                 <SelectItem key={dept.id} value={dept.id}>
                                   {dept.name}
                                 </SelectItem>
@@ -901,9 +998,9 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {filteredDoctors.map(doctor => (
+                              {filteredDoctors.map((doctor: any) => (
                                 <SelectItem key={doctor.id} value={doctor.id}>
-                                  Dr. {doctor.name} - {doctor.specialization}
+                                  Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization || 'General'}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -972,12 +1069,12 @@ export function ComprehensiveAdmissionForm({ onSubmit, onCancel }: Comprehensive
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {availableBeds.map(bed => (
+                              {availableBeds.map((bed: any) => (
                                 <SelectItem key={bed.id} value={bed.id}>
                                   <div className="flex items-center justify-between w-full">
                                     <span>Bed {bed.bedNumber}</span>
                                     <Badge variant="outline" className="ml-2">
-                                      {bed.wardName}
+                                      {bed.ward?.name || bed.wardName || 'Unknown Ward'}
                                     </Badge>
                                   </div>
                                 </SelectItem>
