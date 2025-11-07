@@ -1,35 +1,16 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from 'react';
-import { usePatient, type EnhancedPatient } from '@/hooks/usePatient';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import { useState, useEffect } from "react"
+import { usePatient, type EnhancedPatient } from "@/hooks/usePatient"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
   Search,
   User,
   Calendar,
@@ -44,13 +25,13 @@ import {
   Eye,
   Filter,
   RefreshCw,
-  Download
-} from 'lucide-react';
-import { format } from 'date-fns';
+  Download,
+} from "lucide-react"
+import { format } from "date-fns"
 
 interface OPDPatientListProps {
-  onPatientSelect?: (patient: EnhancedPatient) => void;
-  refreshTrigger?: number;
+  onPatientSelect?: (patient: EnhancedPatient) => void
+  refreshTrigger?: number
 }
 
 export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientListProps) {
@@ -66,127 +47,140 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
     refresh,
     setSearchQuery,
     setFilters,
-  } = usePatient({ autoFetch: true });
+  } = usePatient({ autoFetch: true })
 
-  const [selectedPatient, setSelectedPatient] = useState<EnhancedPatient | null>(null);
-  const [showPatientDetails, setShowPatientDetails] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
+  const [selectedPatient, setSelectedPatient] = useState<EnhancedPatient | null>(null)
+  const [showPatientDetails, setShowPatientDetails] = useState(false)
+  const [searchInput, setSearchInput] = useState("")
 
   // Export OPD patient list to CSV
   const exportToCSV = () => {
     if (!patients || patients.length === 0) {
-      alert('No data to export');
-      return;
+      alert("No data to export")
+      return
     }
 
     // Define CSV headers
     const headers = [
-      'Patient ID',
-      'Patient Name',
-      'Age',
-      'Gender',
-      'Phone',
-      'Email',
-      'Blood Group',
-      'Address',
-      'City',
-      'State',
-      'Zip Code',
-      'Emergency Contact Name',
-      'Emergency Contact Phone',
-      'Allergies',
-      'Chronic Conditions',
-      'Current Medications'
-    ];
+      "Patient ID",
+      "Patient Name",
+      "Age",
+      "Gender",
+      "Phone",
+      "Email",
+      "Blood Group",
+      "Address",
+      "City",
+      "State",
+      "Zip Code",
+      "Emergency Contact Name",
+      "Emergency Contact Phone",
+      "Allergies",
+      "Chronic Conditions",
+      "Current Medications",
+    ]
 
     // Map patients data to CSV rows
     const csvRows = [
-      headers.join(','),
+      headers.join(","),
       ...patients.map(patient => {
-        const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear();
-        const allergiesStr = patient.allergies ? String(patient.allergies) : 'None';
-        const chronicStr = patient.medicalHistory.chronicConditions ? String(patient.medicalHistory.chronicConditions) : 'None';
-        const medsStr = patient.medicalHistory.currentMedications ? String(patient.medicalHistory.currentMedications) : 'None';
-        
+        const age = new Date().getFullYear() - new Date(patient.dateOfBirth).getFullYear()
+        const allergiesStr = patient.allergies ? String(patient.allergies) : "None"
+        const chronicStr = patient.medicalHistory.chronicConditions
+          ? String(patient.medicalHistory.chronicConditions)
+          : "None"
+        const medsStr = patient.medicalHistory.currentMedications
+          ? String(patient.medicalHistory.currentMedications)
+          : "None"
+
         return [
-          patient.patientId || 'N/A',
+          patient.patientId || "N/A",
           `"${patient.firstName} ${patient.lastName}"`,
           age,
           patient.gender,
-          patient.phone || 'N/A',
-          patient.email || 'N/A',
-          patient.bloodGroup || 'N/A',
-          `"${patient.address || 'N/A'}"`,
-          patient.city || 'N/A',
-          patient.state || 'N/A',
-          patient.zipCode || 'N/A',
-          `"${patient.emergencyContact.name || 'N/A'}"`,
-          patient.emergencyContact.phone || 'N/A',
+          patient.phone || "N/A",
+          patient.email || "N/A",
+          patient.bloodGroup || "N/A",
+          `"${patient.address || "N/A"}"`,
+          patient.city || "N/A",
+          patient.state || "N/A",
+          patient.zipCode || "N/A",
+          `"${patient.emergencyContact.name || "N/A"}"`,
+          patient.emergencyContact.phone || "N/A",
           `"${allergiesStr}"`,
           `"${chronicStr}"`,
-          `"${medsStr}"`
-        ].join(',');
-      })
-    ];
+          `"${medsStr}"`,
+        ].join(",")
+      }),
+    ]
 
-    const csvContent = csvRows.join('\n');
+    const csvContent = csvRows.join("\n")
 
     // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `opd-patients-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+
+    link.setAttribute("href", url)
+    link.setAttribute("download", `opd-patients-${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   // Refresh when trigger changes
   useEffect(() => {
     if (refreshTrigger) {
-      refresh();
+      refresh()
     }
-  }, [refreshTrigger, refresh]);
+  }, [refreshTrigger, refresh])
 
   const handleSearch = (query: string) => {
-    setSearchInput(query);
+    setSearchInput(query)
     if (query.length >= 2 || query.length === 0) {
-      searchPatients(query);
+      searchPatients(query)
     }
-  };
+  }
 
   const handlePatientClick = (patient: EnhancedPatient) => {
-    setSelectedPatient(patient);
-    setShowPatientDetails(true);
-    onPatientSelect?.(patient);
-  };
+    setSelectedPatient(patient)
+    setShowPatientDetails(true)
+    onPatientSelect?.(patient)
+  }
 
   const handleFilterChange = (key: string, value: string) => {
-    applyFilters({ [key]: value });
-  };
+    applyFilters({ [key]: value })
+  }
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in-progress': return 'bg-blue-100 text-blue-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "completed":
+        return "bg-green-100 text-green-800"
+      case "in-progress":
+        return "bg-blue-100 text-blue-800"
+      case "pending":
+        return "bg-yellow-100 text-yellow-800"
+      case "cancelled":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
     }
-  };
+  }
 
   const getPriorityColor = (urgency: string) => {
     switch (urgency.toLowerCase()) {
-      case 'stat': return 'bg-red-100 text-red-800';
-      case 'urgent': return 'bg-orange-100 text-orange-800';
-      case 'routine': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "stat":
+        return "bg-red-100 text-red-800"
+      case "urgent":
+        return "bg-orange-100 text-orange-800"
+      case "routine":
+        return "bg-green-100 text-green-800"
+      default:
+        return "bg-gray-100 text-gray-800"
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -203,7 +197,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -215,7 +209,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -227,7 +221,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -239,7 +233,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -263,7 +257,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={refresh} disabled={isLoading}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
               <Button variant="outline" size="sm" onClick={exportToCSV}>
@@ -281,12 +275,12 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
               <Input
                 placeholder="Search by name, phone, patient ID..."
                 value={searchInput}
-                onChange={(e) => handleSearch(e.target.value)}
+                onChange={e => handleSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
-            
-            <Select value={filters.department} onValueChange={(value) => handleFilterChange('department', value)}>
+
+            <Select value={filters.department} onValueChange={value => handleFilterChange("department", value)}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Department" />
               </SelectTrigger>
@@ -299,22 +293,18 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                 <SelectItem value="Pediatrics">Pediatrics</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Input
               type="date"
               value={filters.date}
-              onChange={(e) => handleFilterChange('date', e.target.value)}
+              onChange={e => handleFilterChange("date", e.target.value)}
               className="w-full sm:w-48"
             />
           </div>
 
           {/* Patient Table */}
-          {error && (
-            <div className="text-center py-4 text-red-600">
-              Error: {error}
-            </div>
-          )}
-          
+          {error && <div className="text-center py-4 text-red-600">Error: {error}</div>}
+
           {isLoading ? (
             <div className="text-center py-8">
               <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
@@ -325,7 +315,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
               <User className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
               <h3 className="text-lg font-semibold mb-2">No patients found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchQuery ? `No patients match "${searchQuery}"` : 'No OPD patients available'}
+                {searchQuery ? `No patients match "${searchQuery}"` : "No OPD patients available"}
               </p>
             </div>
           ) : (
@@ -342,7 +332,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {patients.map((patient) => (
+                  {patients.map(patient => (
                     <TableRow key={patient.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell>
                         <div className="space-y-1">
@@ -362,7 +352,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                           </div>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         <div className="space-y-1">
                           <div className="flex items-center gap-1 text-sm">
@@ -377,12 +367,12 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                           )}
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         {patient.summary.lastVisitDate ? (
                           <div className="space-y-1">
                             <div className="text-sm font-medium">
-                              {format(new Date(patient.summary.lastVisitDate), 'MMM dd, yyyy')}
+                              {format(new Date(patient.summary.lastVisitDate), "MMM dd, yyyy")}
                             </div>
                             {patient.opdData.recentVisits[0] && (
                               <div className="text-xs text-muted-foreground">
@@ -394,7 +384,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                           <span className="text-muted-foreground text-sm">No visits</span>
                         )}
                       </TableCell>
-                      
+
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           <Badge variant="outline" className="text-xs">
@@ -412,23 +402,21 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                           )}
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         {patient.summary.outstandingBalance > 0 ? (
                           <div className="text-sm font-medium text-red-600">
                             ₹{patient.summary.outstandingBalance.toLocaleString()}
                           </div>
                         ) : (
-                          <Badge variant="secondary" className="text-xs">Paid</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Paid
+                          </Badge>
                         )}
                       </TableCell>
-                      
+
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handlePatientClick(patient)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handlePatientClick(patient)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -449,22 +437,21 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
               <User className="h-5 w-5" />
               {selectedPatient?.fullName}
             </DialogTitle>
-            <DialogDescription>
-              Patient ID: {selectedPatient?.patientId} • Complete OPD Records
-            </DialogDescription>
+            <DialogDescription>Patient ID: {selectedPatient?.patientId} • Complete OPD Records</DialogDescription>
           </DialogHeader>
-          
+
           {selectedPatient && (
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="vitals">Vitals</TabsTrigger>
+                <TabsTrigger value="clinical">Clinical</TabsTrigger>
                 <TabsTrigger value="visits">Visits</TabsTrigger>
                 <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
                 <TabsTrigger value="investigations">Tests</TabsTrigger>
                 <TabsTrigger value="billing">Billing</TabsTrigger>
-                <TabsTrigger value="ipd">IPD</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="overview" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Personal Information */}
@@ -484,21 +471,21 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                         </div>
                         <div>
                           <span className="font-medium text-muted-foreground">Blood Group:</span>
-                          <div>{selectedPatient.bloodGroup || 'Not specified'}</div>
+                          <div>{selectedPatient.bloodGroup || "Not specified"}</div>
                         </div>
                         <div>
                           <span className="font-medium text-muted-foreground">Patient Type:</span>
                           <Badge variant="outline">{selectedPatient.patientType}</Badge>
                         </div>
                       </div>
-                      
+
                       {selectedPatient.occupation && (
                         <div>
                           <span className="font-medium text-muted-foreground">Occupation:</span>
                           <div className="text-sm">{selectedPatient.occupation}</div>
                         </div>
                       )}
-                      
+
                       <div>
                         <span className="font-medium text-muted-foreground">Address:</span>
                         <div className="text-sm">{selectedPatient.address}</div>
@@ -518,18 +505,20 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                           <div className="text-sm text-muted-foreground">Total Visits</div>
                         </div>
                         <div className="text-center p-3 bg-green-50 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">{selectedPatient.summary.activePrescriptions}</div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {selectedPatient.summary.activePrescriptions}
+                          </div>
                           <div className="text-sm text-muted-foreground">Active Rx</div>
                         </div>
                       </div>
-                      
+
                       {selectedPatient.allergies && (
                         <div>
                           <span className="font-medium text-muted-foreground">Allergies:</span>
                           <div className="text-sm text-red-600">{selectedPatient.allergies}</div>
                         </div>
                       )}
-                      
+
                       {selectedPatient.medicalHistory.chronicConditions && (
                         <div>
                           <span className="font-medium text-muted-foreground">Chronic Conditions:</span>
@@ -540,7 +529,176 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                   </Card>
                 </div>
               </TabsContent>
-              
+
+              <TabsContent value="vitals" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Vitals Card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Vital Signs</CardTitle>
+                      <CardDescription>Latest recorded vitals</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <div className="text-muted-foreground text-xs">Height</div>
+                          <div className="font-semibold">170 cm</div>
+                        </div>
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <div className="text-muted-foreground text-xs">Weight</div>
+                          <div className="font-semibold">68 kg</div>
+                        </div>
+                        <div className="p-3 bg-green-50 rounded-lg">
+                          <div className="text-muted-foreground text-xs">BMI</div>
+                          <div className="font-semibold">23.5</div>
+                        </div>
+                        <div className="p-3 bg-green-50 rounded-lg">
+                          <div className="text-muted-foreground text-xs">Temperature</div>
+                          <div className="font-semibold">98.6°F</div>
+                        </div>
+                        <div className="p-3 bg-purple-50 rounded-lg">
+                          <div className="text-muted-foreground text-xs">Blood Pressure</div>
+                          <div className="font-semibold">120/80</div>
+                        </div>
+                        <div className="p-3 bg-purple-50 rounded-lg">
+                          <div className="text-muted-foreground text-xs">Pulse Rate</div>
+                          <div className="font-semibold">72 bpm</div>
+                        </div>
+                        <div className="p-3 bg-orange-50 rounded-lg">
+                          <div className="text-muted-foreground text-xs">Respiratory Rate</div>
+                          <div className="font-semibold">16 /min</div>
+                        </div>
+                        <div className="p-3 bg-orange-50 rounded-lg">
+                          <div className="text-muted-foreground text-xs">SpO2</div>
+                          <div className="font-semibold">98%</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Additional Notes */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Vitals Notes</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <span className="font-medium text-muted-foreground text-sm">Last Recorded:</span>
+                        <div className="text-sm">{format(new Date(), "PPP p")}</div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-muted-foreground text-sm">Recorded By:</span>
+                        <div className="text-sm">Nurse Station - OPD</div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-muted-foreground text-sm">Additional Notes:</span>
+                        <div className="text-sm text-muted-foreground">
+                          Patient vitals within normal range. No immediate concerns noted.
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="clinical" className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Chief Complaint */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Chief Complaint</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm">Fever and body ache for 3 days</p>
+                      <p className="text-xs text-muted-foreground mt-2">Duration: 3 days</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* History of Present Illness */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">History of Present Illness</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm">
+                        Patient presents with high-grade fever (102°F) associated with generalized body ache and
+                        weakness. Symptoms started 3 days ago. No cough, cold, or respiratory symptoms. Patient has been
+                        taking over-the-counter paracetamol with temporary relief.
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Past Medical History */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Past Medical History</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm">
+                        {selectedPatient.medicalHistory.chronicConditions || "No significant past medical history"}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Examination */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">General & Systemic Examination</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <span className="font-medium text-sm">General Examination:</span>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Patient is conscious, oriented. Mild pallor present. No cyanosis, jaundice, or edema.
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-sm">Systemic Examination:</span>
+                        <ul className="text-sm text-muted-foreground mt-1 space-y-1 list-disc list-inside">
+                          <li>CVS: S1 S2 normal, no murmurs</li>
+                          <li>RS: Bilateral air entry equal, no added sounds</li>
+                          <li>CNS: Conscious, oriented, no focal deficit</li>
+                          <li>Per Abdomen: Soft, non-tender</li>
+                        </ul>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Provisional Diagnosis */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Provisional Diagnosis</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <Badge variant="outline" className="mr-2">
+                          Viral Fever
+                        </Badge>
+                        <Badge variant="outline">Under Investigation</Badge>
+                        <p className="text-sm text-muted-foreground mt-3">
+                          Differential: Rule out dengue, malaria, typhoid
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Treatment Plan */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Treatment Plan</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="text-sm space-y-2 list-disc list-inside">
+                        <li>Tab. Paracetamol 500mg TDS for fever</li>
+                        <li>Tab. Multivitamin OD</li>
+                        <li>Adequate hydration and rest</li>
+                        <li>Follow-up after 3 days if fever persists</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
               <TabsContent value="visits" className="space-y-4">
                 <Card>
                   <CardHeader>
@@ -553,7 +711,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                           <div className="space-y-1">
                             <div className="font-medium">{visit.visitId}</div>
                             <div className="text-sm text-muted-foreground">
-                              {format(new Date(visit.visitDate), 'PPP')} • {visit.doctor}
+                              {format(new Date(visit.visitDate), "PPP")} • {visit.doctor}
                             </div>
                             <div className="text-sm">{visit.chiefComplaint}</div>
                           </div>
@@ -567,7 +725,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="prescriptions" className="space-y-4">
                 <Card>
                   <CardHeader>
@@ -586,7 +744,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                           </div>
                           <div className="text-right">
                             <div className="text-sm text-muted-foreground">
-                              {format(new Date(prescription.prescribedAt), 'MMM dd')}
+                              {format(new Date(prescription.prescribedAt), "MMM dd")}
                             </div>
                           </div>
                         </div>
@@ -595,7 +753,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="investigations" className="space-y-4">
                 <Card>
                   <CardHeader>
@@ -612,7 +770,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                           <div className="text-right">
                             <Badge className={getPriorityColor(investigation.urgency)}>{investigation.urgency}</Badge>
                             <div className="text-sm text-muted-foreground mt-1">
-                              {format(new Date(investigation.orderedAt), 'MMM dd')}
+                              {format(new Date(investigation.orderedAt), "MMM dd")}
                             </div>
                           </div>
                         </div>
@@ -621,7 +779,7 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="billing" className="space-y-4">
                 <Card>
                   <CardHeader>
@@ -637,27 +795,10 @@ export function OPDPatientList({ onPatientSelect, refreshTrigger }: OPDPatientLi
                   </CardContent>
                 </Card>
               </TabsContent>
-              
-              <TabsContent value="ipd" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">IPD Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center p-8 text-muted-foreground">
-                      <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                      <h3 className="font-semibold mb-2">IPD Integration Pending</h3>
-                      <p className="text-sm">
-                        {selectedPatient.ipdData.note}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
             </Tabs>
           )}
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

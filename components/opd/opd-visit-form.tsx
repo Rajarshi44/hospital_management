@@ -1,207 +1,220 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Save,
-  FileCheck,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-  AlertCircle,
-  CheckCircle2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useToast } from "@/hooks/use-toast";
-import { PatientSearchSelect, PrescriptionBuilder, VitalsCalculator } from "@/components/opd";
-import { DoctorTimeSlotPicker } from "@/components/opd/doctor-time-slot-picker-new";
-import { opdService } from "@/lib/opd-service";
-import { generateVisitId } from "@/lib/opd-mock-data";
-import { useOPDVisit } from "@/hooks/useOPDVisit";
-import type { OPDVisitForm as OPDVisitFormType, Gender, BloodGroup, IdProofType, VisitType, ReferralSource, AppointmentMode, VisitPriority, VisitStatus, PaymentMode, PaymentStatus, InvestigationUrgency, Department } from "@/lib/opd-types";
-import type { Patient } from "@/lib/patient-service";
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { Save, FileCheck, ChevronDown, ChevronUp, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { useToast } from "@/hooks/use-toast"
+import { PatientSearchSelect, PrescriptionBuilder, VitalsCalculator } from "@/components/opd"
+import { DoctorTimeSlotPicker } from "@/components/opd/doctor-time-slot-picker-new"
+import { opdService } from "@/lib/opd-service"
+import { generateVisitId } from "@/lib/opd-mock-data"
+import { useOPDVisit } from "@/hooks/useOPDVisit"
+import type {
+  OPDVisitForm as OPDVisitFormType,
+  Gender,
+  BloodGroup,
+  IdProofType,
+  VisitType,
+  ReferralSource,
+  AppointmentMode,
+  VisitPriority,
+  VisitStatus,
+  PaymentMode,
+  PaymentStatus,
+  InvestigationUrgency,
+  Department,
+} from "@/lib/opd-types"
+import type { Patient } from "@/lib/patient-service"
 
 // Zod validation schema
-const opdVisitSchema = z.object({
-  registration: z.object({
-    patientId: z.string().min(1, "Patient ID is required"),
-    firstName: z.string().min(1, "First name is required").max(100),
-    lastName: z.string().max(100).optional(),
-    age: z.number().min(0).max(150),
-    gender: z.enum(["MALE", "FEMALE", "OTHER"]),
-    phone: z.string().regex(/^[0-9]{10,15}$/, "Phone must be 10-15 digits"),
-    email: z.string().email().optional().or(z.literal("")),
-    address: z.string().max(1000).optional(),
-    guardianName: z.string().optional(),
-    guardianRelation: z.string().optional(),
-    bloodGroup: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
-    knownAllergies: z.string().max(1000).optional(),
-    patientType: z.enum(["NEW", "RETURNING"]),
-    occupation: z.string().optional(),
-    idProofType: z.enum(["Aadhaar", "PAN", "Passport", "DriverLicense", "Other"]).optional(),
-    idProofNumber: z.string().max(50).optional(),
-  }),
-  visit: z.object({
-    visitId: z.string(),
-    visitDate: z.string(),
-    department: z.string().min(1, "Department is required"),
-    consultingDoctor: z.string().min(1, "Consulting doctor is required"),
-    doctorSpecialization: z.string().optional(),
-    visitType: z.enum(["OPD", "EMERGENCY", "REVIEW"]),
-    referralSource: z.enum(["Self", "Internal Doctor", "External Doctor", "Hospital", "Organization", "Other"]).optional(),
-    appointmentMode: z.enum(["Walk-in", "Online", "Phone"]),
-    tokenNumber: z.string().optional(),
-    appointmentSlot: z.string().optional(),
-    visitPriority: z.enum(["Normal", "Urgent", "Emergency"]),
-    visitStatus: z.enum(["Pending", "In-Progress", "Completed", "Cancelled"]),
-    followUpSuggestedDays: z.number().min(0).max(365).optional(),
-  }),
-  vitals: z.object({
-    heightCm: z.number().min(20).max(300).optional(),
-    weightKg: z.number().min(0.5).max(500).optional(),
-    bmi: z.number().min(0).max(200).optional(),
-    temperature: z.number().min(30).max(45),
-    bloodPressure: z.string().regex(/^[0-9]{2,3}\/[0-9]{2,3}$/, "Invalid BP format (e.g., 120/80)"),
-    pulseRate: z.number().min(30).max(220),
-    respiratoryRate: z.number().min(6).max(60).optional(),
-    spo2: z.number().min(50).max(100),
-    weightNote: z.string().optional(),
-  }),
-  clinical: z.object({
-    chiefComplaint: z.string().min(1, "Chief complaint is required").max(200),
-    durationOfSymptoms: z.string().optional(),
-    historyOfPresentIllness: z.string().min(1, "History of present illness is required").max(2000),
-    pastMedicalHistory: z.string().max(2000).optional(),
-    familyHistory: z.string().optional(),
-    personalHistory: z.string().optional(),
-    generalExamination: z.string().optional(),
-    systemicExamination: z.string().optional(),
-    allergiesDetailed: z.string().optional(),
-  }),
-  diagnosis: z.object({
-    provisionalDiagnosis: z.string().max(1000).optional(),
-    finalDiagnosis: z.string().max(1000).optional(),
-    icd10Codes: z.array(z.string().max(20)).optional(),
-  }),
-  treatment: z.object({
-    prescriptionList: z.array(
-      z.object({
-        drugName: z.string().min(1, "Drug name is required"),
-        strength: z.string().min(1, "Strength is required"),
-        route: z.enum(["Oral", "IV", "IM", "Subcutaneous", "Topical", "Inhalation", "Other"]),
-        frequency: z.string().min(1, "Frequency is required"),
-        dose: z.string().min(1, "Dose is required"),
-        duration: z.string().min(1, "Duration is required"),
-        instructions: z.string().max(500).optional(),
-        notes: z.string().optional(),
-        prescribingDoctor: z.string().optional(),
+const opdVisitSchema = z
+  .object({
+    registration: z.object({
+      patientId: z.string().min(1, "Patient ID is required"),
+      firstName: z.string().min(1, "First name is required").max(100),
+      lastName: z.string().max(100).optional(),
+      age: z.number().min(0).max(150),
+      gender: z.enum(["MALE", "FEMALE", "OTHER"]),
+      phone: z.string().regex(/^[0-9]{10,15}$/, "Phone must be 10-15 digits"),
+      email: z.string().email().optional().or(z.literal("")),
+      address: z.string().max(1000).optional(),
+      guardianName: z.string().optional(),
+      guardianRelation: z.string().optional(),
+      bloodGroup: z.enum(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+      knownAllergies: z.string().max(1000).optional(),
+      patientType: z.enum(["NEW", "RETURNING"]),
+      occupation: z.string().optional(),
+      idProofType: z.enum(["Aadhaar", "PAN", "Passport", "DriverLicense", "Other"]).optional(),
+      idProofNumber: z.string().max(50).optional(),
+    }),
+    visit: z.object({
+      visitId: z.string(),
+      visitDate: z.string(),
+      department: z.string().min(1, "Department is required"),
+      consultingDoctor: z.string().min(1, "Consulting doctor is required"),
+      doctorSpecialization: z.string().optional(),
+      visitType: z.enum(["OPD", "EMERGENCY", "REVIEW"]),
+      referralSource: z
+        .enum(["Self", "Internal Doctor", "External Doctor", "Hospital", "Organization", "Other"])
+        .optional(),
+      appointmentMode: z.enum(["Walk-in", "Online", "Phone"]),
+      tokenNumber: z.string().optional(),
+      appointmentSlot: z.string().optional(),
+      visitPriority: z.enum(["Normal", "Urgent", "Emergency"]),
+      visitStatus: z.enum(["Pending", "In-Progress", "Completed", "Cancelled"]),
+      followUpSuggestedDays: z.number().min(0).max(365).optional(),
+    }),
+    vitals: z.object({
+      heightCm: z.number().min(20).max(300).optional(),
+      weightKg: z.number().min(0.5).max(500).optional(),
+      bmi: z.number().min(0).max(200).optional(),
+      temperature: z.number().min(30).max(45),
+      bloodPressure: z.string().regex(/^[0-9]{2,3}\/[0-9]{2,3}$/, "Invalid BP format (e.g., 120/80)"),
+      pulseRate: z.number().min(30).max(220),
+      respiratoryRate: z.number().min(6).max(60).optional(),
+      spo2: z.number().min(50).max(100),
+      weightNote: z.string().optional(),
+    }),
+    clinical: z.object({
+      chiefComplaint: z.string().min(1, "Chief complaint is required").max(200),
+      durationOfSymptoms: z.string().optional(),
+      historyOfPresentIllness: z.string().min(1, "History of present illness is required").max(2000),
+      pastMedicalHistory: z.string().max(2000).optional(),
+      familyHistory: z.string().optional(),
+      personalHistory: z.string().optional(),
+      generalExamination: z.string().optional(),
+      systemicExamination: z.string().optional(),
+      allergiesDetailed: z.string().optional(),
+    }),
+    diagnosis: z.object({
+      provisionalDiagnosis: z.string().max(1000).optional(),
+      finalDiagnosis: z.string().max(1000).optional(),
+      icd10Codes: z.array(z.string().max(20)).optional(),
+    }),
+    treatment: z.object({
+      prescriptionList: z
+        .array(
+          z.object({
+            drugName: z.string().min(1, "Drug name is required"),
+            strength: z.string().min(1, "Strength is required"),
+            route: z.enum(["Oral", "IV", "IM", "Subcutaneous", "Topical", "Inhalation", "Other"]),
+            frequency: z.string().min(1, "Frequency is required"),
+            dose: z.string().min(1, "Dose is required"),
+            duration: z.string().min(1, "Duration is required"),
+            instructions: z.string().max(500).optional(),
+            notes: z.string().optional(),
+            prescribingDoctor: z.string().optional(),
+          })
+        )
+        .min(1, "At least one prescription is required"),
+      proceduresDone: z.array(z.string()).optional(),
+      treatmentNotes: z.string().optional(),
+    }),
+    investigations: z
+      .object({
+        recommendedLabTests: z.array(z.string()).optional(),
+        radiologyTests: z.array(z.string()).optional(),
+        investigationUrgency: z.enum(["Routine", "Urgent", "STAT"]).optional(),
       })
-    ).min(1, "At least one prescription is required"),
-    proceduresDone: z.array(z.string()).optional(),
-    treatmentNotes: z.string().optional(),
-  }),
-  investigations: z.object({
-    recommendedLabTests: z.array(z.string()).optional(),
-    radiologyTests: z.array(z.string()).optional(),
-    investigationUrgency: z.enum(["Routine", "Urgent", "STAT"]).optional(),
-  }).optional(),
-  billing: z.object({
-    consultationFee: z.number().min(0).multipleOf(0.01),
-    investigationEstimate: z.number().min(0).multipleOf(0.01).optional(),
-    procedureCharges: z.number().min(0).multipleOf(0.01).optional(),
-    discountAmount: z.number().min(0).multipleOf(0.01).optional(),
-    totalPayable: z.number().min(0).multipleOf(0.01),
-    paymentMode: z.enum(["Cash", "Card", "UPI", "Insurance", "TPA", "Other"]).optional(),
-    paymentStatus: z.enum(["Paid", "Pending", "Refunded"]),
-    insuranceCompany: z.string().optional(),
-    insurancePolicyNumber: z.string().optional(),
-    insurancePreAuthRequired: z.boolean().optional(),
-  }),
-  followUp: z.object({
-    followUpDate: z.string().optional(),
-    followUpInstructions: z.string().max(2000).optional(),
-    referToIPD: z.boolean().optional(),
-    referralNote: z.string().optional(),
-  }).optional(),
-  metadata: z.object({
-    createdBy: z.string().optional(),
-    modifiedBy: z.string().optional(),
-    createdAt: z.string().optional(),
-    modifiedAt: z.string().optional(),
-  }).optional(),
-}).refine(
-  (data) => {
-    // If payment mode is Insurance, require insurance fields
-    if (data.billing.paymentMode === "Insurance") {
-      return data.billing.insuranceCompany && data.billing.insurancePolicyNumber;
+      .optional(),
+    billing: z.object({
+      consultationFee: z.number().min(0).multipleOf(0.01),
+      investigationEstimate: z.number().min(0).multipleOf(0.01).optional(),
+      procedureCharges: z.number().min(0).multipleOf(0.01).optional(),
+      discountAmount: z.number().min(0).multipleOf(0.01).optional(),
+      totalPayable: z.number().min(0).multipleOf(0.01),
+      paymentMode: z.enum(["Cash", "Card", "UPI", "Insurance", "TPA", "Other"]).optional(),
+      paymentStatus: z.enum(["Paid", "Pending", "Refunded"]),
+      insuranceCompany: z.string().optional(),
+      insurancePolicyNumber: z.string().optional(),
+      insurancePreAuthRequired: z.boolean().optional(),
+    }),
+    followUp: z
+      .object({
+        followUpDate: z.string().optional(),
+        followUpInstructions: z.string().max(2000).optional(),
+        referToIPD: z.boolean().optional(),
+        referralNote: z.string().optional(),
+      })
+      .optional(),
+    metadata: z
+      .object({
+        createdBy: z.string().optional(),
+        modifiedBy: z.string().optional(),
+        createdAt: z.string().optional(),
+        modifiedAt: z.string().optional(),
+      })
+      .optional(),
+  })
+  .refine(
+    data => {
+      // If payment mode is Insurance, require insurance fields
+      if (data.billing.paymentMode === "Insurance") {
+        return data.billing.insuranceCompany && data.billing.insurancePolicyNumber
+      }
+      return true
+    },
+    {
+      message: "Insurance company and policy number are required when payment mode is Insurance",
+      path: ["billing", "insuranceCompany"],
     }
-    return true;
-  },
-  {
-    message: "Insurance company and policy number are required when payment mode is Insurance",
-    path: ["billing", "insuranceCompany"],
-  }
-).refine(
-  (data) => {
-    // If referToIPD is true, require referralNote
-    if (data.followUp?.referToIPD === true) {
-      return data.followUp.referralNote && data.followUp.referralNote.length >= 5;
+  )
+  .refine(
+    data => {
+      // If referToIPD is true, require referralNote
+      if (data.followUp?.referToIPD === true) {
+        return data.followUp.referralNote && data.followUp.referralNote.length >= 5
+      }
+      return true
+    },
+    {
+      message: "Referral note is required when referring to IPD (min 5 characters)",
+      path: ["followUp", "referralNote"],
     }
-    return true;
-  },
-  {
-    message: "Referral note is required when referring to IPD (min 5 characters)",
-    path: ["followUp", "referralNote"],
-  }
-);
+  )
 
 interface OPDVisitFormProps {
-  onSuccess?: (visitId: string) => void;
-  onCancel?: () => void;
-  initialData?: Partial<OPDVisitFormType>;
+  onSuccess?: (visitId: string) => void
+  onCancel?: () => void
+  initialData?: Partial<OPDVisitFormType>
 }
 
 export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormProps) {
-  const { toast } = useToast();
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  
+  const { toast } = useToast()
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle")
+
   // Initialize OPD Visit hook
   const { createOPDVisit, isSubmitting } = useOPDVisit({
     onSuccess: (visitId: string) => {
       toast({
         title: "Success!",
         description: `OPD visit ${visitId} created successfully with auto patient registration.`,
-      });
-      onSuccess?.(visitId);
+      })
+      onSuccess?.(visitId)
     },
     onError: (error: string) => {
       toast({
         title: "Error",
         description: error,
         variant: "destructive",
-      });
+      })
     },
-  });
-  
+  })
+
   // Collapsible section states
   const [openSections, setOpenSections] = useState({
     registration: true,
@@ -213,28 +226,32 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
     investigations: false,
     billing: false,
     followUp: false,
-  });
+  })
 
   // Calculate age from date of birth
   const calculateAge = (dateOfBirth: string | Date): number => {
-    const dob = new Date(dateOfBirth);
-    const today = new Date();
-    let age = today.getFullYear() - dob.getFullYear();
-    const monthDiff = today.getMonth() - dob.getMonth();
+    const dob = new Date(dateOfBirth)
+    const today = new Date()
+    let age = today.getFullYear() - dob.getFullYear()
+    const monthDiff = today.getMonth() - dob.getMonth()
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-      age--;
+      age--
     }
-    return age;
-  };
+    return age
+  }
 
   // Generate token number based on doctor and date
   const generateTokenNumber = (doctorName: string): string => {
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    const timeStr = today.getHours().toString().padStart(2, '0') + today.getMinutes().toString().padStart(2, '0');
-    const doctorInitials = doctorName.split(' ').map(name => name.charAt(0)).join('').toUpperCase();
-    return `${doctorInitials}-${dateStr}-${timeStr}`;
-  };
+    const today = new Date()
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, "")
+    const timeStr = today.getHours().toString().padStart(2, "0") + today.getMinutes().toString().padStart(2, "0")
+    const doctorInitials = doctorName
+      .split(" ")
+      .map(name => name.charAt(0))
+      .join("")
+      .toUpperCase()
+    return `${doctorInitials}-${dateStr}-${timeStr}`
+  }
 
   // Initialize form with default values
   const form = useForm<OPDVisitFormType>({
@@ -335,27 +352,27 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
         modifiedAt: "",
       },
     },
-  });
+  })
 
   // Load draft on mount
   useEffect(() => {
-    const userId = "current-user"; // Replace with actual user ID from auth
+    const userId = "current-user" // Replace with actual user ID from auth
     if (opdService.hasDraft(userId)) {
-      const draft = opdService.loadDraft(userId);
+      const draft = opdService.loadDraft(userId)
       if (draft && draft.formData) {
-        const timestamp = new Date(draft.timestamp).toLocaleString();
+        const timestamp = new Date(draft.timestamp).toLocaleString()
         if (window.confirm(`Restore unsaved OPD visit from ${timestamp}?`)) {
-          form.reset(draft.formData as OPDVisitFormType);
+          form.reset(draft.formData as OPDVisitFormType)
           toast({
             title: "Draft restored",
             description: "Your unsaved work has been restored.",
-          });
+          })
         } else {
-          opdService.clearDraft(userId);
+          opdService.clearDraft(userId)
         }
       }
     }
-  }, []);
+  }, [])
 
   // Auto-save every 30 seconds - DISABLED
   // useEffect(() => {
@@ -373,37 +390,36 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
   //   return () => clearInterval(interval);
   // }, [form]);
 
-  // Auto-calculate total payable
+  // Auto-calculate total payable using individual field watchers
+  const consultationFee = form.watch("billing.consultationFee") || 0
+  const investigationEstimate = form.watch("billing.investigationEstimate") || 0
+  const procedureCharges = form.watch("billing.procedureCharges") || 0
+  const discountAmount = form.watch("billing.discountAmount") || 0
+
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name?.startsWith("billing.")) {
-        const { consultationFee = 0, investigationEstimate = 0, procedureCharges = 0, discountAmount = 0 } = value.billing || {};
-        const total = consultationFee + investigationEstimate + procedureCharges - discountAmount;
-        form.setValue("billing.totalPayable", Math.max(0, total));
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
+    const total = consultationFee + investigationEstimate + procedureCharges - discountAmount
+    form.setValue("billing.totalPayable", Math.max(0, total), { shouldValidate: false })
+  }, [consultationFee, investigationEstimate, procedureCharges, discountAmount, form])
 
   const handlePatientSelect = (patient: Patient | null) => {
-    setSelectedPatient(patient);
+    setSelectedPatient(patient)
     if (patient) {
-      form.setValue("registration.patientId", patient.id);
-      form.setValue("registration.firstName", patient.firstName);
-      form.setValue("registration.lastName", patient.lastName);
-      form.setValue("registration.age", calculateAge(patient.dateOfBirth));
-      form.setValue("registration.gender", patient.gender);
-      form.setValue("registration.phone", patient.phone);
-      form.setValue("registration.email", patient.email || "");
-      form.setValue("registration.address", patient.address || "");
-      form.setValue("registration.bloodGroup", patient.bloodGroup as BloodGroup);
-      form.setValue("registration.knownAllergies", patient.allergies || "");
-      form.setValue("registration.patientType", "RETURNING");
+      form.setValue("registration.patientId", patient.id)
+      form.setValue("registration.firstName", patient.firstName)
+      form.setValue("registration.lastName", patient.lastName)
+      form.setValue("registration.age", calculateAge(patient.dateOfBirth))
+      form.setValue("registration.gender", patient.gender)
+      form.setValue("registration.phone", patient.phone)
+      form.setValue("registration.email", patient.email || "")
+      form.setValue("registration.address", patient.address || "")
+      form.setValue("registration.bloodGroup", patient.bloodGroup as BloodGroup)
+      form.setValue("registration.knownAllergies", patient.allergies || "")
+      form.setValue("registration.patientType", "RETURNING")
     }
-  };
+  }
 
   const handleCreateNewPatient = () => {
-    setSelectedPatient(null);
+    setSelectedPatient(null)
     form.reset({
       ...form.getValues(),
       registration: {
@@ -417,35 +433,35 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
         address: "",
         patientType: "NEW",
       },
-    });
-  };
+    })
+  }
 
   const onSubmit = async (data: OPDVisitFormType) => {
     try {
       // Use the new hook to create OPD visit with auto patient creation
-      const visitId = await createOPDVisit(data);
-      
+      const visitId = await createOPDVisit(data)
+
       // Clear draft after successful submission
-      const userId = "current-user";
-      opdService.clearDraft(userId);
+      const userId = "current-user"
+      opdService.clearDraft(userId)
 
       // Reset form for new visit
-      form.reset();
-      setSelectedPatient(null);
-      
+      form.reset()
+      setSelectedPatient(null)
+
       // Success is handled by the hook's onSuccess callback
     } catch (error) {
-      console.error("Error creating OPD visit:", error);
+      console.error("Error creating OPD visit:", error)
       // Error is handled by the hook's onError callback
     }
-  };
+  }
 
   const toggleSection = (section: keyof typeof openSections) => {
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
 
-  const paymentMode = form.watch("billing.paymentMode");
-  const referToIPD = form.watch("followUp.referToIPD");
+  const paymentMode = form.watch("billing.paymentMode")
+  const referToIPD = form.watch("followUp.referToIPD")
 
   return (
     <Form {...form}>
@@ -454,9 +470,7 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold">OPD Patient Visit Form</h2>
-            <p className="text-sm text-muted-foreground">
-              Visit ID: {form.watch("visit.visitId")}
-            </p>
+            <p className="text-sm text-muted-foreground">Visit ID: {form.watch("visit.visitId")}</p>
           </div>
           <div className="flex items-center gap-2">
             {autoSaveStatus === "saving" && (
@@ -548,11 +562,11 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                       <FormItem>
                         <FormLabel>Age *</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="Age" 
+                          <Input
+                            type="number"
+                            placeholder="Age"
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            onChange={e => field.onChange(parseInt(e.target.value))}
                           />
                         </FormControl>
                         <FormMessage />
@@ -624,8 +638,10 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((bg) => (
-                              <SelectItem key={bg} value={bg}>{bg}</SelectItem>
+                            {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(bg => (
+                              <SelectItem key={bg} value={bg}>
+                                {bg}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -661,8 +677,10 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {["Aadhaar", "PAN", "Passport", "DriverLicense", "Other"].map((id) => (
-                              <SelectItem key={id} value={id}>{id}</SelectItem>
+                            {["Aadhaar", "PAN", "Passport", "DriverLicense", "Other"].map(id => (
+                              <SelectItem key={id} value={id}>
+                                {id}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -786,31 +804,35 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                   selectedSlot={form.watch("visit.appointmentSlot") || ""}
                   visitDate={form.watch("visit.visitDate")}
                   onDepartmentChange={(departmentId, departmentName) => {
-                    form.setValue("visit.department", departmentId);
+                    form.setValue("visit.department", departmentId)
                   }}
                   onDoctorChange={(doctorId, specialization, consultationFee, doctorName) => {
-                    form.setValue("visit.consultingDoctor", doctorId);
-                    form.setValue("visit.doctorSpecialization", specialization);
-                    
+                    form.setValue("visit.consultingDoctor", doctorId)
+                    form.setValue("visit.doctorSpecialization", specialization)
+
                     // Auto-generate and set token number
-                    const tokenNumber = generateTokenNumber(doctorName);
-                    form.setValue("visit.tokenNumber", tokenNumber);
-                    
+                    const tokenNumber = generateTokenNumber(doctorName)
+                    form.setValue("visit.tokenNumber", tokenNumber)
+
                     // Auto-fill billing information
-                    form.setValue("billing.consultationFee", consultationFee);
-                    
+                    form.setValue("billing.consultationFee", consultationFee)
+
                     // Recalculate total payable
-                    const currentValues = form.getValues("billing");
-                    const total = consultationFee + (currentValues.investigationEstimate || 0) + (currentValues.procedureCharges || 0) - (currentValues.discountAmount || 0);
-                    form.setValue("billing.totalPayable", Math.max(0, total));
-                    
+                    const currentValues = form.getValues("billing")
+                    const total =
+                      consultationFee +
+                      (currentValues.investigationEstimate || 0) +
+                      (currentValues.procedureCharges || 0) -
+                      (currentValues.discountAmount || 0)
+                    form.setValue("billing.totalPayable", Math.max(0, total))
+
                     // Show success message
                     toast({
                       title: "Doctor Selected",
                       description: `${doctorName} - Fee: ₹${consultationFee} - Token: ${tokenNumber}`,
-                    });
+                    })
                   }}
-                  onSlotChange={(slot) => form.setValue("visit.appointmentSlot", slot)}
+                  onSlotChange={slot => form.setValue("visit.appointmentSlot", slot)}
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
@@ -919,9 +941,15 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                   </div>
                   <div className="flex items-center gap-2">
                     {!openSections.vitals && (
-                      <Badge variant="secondary" className="text-xs">Click to expand</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Click to expand
+                      </Badge>
                     )}
-                    {openSections.vitals ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                    {openSections.vitals ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -951,9 +979,15 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                   </div>
                   <div className="flex items-center gap-2">
                     {!openSections.clinical && (
-                      <Badge variant="secondary" className="text-xs">Click to expand</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Click to expand
+                      </Badge>
                     )}
-                    {openSections.clinical ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                    {openSections.clinical ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -1069,9 +1103,15 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                   </div>
                   <div className="flex items-center gap-2">
                     {!openSections.diagnosis && (
-                      <Badge variant="secondary" className="text-xs">Click to expand</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Click to expand
+                      </Badge>
                     )}
-                    {openSections.diagnosis ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                    {openSections.diagnosis ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -1127,9 +1167,15 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                   </div>
                   <div className="flex items-center gap-2">
                     {!openSections.treatment && (
-                      <Badge variant="secondary" className="text-xs">Click to expand</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Click to expand
+                      </Badge>
                     )}
-                    {openSections.treatment ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                    {openSections.treatment ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -1173,9 +1219,15 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                   </div>
                   <div className="flex items-center gap-2">
                     {!openSections.investigations && (
-                      <Badge variant="secondary" className="text-xs">Click to expand</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Click to expand
+                      </Badge>
                     )}
-                    {openSections.investigations ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                    {openSections.investigations ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -1233,9 +1285,15 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                   </div>
                   <div className="flex items-center gap-2">
                     {!openSections.billing && (
-                      <Badge variant="secondary" className="text-xs">Click to expand</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Click to expand
+                      </Badge>
                     )}
-                    {openSections.billing ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                    {openSections.billing ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -1250,12 +1308,12 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                       <FormItem>
                         <FormLabel>Consultation Fee *</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             step="0.01"
-                            placeholder="0.00" 
+                            placeholder="0.00"
                             {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -1270,12 +1328,12 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                       <FormItem>
                         <FormLabel>Investigation Est.</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             step="0.01"
-                            placeholder="0.00" 
+                            placeholder="0.00"
                             {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -1290,12 +1348,12 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                       <FormItem>
                         <FormLabel>Procedure Charges</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             step="0.01"
-                            placeholder="0.00" 
+                            placeholder="0.00"
                             {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -1310,12 +1368,12 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                       <FormItem>
                         <FormLabel>Discount</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             step="0.01"
-                            placeholder="0.00" 
+                            placeholder="0.00"
                             {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -1331,12 +1389,7 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                     <FormItem>
                       <FormLabel>Total Payable (Auto-calculated)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          readOnly
-                          className="bg-muted font-semibold text-lg"
-                          {...field}
-                        />
+                        <Input type="number" readOnly className="bg-muted font-semibold text-lg" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1431,10 +1484,7 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                       render={({ field }) => (
                         <FormItem className="flex items-center space-x-2">
                           <FormControl>
-                            <Checkbox 
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                           </FormControl>
                           <FormLabel className="!mt-0">Pre-authorization Required</FormLabel>
                         </FormItem>
@@ -1464,9 +1514,15 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                   </div>
                   <div className="flex items-center gap-2">
                     {!openSections.followUp && (
-                      <Badge variant="secondary" className="text-xs">Click to expand</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Click to expand
+                      </Badge>
                     )}
-                    {openSections.followUp ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+                    {openSections.followUp ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -1507,10 +1563,7 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
                   render={({ field }) => (
                     <FormItem className="flex items-center space-x-2">
                       <FormControl>
-                        <Checkbox 
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
+                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
                       <FormLabel className="!mt-0">Refer to IPD (In-Patient Department)</FormLabel>
                     </FormItem>
@@ -1567,5 +1620,5 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
         </div>
       </form>
     </Form>
-  );
+  )
 }
