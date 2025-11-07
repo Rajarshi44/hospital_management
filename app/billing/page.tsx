@@ -248,6 +248,8 @@ export default function BillingPage() {
   const [showAdvanceDialog, setShowAdvanceDialog] = useState(false)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
   const [showNewClaimDialog, setShowNewClaimDialog] = useState(false)
+  const [showViewIPDBillDialog, setShowViewIPDBillDialog] = useState(false)
+  const [selectedIPDBill, setSelectedIPDBill] = useState<any>(null)
   const [dateFilter, setDateFilter] = useState("today")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [paymentModeFilter, setPaymentModeFilter] = useState("all")
@@ -550,6 +552,29 @@ export default function BillingPage() {
     })
   }
 
+  const handleViewIPDBill = (bill: any) => {
+    setSelectedIPDBill(bill)
+    setShowViewIPDBillDialog(true)
+  }
+
+  const handleGenerateIPDBill = () => {
+    toast({
+      title: "IPD Bill Generated",
+      description: "Bill has been generated successfully",
+    })
+  }
+
+  const handlePrintIPDBill = () => {
+    setShowPrintPreview(true)
+    setTimeout(() => {
+      handlePrint()
+    }, 100)
+    toast({
+      title: "Printing IPD Bill",
+      description: "Opening print dialog...",
+    })
+  }
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { color: string; icon: any }> = {
       Paid: { color: "bg-green-100 text-green-700", icon: CheckCircle },
@@ -582,12 +607,6 @@ export default function BillingPage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Billing & Payments</h1>
               <p className="text-muted-foreground">Comprehensive billing management system</p>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={() => setShowOPDDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                New OPD Bill
-              </Button>
             </div>
           </div>
 
@@ -841,10 +860,16 @@ export default function BillingPage() {
                       <CardTitle>IPD Billing (Real-time)</CardTitle>
                       <CardDescription>Track running bills and manage inpatient billing</CardDescription>
                     </div>
-                    <Button variant="outline">
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Refresh Bills
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button onClick={() => setShowOPDDialog(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        New IPD Bill
+                      </Button>
+                      <Button variant="outline">
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refresh Bills
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -873,11 +898,12 @@ export default function BillingPage() {
                           <TableCell>{getStatusBadge(bill.status)}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="sm">
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Plus className="h-4 w-4" />
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleViewIPDBill(bill)}
+                              >
+                                <Eye className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
