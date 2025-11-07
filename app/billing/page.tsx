@@ -250,7 +250,7 @@ export default function BillingPage() {
   const [dateFilter, setDateFilter] = useState("today")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [paymentModeFilter, setPaymentModeFilter] = useState("all")
-  
+
   // Billing categories state
   const [billingCategories, setBillingCategories] = useState<BillingCategory[]>([
     {
@@ -341,7 +341,7 @@ export default function BillingPage() {
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState("")
   const [showPrintPreview, setShowPrintPreview] = useState(false)
-  
+
   // Patient and visit info state
   const [patientInfo, setPatientInfo] = useState({
     name: "",
@@ -352,7 +352,7 @@ export default function BillingPage() {
     cin: "",
     address: "",
   })
-  
+
   const [visitInfo, setVisitInfo] = useState({
     admissionDate: "",
     dischargeDate: "",
@@ -372,7 +372,7 @@ export default function BillingPage() {
 
   // Print ref
   const printRef = useRef<HTMLDivElement>(null)
-  
+
   const handlePrint = () => {
     if (typeof window !== "undefined") {
       window.print()
@@ -381,7 +381,7 @@ export default function BillingPage() {
 
   const addCategory = () => {
     if (!newCategoryName.trim()) return
-    
+
     const newCategory: BillingCategory = {
       id: `cat-${Date.now()}`,
       name: newCategoryName.toUpperCase(),
@@ -396,11 +396,11 @@ export default function BillingPage() {
         },
       ],
     }
-    
+
     setBillingCategories([...billingCategories, newCategory])
     setNewCategoryName("")
     setShowAddCategoryDialog(false)
-    
+
     toast({
       title: "Category Added",
       description: `${newCategoryName} category has been added`,
@@ -453,12 +453,7 @@ export default function BillingPage() {
     )
   }
 
-  const updateLineItem = (
-    categoryId: string,
-    itemId: string,
-    field: keyof BillingLineItem,
-    value: any
-  ) => {
+  const updateLineItem = (categoryId: string, itemId: string, field: keyof BillingLineItem, value: any) => {
     setBillingCategories(
       billingCategories.map(category => {
         if (category.id === categoryId) {
@@ -484,16 +479,14 @@ export default function BillingPage() {
 
   const calculateTotal = () => {
     return billingCategories.reduce(
-      (total, category) =>
-        total + category.items.reduce((catTotal, item) => catTotal + item.amount, 0),
+      (total, category) => total + category.items.reduce((catTotal, item) => catTotal + item.amount, 0),
       0
     )
   }
 
   const calculateTotalDiscount = () => {
     return billingCategories.reduce(
-      (total, category) =>
-        total + category.items.reduce((catTotal, item) => catTotal + item.discount, 0),
+      (total, category) => total + category.items.reduce((catTotal, item) => catTotal + item.discount, 0),
       0
     )
   }
@@ -731,7 +724,14 @@ export default function BillingPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {mockRevenueBySource.map(item => {
-                      const widthClass = item.percentage >= 50 ? 'w-1/2' : item.percentage >= 30 ? 'w-1/3' : item.percentage >= 10 ? 'w-1/6' : 'w-1/12';
+                      const widthClass =
+                        item.percentage >= 50
+                          ? "w-1/2"
+                          : item.percentage >= 30
+                            ? "w-1/3"
+                            : item.percentage >= 10
+                              ? "w-1/6"
+                              : "w-1/12"
                       return (
                         <div key={item.source} className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
@@ -744,7 +744,7 @@ export default function BillingPage() {
                             <div className={`h-full ${item.color} ${widthClass}`} />
                           </div>
                         </div>
-                      );
+                      )
                     })}
                   </CardContent>
                 </Card>
@@ -969,7 +969,7 @@ export default function BillingPage() {
                 <DialogTitle className="text-2xl">Create OPD Bill</DialogTitle>
                 <DialogDescription className="text-base">Generate new outpatient billing invoice</DialogDescription>
               </DialogHeader>
-              
+
               {/* Patient Information */}
               <div className="space-y-4">
                 <div className="text-sm font-semibold">Patient Information</div>
@@ -1095,31 +1095,23 @@ export default function BillingPage() {
                     Add Category
                   </Button>
                 </div>
-                
+
                 {/* Dynamic Categories */}
                 {billingCategories.map((category, categoryIndex) => (
                   <div key={category.id} className="space-y-2 border rounded-lg p-3 bg-muted/20">
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold text-muted-foreground">{category.name}</div>
                       <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => addLineItem(category.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => addLineItem(category.id)}>
                           <Plus className="h-3 w-3 mr-1" />
                           Add Item
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeCategory(category.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => removeCategory(category.id)}>
                           <X className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                    
+
                     {/* Line Items */}
                     {category.items.map((item, itemIndex) => (
                       <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
@@ -1128,18 +1120,14 @@ export default function BillingPage() {
                           <Input
                             placeholder="e.g., Item description"
                             value={item.description}
-                            onChange={e =>
-                              updateLineItem(category.id, item.id, "description", e.target.value)
-                            }
+                            onChange={e => updateLineItem(category.id, item.id, "description", e.target.value)}
                           />
                         </div>
                         <div className="col-span-2">
                           {itemIndex === 0 && <Label className="text-xs">Type</Label>}
                           <Select
                             value={item.type}
-                            onValueChange={value =>
-                              updateLineItem(category.id, item.id, "type", value)
-                            }
+                            onValueChange={value => updateLineItem(category.id, item.id, "type", value)}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -1175,23 +1163,13 @@ export default function BillingPage() {
                             placeholder="0.00"
                             value={item.discount || ""}
                             onChange={e =>
-                              updateLineItem(
-                                category.id,
-                                item.id,
-                                "discount",
-                                parseFloat(e.target.value) || 0
-                              )
+                              updateLineItem(category.id, item.id, "discount", parseFloat(e.target.value) || 0)
                             }
                           />
                         </div>
                         <div className="col-span-1">
                           {itemIndex === 0 && <Label className="text-xs">Amount</Label>}
-                          <Input
-                            type="number"
-                            value={item.amount.toFixed(2)}
-                            disabled
-                            className="bg-muted"
-                          />
+                          <Input type="number" value={item.amount.toFixed(2)} disabled className="bg-muted" />
                         </div>
                         <div className="col-span-1 flex items-center">
                           {itemIndex === 0 && <div className="h-5" />}
@@ -1448,10 +1426,7 @@ export default function BillingPage() {
                 </div>
                 <div>
                   <Label>TPA/Insurance Provider *</Label>
-                  <Select
-                    value={claimInfo.tpa}
-                    onValueChange={value => setClaimInfo({ ...claimInfo, tpa: value })}
-                  >
+                  <Select value={claimInfo.tpa} onValueChange={value => setClaimInfo({ ...claimInfo, tpa: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select TPA" />
                     </SelectTrigger>

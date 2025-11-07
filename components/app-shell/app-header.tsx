@@ -76,9 +76,7 @@ export function AppHeader() {
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
 
-        <div className="flex flex-1 items-center gap-2">
-          {/* Search removed */}
-        </div>
+        <div className="flex flex-1 items-center gap-2">{/* Search removed */}</div>
 
         <div className="flex items-center gap-3">
           {/* User Profile Info */}
