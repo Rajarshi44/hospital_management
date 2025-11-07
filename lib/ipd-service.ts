@@ -346,10 +346,18 @@ export class IPDService {
         }
       });
     }
+    
+    // Add timestamp to prevent caching
+    params.append('_t', Date.now().toString());
+    
     const query = params.toString() ? `?${params.toString()}` : '';
     const endpoint = `/ipd/wards${query}`;
     
+    console.log('🔥 IPDService.getWards - calling:', endpoint);
+    
     const wards = await ApiClient.get(endpoint) as any[];
+    
+    console.log('🔥 IPDService.getWards - response:', wards);
     
     // If the beds in wards are missing dailyRate, fetch complete bed data
     if (Array.isArray(wards) && wards.length > 0) {
@@ -372,6 +380,7 @@ export class IPDService {
           return ward;
         })
       );
+      console.log('🔥 IPDService.getWards - processed wards:', wardsWithCompleteBeds);
       return wardsWithCompleteBeds;
     }
     
@@ -383,7 +392,15 @@ export class IPDService {
   }
 
   static async updateWard(id: string, data: Partial<CreateWardDto>) {
-    return ApiClient.patch(`/ipd/wards/${id}`, data);
+    console.log('🔥 IPDService.updateWard called with:', { id, data });
+    try {
+      const result = await ApiClient.patch(`/ipd/wards/${id}`, data);
+      console.log('🔥 IPDService.updateWard result:', result);
+      return result;
+    } catch (error) {
+      console.error('🔥 IPDService.updateWard error:', error);
+      throw error;
+    }
   }
 
   static async deleteWard(id: string) {

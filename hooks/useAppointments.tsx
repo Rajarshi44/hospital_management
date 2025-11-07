@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { AppointmentsService, FrontendAppointmentStatus } from '@/lib/appointments-service';
 
 // Types
 interface Doctor {
@@ -360,6 +361,46 @@ export function useAppointments(options: UseAppointmentsOptions = {}) {
     }
   }, [API_BASE_URL]);
 
+  // Update appointment status
+  const updateAppointmentStatus = useCallback(async (appointmentId: string, status: FrontendAppointmentStatus) => {
+    console.log('🔥 useAppointments - updateAppointmentStatus called with:', { appointmentId, status });
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await AppointmentsService.updateAppointmentStatus(appointmentId, status);
+      console.log('🔥 useAppointments - updateAppointmentStatus result:', result);
+      
+      // Update local state
+      setAppointments(prev => 
+        prev.map(apt => 
+          apt.id === appointmentId 
+            ? { ...apt, status: status }
+            : apt
+        )
+      );
+
+      toast({
+        title: "Status Updated",
+        description: `Appointment status updated to ${status}`,
+      });
+
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update appointment status';
+      setError(errorMessage);
+      console.error('🔥 useAppointments - updateAppointmentStatus error:', err);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return {
     // State
     isLoading,
@@ -375,6 +416,7 @@ export function useAppointments(options: UseAppointmentsOptions = {}) {
     createAppointmentWithOPD,
     getAppointmentsByDoctor,
     getAppointments,
+    updateAppointmentStatus,
     
     // Setters
     setAppointments,

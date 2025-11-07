@@ -42,9 +42,11 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { BookAppointmentDialog } from "@/components/appointments/book-appointment-dialog"
+import { AppointmentDetails } from "@/components/appointments/appointment-details"
 
 import { Appointment, AppointmentStatus } from "@/lib/appointments-types"
 import { useAppointments } from "@/hooks/useAppointments"
+import { FrontendAppointmentStatus } from "@/lib/appointments-service"
 
 // Hook to fetch doctors and departments
 const useDoctorsAndDepartments = () => {
@@ -202,6 +204,10 @@ export default function AppointmentsPage() {
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null)
   const [newStatus, setNewStatus] = useState<AppointmentStatus>("Scheduled")
 
+  // View details dialog state
+  const [viewDetailsDialog, setViewDetailsDialog] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+
   // Filters
   const [patientSearch, setPatientSearch] = useState("")
   const [doctorFilter, setDoctorFilter] = useState("")
@@ -217,6 +223,7 @@ export default function AppointmentsPage() {
     isLoading,
     error,
     getAppointments,
+    updateAppointmentStatus,
   } = useAppointments({
     onError: error => {
       toast({
@@ -284,12 +291,47 @@ export default function AppointmentsPage() {
     setEditStatusDialog(true)
   }
 
+  const openViewDetailsDialog = (appointment: Appointment) => {
+    setSelectedAppointment(appointment)
+    setViewDetailsDialog(true)
+  }
+
+  const closeViewDetailsDialog = () => {
+    setSelectedAppointment(null)
+    setViewDetailsDialog(false)
+  }
+
+  // Handlers for AppointmentDetails component
+  const handleEditFromDetails = () => {
+    if (selectedAppointment) {
+      closeViewDetailsDialog()
+      openEditStatusDialog(selectedAppointment.id, selectedAppointment.status)
+    }
+  }
+
+  const handleCancelFromDetails = () => {
+    if (selectedAppointment) {
+      handleStatusChange(selectedAppointment.id, "Cancelled")
+      closeViewDetailsDialog()
+    }
+  }
+
+  const handleCompleteFromDetails = () => {
+    if (selectedAppointment) {
+      handleStatusChange(selectedAppointment.id, "Completed")
+      closeViewDetailsDialog()
+    }
+  }
+
   const handleStatusChange = useCallback(
     async (appointmentId: string, statusToUpdate: AppointmentStatus) => {
       try {
-        console.log(`Updating appointment ${appointmentId} to status: ${statusToUpdate}`)
+        console.log(`🔥 Updating appointment ${appointmentId} to status: ${statusToUpdate}`)
         
-        // Update filtered appointments locally for immediate UI feedback
+        // Call the backend API to update status using the hook
+        await updateAppointmentStatus(appointmentId, statusToUpdate as FrontendAppointmentStatus);
+
+        // Optimistically update the local state for immediate UI feedback
         setFilteredAppointments(prev => 
           prev.map(apt => 
             apt.id === appointmentId 
@@ -306,31 +348,27 @@ export default function AppointmentsPage() {
           Cancelled: "Appointment cancelled",
         }
 
-        toast({
-          title: "Status Updated",
-          description: statusMessages[statusToUpdate],
-        })
-        
+        // Don't show toast here as the hook already handles it
         setEditStatusDialog(false)
         
-        // Optionally refresh from backend after a delay
+        // Refresh from backend after a short delay to ensure consistency
         setTimeout(() => {
           loadAppointments()
-        }, 500)
+        }, 1000)
       } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to update appointment status",
-          variant: "destructive",
-        })
+        console.error('🔥 Error updating appointment status:', error);
+        // Don't show toast here as the hook already handles it
+        
+        // Refresh appointments to revert any optimistic updates
+        loadAppointments()
       }
     },
-    [loadAppointments, toast]
+    [updateAppointmentStatus, loadAppointments]
   )
 
-  const handleSaveStatus = () => {
+  const handleSaveStatus = async () => {
     if (selectedAppointmentId && newStatus) {
-      handleStatusChange(selectedAppointmentId, newStatus)
+      await handleStatusChange(selectedAppointmentId, newStatus)
     }
   }
 
@@ -599,53 +637,73 @@ export default function AppointmentsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => openEditStatusDialog(appointment.id, appointment.status)}
+                            <div className="flex items-center gap-1 justify-end">
+                              {/* View Details Button */}
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => openViewDetailsDialog(appointment)}
+                                className="h-8 px-2"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              
+                              {/* Edit Status Button */}
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => openEditStatusDialog(appointment.id, appointment.status)}
+                                className="h-8 px-2"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              
+                              {/* Status Update Buttons - Show based on current status */}
+                              {appointment.status === "Scheduled" && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleStatusChange(appointment.id, "Checked-in")}
+                                  className="h-8 px-3 text-green-600 border-green-200 hover:bg-green-50"
                                 >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Status
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                {appointment.status === "Scheduled" && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "Checked-in")}>
-                                    <User className="h-4 w-4 mr-2" />
-                                    Quick Check-In
-                                  </DropdownMenuItem>
-                                )}
-                                {appointment.status === "Checked-in" && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "In Progress")}>
-                                    <AlertCircle className="h-4 w-4 mr-2" />
-                                    Start Consultation
-                                  </DropdownMenuItem>
-                                )}
-                                {appointment.status === "In Progress" && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "Completed")}>
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Mark Completed
-                                  </DropdownMenuItem>
-                                )}
-                                {appointment.status !== "Cancelled" && appointment.status !== "Completed" && (
-                                  <DropdownMenuItem 
-                                    onClick={() => handleStatusChange(appointment.id, "Cancelled")}
-                                    className="text-red-600"
-                                  >
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Cancel Appointment
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                  Check-in
+                                </Button>
+                              )}
+                              
+                              {appointment.status === "Checked-in" && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleStatusChange(appointment.id, "In Progress")}
+                                  className="h-8 px-3 text-orange-600 border-orange-200 hover:bg-orange-50"
+                                >
+                                  Start
+                                </Button>
+                              )}
+                              
+                              {appointment.status === "In Progress" && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleStatusChange(appointment.id, "Completed")}
+                                  className="h-8 px-3 text-green-600 border-green-200 hover:bg-green-50"
+                                >
+                                  Complete
+                                </Button>
+                              )}
+                              
+                              {/* Cancel Button - Show for non-cancelled/completed appointments */}
+                              {appointment.status !== "Cancelled" && appointment.status !== "Completed" && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleStatusChange(appointment.id, "Cancelled")}
+                                  className="h-8 px-2 text-red-600 hover:bg-red-50"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -728,6 +786,37 @@ export default function AppointmentsPage() {
                 Save Status
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Details Dialog */}
+        <Dialog open={viewDetailsDialog} onOpenChange={setViewDetailsDialog}>
+          <DialogContent className="max-w-4xl">
+            {selectedAppointment && (
+              <AppointmentDetails
+                appointment={{
+                  ...selectedAppointment,
+                  date: new Date(selectedAppointment.date),
+                  startTime: selectedAppointment.timeSlot?.split('-')[0] || "09:00",
+                  endTime: selectedAppointment.timeSlot?.split('-')[1] || "09:30",
+                  type: selectedAppointment.visitType === "First Visit" ? "consultation" : 
+                        selectedAppointment.visitType === "Follow-Up" ? "follow-up" : "consultation",
+                  status: selectedAppointment.status === "Scheduled" ? "scheduled" :
+                          selectedAppointment.status === "Checked-in" ? "confirmed" :
+                          selectedAppointment.status === "In Progress" ? "in-progress" :
+                          selectedAppointment.status === "Completed" ? "completed" :
+                          selectedAppointment.status === "Cancelled" ? "cancelled" : "scheduled",
+                  duration: 30,
+                  symptoms: selectedAppointment.notes || "",
+                  priority: selectedAppointment.priority ? "high" : "low",
+                  room: selectedAppointment.department
+                }}
+                onEdit={handleEditFromDetails}
+                onCancel={handleCancelFromDetails}
+                onComplete={handleCompleteFromDetails}
+                onClose={closeViewDetailsDialog}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </AppLayout>

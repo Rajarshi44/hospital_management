@@ -506,14 +506,18 @@ export function useWards(filters?: {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchWards = useCallback(async () => {
+  const fetchWards = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     try {
+      console.log('🔥 useWards - fetchWards called with filters:', filters, 'forceRefresh:', forceRefresh);
       const data = await IPDService.getWards(filters) as any;
+      console.log('🔥 useWards - fetchWards response:', data);
       const wardsArray = Array.isArray(data) ? data : data.wards || [];
+      console.log('🔥 useWards - setting wards:', wardsArray);
       setWards(wardsArray);
     } catch (err) {
+      console.error('🔥 useWards - fetchWards error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch wards';
       setError(errorMessage);
     } finally {
@@ -529,7 +533,7 @@ export function useWards(filters?: {
         title: 'Success',
         description: 'Ward created successfully',
       });
-      await fetchWards(); // Refresh the list
+      await fetchWards(true); // Force refresh after create
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create ward';
@@ -547,15 +551,20 @@ export function useWards(filters?: {
   const updateWard = async (id: string, data: any) => {
     setLoading(true);
     try {
+      console.log('🔥 useWards - updateWard called with:', { id, data });
       const result = await IPDService.updateWard(id, data);
+      console.log('🔥 useWards - updateWard result:', result);
       toast({
         title: 'Success',
         description: 'Ward updated successfully',
       });
-      await fetchWards(); // Refresh the list
+      console.log('🔥 useWards - calling fetchWards to refresh after update');
+      await fetchWards(true); // Force refresh after update
       return result;
     } catch (err) {
+      console.error('🔥 useWards - updateWard error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to update ward';
+      console.error('🔥 useWards - Error message:', errorMessage);
       toast({
         title: 'Error',
         description: errorMessage,
@@ -575,7 +584,7 @@ export function useWards(filters?: {
         title: 'Success',
         description: 'Ward deleted successfully',
       });
-      await fetchWards(); // Refresh the list
+      await fetchWards(true); // Force refresh after delete
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete ward';
       toast({
