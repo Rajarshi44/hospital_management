@@ -272,6 +272,7 @@ export default function BillingPage() {
   const [showNewClaimDialog, setShowNewClaimDialog] = useState(false)
   const [showViewIPDBillDialog, setShowViewIPDBillDialog] = useState(false)
   const [selectedIPDBill, setSelectedIPDBill] = useState<any>(null)
+  const [isEditMode, setIsEditMode] = useState(false)
   const [dateFilter, setDateFilter] = useState("today")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [paymentModeFilter, setPaymentModeFilter] = useState("all")
@@ -1019,7 +1020,22 @@ export default function BillingPage() {
 
   const handleViewIPDBill = (bill: any) => {
     setSelectedIPDBill(bill)
+    setIsEditMode(false)
     setShowViewIPDBillDialog(true)
+  }
+
+  const handleEditIPDBill = (bill: any) => {
+    setSelectedIPDBill(bill)
+    setIsEditMode(true)
+    setShowViewIPDBillDialog(true)
+  }
+
+  const handleSaveIPDBill = () => {
+    toast({
+      title: "IPD Bill Updated",
+      description: "Bill has been updated successfully",
+    })
+    setIsEditMode(false)
   }
 
   const handleGenerateIPDBill = () => {
@@ -1518,6 +1534,9 @@ export default function BillingPage() {
                             <div className="flex gap-1">
                               <Button variant="ghost" size="sm" onClick={() => handleViewIPDBill(bill)}>
                                 <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleEditIPDBill(bill)}>
+                                <Edit className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
