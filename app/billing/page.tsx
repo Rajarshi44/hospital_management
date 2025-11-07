@@ -1626,11 +1626,7 @@ export default function BillingPage() {
                 <DialogTitle className="text-2xl flex items-center justify-between">
                   <span>{isEditMode ? "Edit IPD Bill" : "View IPD Bill"}</span>
                   {!isEditMode && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setIsEditMode(true)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
                       <Edit className="h-4 w-4 mr-2" />
                       Enable Edit Mode
                     </Button>
@@ -1640,7 +1636,7 @@ export default function BillingPage() {
                   {selectedIPDBill && `Bill ID: ${selectedIPDBill.id} | Admission ID: ${selectedIPDBill.admissionId}`}
                 </DialogDescription>
               </DialogHeader>
-              
+
               {selectedIPDBill && (
                 <>
                   {/* Patient Information */}
@@ -1738,7 +1734,7 @@ export default function BillingPage() {
                         </Button>
                       )}
                     </div>
-                    
+
                     {/* Dynamic Categories */}
                     {billingCategories.map((category, categoryIndex) => (
                       <div key={category.id} className="space-y-2 border rounded-lg p-3 bg-muted/20">
@@ -1746,25 +1742,17 @@ export default function BillingPage() {
                           <div className="text-xs font-semibold text-muted-foreground">{category.name}</div>
                           {isEditMode && (
                             <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => addLineItem(category.id)}
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => addLineItem(category.id)}>
                                 <Plus className="h-3 w-3 mr-1" />
                                 Add Item
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeCategory(category.id)}
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => removeCategory(category.id)}>
                                 <X className="h-3 w-3" />
                               </Button>
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Line Items */}
                         {category.items.map((item, itemIndex) => (
                           <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
@@ -1773,9 +1761,7 @@ export default function BillingPage() {
                               <Input
                                 placeholder="e.g., Item description"
                                 value={item.description}
-                                onChange={e =>
-                                  updateLineItem(category.id, item.id, "description", e.target.value)
-                                }
+                                onChange={e => updateLineItem(category.id, item.id, "description", e.target.value)}
                                 readOnly={!isEditMode}
                                 className={!isEditMode ? "bg-muted" : ""}
                               />
@@ -1784,9 +1770,7 @@ export default function BillingPage() {
                               {itemIndex === 0 && <Label className="text-xs">Type</Label>}
                               <Select
                                 value={item.type}
-                                onValueChange={value =>
-                                  updateLineItem(category.id, item.id, "type", value)
-                                }
+                                onValueChange={value => updateLineItem(category.id, item.id, "type", value)}
                                 disabled={!isEditMode}
                               >
                                 <SelectTrigger className={!isEditMode ? "bg-muted" : ""}>
@@ -1825,12 +1809,7 @@ export default function BillingPage() {
                                 placeholder="0.00"
                                 value={item.discount || ""}
                                 onChange={e =>
-                                  updateLineItem(
-                                    category.id,
-                                    item.id,
-                                    "discount",
-                                    parseFloat(e.target.value) || 0
-                                  )
+                                  updateLineItem(category.id, item.id, "discount", parseFloat(e.target.value) || 0)
                                 }
                                 readOnly={!isEditMode}
                                 className={!isEditMode ? "bg-muted" : ""}
@@ -1838,12 +1817,7 @@ export default function BillingPage() {
                             </div>
                             <div className="col-span-1">
                               {itemIndex === 0 && <Label className="text-xs">Amount</Label>}
-                              <Input
-                                type="number"
-                                value={item.amount.toFixed(2)}
-                                disabled
-                                className="bg-muted"
-                              />
+                              <Input type="number" value={item.amount.toFixed(2)} disabled className="bg-muted" />
                             </div>
                             <div className="col-span-1 flex items-center">
                               {itemIndex === 0 && <div className="h-5" />}
@@ -1920,8 +1894,8 @@ export default function BillingPage() {
                       </div>
                       <div>
                         <Label>Transaction Reference</Label>
-                        <Input 
-                          placeholder="Reference number (optional)" 
+                        <Input
+                          placeholder="Reference number (optional)"
                           readOnly={!isEditMode}
                           className={!isEditMode ? "bg-muted" : ""}
                         />
@@ -1938,9 +1912,7 @@ export default function BillingPage() {
                         <Button variant="outline" onClick={() => setIsEditMode(false)}>
                           Cancel Edit
                         </Button>
-                        <Button onClick={handleSaveIPDBill}>
-                          Save Changes
-                        </Button>
+                        <Button onClick={handleSaveIPDBill}>Save Changes</Button>
                       </>
                     ) : (
                       <>
