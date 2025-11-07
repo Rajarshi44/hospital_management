@@ -71,7 +71,7 @@ import { Separator } from "@/components/ui/separator"
 import { AppLayout } from "@/components/app-shell/app-layout"
 import { AuthProvider } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { BillPrintLayout } from "@/components/billing/bill-print-layout"
+import { BillPrintLayout } from "@/components/billing/bill-print"
 
 // Mock data for demonstration
 const mockDashboardStats = {
@@ -275,6 +275,8 @@ export default function BillingPage() {
   const [showAdvanceDialog, setShowAdvanceDialog] = useState(false)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
   const [showNewClaimDialog, setShowNewClaimDialog] = useState(false)
+  const [showViewClaimDialog, setShowViewClaimDialog] = useState(false)
+  const [selectedClaim, setSelectedClaim] = useState<any>(null)
   const [showViewIPDBillDialog, setShowViewIPDBillDialog] = useState(false)
   const [selectedIPDBill, setSelectedIPDBill] = useState<any>(null)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -612,8 +614,21 @@ export default function BillingPage() {
   const printRef = useRef<HTMLDivElement>(null)
 
   const handlePrint = () => {
-    if (typeof window !== "undefined") {
+    if (printRef.current) {
+      const printContent = printRef.current.innerHTML
+      const originalContent = document.body.innerHTML
+
+      // Replace body content with print content
+      document.body.innerHTML = printContent
+
+      // Print
       window.print()
+
+      // Restore original content
+      document.body.innerHTML = originalContent
+
+      // Reload to restore React state
+      window.location.reload()
     }
   }
 
@@ -1595,110 +1610,18 @@ export default function BillingPage() {
                           </TableCell>
                           <TableCell>{getStatusBadge(claim.status)}</TableCell>
                           <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    toast({
-                                      title: "Viewing Claim",
-                                      description: `Displaying details for ${claim.claimId}`,
-                                    })
-                                  }}
-                                >
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    toast({
-                                      title: "Edit Claim",
-                                      description: `Opening editor for ${claim.claimId}`,
-                                    })
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit Claim
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    toast({
-                                      title: "Documents",
-                                      description: `Viewing documents for ${claim.claimId}`,
-                                    })
-                                  }}
-                                >
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  View Documents
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    toast({
-                                      title: "Upload Document",
-                                      description: `Upload document for ${claim.claimId}`,
-                                    })
-                                  }}
-                                >
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Upload Document
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    toast({
-                                      title: "Approve Claim",
-                                      description: `Claim ${claim.claimId} approved`,
-                                    })
-                                  }}
-                                  disabled={claim.status === "Approved"}
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Approve Claim
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    toast({
-                                      title: "Reject Claim",
-                                      description: `Claim ${claim.claimId} rejected`,
-                                      variant: "destructive",
-                                    })
-                                  }}
-                                  disabled={claim.status === "Rejected"}
-                                  className="text-red-600"
-                                >
-                                  <X className="h-4 w-4 mr-2" />
-                                  Reject Claim
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    toast({
-                                      title: "Printing Claim",
-                                      description: `Generating PDF for ${claim.claimId}`,
-                                    })
-                                  }}
-                                >
-                                  <Printer className="h-4 w-4 mr-2" />
-                                  Print Claim
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    toast({
-                                      title: "Download Claim",
-                                      description: `Downloading ${claim.claimId}`,
-                                    })
-                                  }}
-                                >
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedClaim(claim)
+                                setShowViewClaimDialog(true)
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              <Edit className="h-4 w-4 mr-1" />
+                              View/Edit
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -2276,6 +2199,1246 @@ export default function BillingPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* View/Edit Claim Dialog */}
+          <Dialog open={showViewClaimDialog} onOpenChange={setShowViewClaimDialog}>
+            <DialogContent className="max-w-[98vw] w-full h-[98vh] max-h-[98vh] overflow-y-auto p-8">
+              <DialogHeader>
+                <DialogTitle className="text-2xl flex items-center justify-between">
+                  <span>{isEditMode ? "Edit Insurance Claim" : "View Insurance Claim"}</span>
+                  {!isEditMode && (
+                    <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Enable Edit Mode
+                    </Button>
+                  )}
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  {selectedClaim && `Claim ID: ${selectedClaim.claimId} | Policy No: ${selectedClaim.policyNo}`}
+                </DialogDescription>
+              </DialogHeader>
+
+              {selectedClaim && (
+                <>
+                  {/* Claim Information */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Claim Information</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Claim ID</Label>
+                        <Input value={selectedClaim.claimId} readOnly className="bg-muted font-mono" />
+                      </div>
+                      <div>
+                        <Label>Claim Status *</Label>
+                        <Select
+                          value={claimInfo.status || selectedClaim.status}
+                          onValueChange={value => setClaimInfo({ ...claimInfo, status: value })}
+                          disabled={!isEditMode}
+                        >
+                          <SelectTrigger className={!isEditMode ? "bg-muted" : ""}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Pending">Pending</SelectItem>
+                            <SelectItem value="Approved">Approved</SelectItem>
+                            <SelectItem value="Rejected">Rejected</SelectItem>
+                            <SelectItem value="Under Review">Under Review</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Claim Date</Label>
+                        <Input
+                          type="date"
+                          defaultValue={new Date().toISOString().split("T")[0]}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Patient Information */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Patient Information</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Patient Name *</Label>
+                        <Input
+                          placeholder="Enter patient name"
+                          defaultValue={selectedClaim.patient}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Patient UHID</Label>
+                        <Input
+                          placeholder="e.g., PAT001"
+                          defaultValue="PAT001"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Age / Gender</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="Age"
+                            defaultValue="45"
+                            readOnly={!isEditMode}
+                            className={!isEditMode ? "bg-muted" : ""}
+                          />
+                          <Select disabled={!isEditMode} defaultValue="Male">
+                            <SelectTrigger className={!isEditMode ? "bg-muted" : ""}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Patient Address</Label>
+                        <Input
+                          placeholder="Enter complete address"
+                          defaultValue="123 Main Street, Kolkata - 700001"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Insurance Details */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Insurance/TPA Details</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>TPA/Insurance Provider *</Label>
+                        <Select defaultValue={selectedClaim.tpa} disabled={!isEditMode}>
+                          <SelectTrigger className={!isEditMode ? "bg-muted" : ""}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Star Health">Star Health</SelectItem>
+                            <SelectItem value="HDFC Ergo">HDFC Ergo</SelectItem>
+                            <SelectItem value="ICICI Lombard">ICICI Lombard</SelectItem>
+                            <SelectItem value="Max Bupa">Max Bupa</SelectItem>
+                            <SelectItem value="Reliance Health">Reliance Health</SelectItem>
+                            <SelectItem value="Care Health">Care Health</SelectItem>
+                            <SelectItem value="Bajaj Allianz">Bajaj Allianz</SelectItem>
+                            <SelectItem value="New India Assurance">New India Assurance</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Policy Number *</Label>
+                        <Input
+                          placeholder="Enter policy number"
+                          defaultValue={selectedClaim.policyNo}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Policy Validity</Label>
+                        <Input
+                          type="date"
+                          defaultValue="2026-12-31"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Pre-Auth Number</Label>
+                        <Input
+                          placeholder="Enter pre-authorization number"
+                          defaultValue="PA123456"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Sum Insured</Label>
+                        <Input
+                          type="number"
+                          placeholder="Total coverage amount"
+                          defaultValue="500000"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Co-Payment (%)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Co-payment percentage"
+                          defaultValue="10"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Medical Details */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Medical Details</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Admission Date</Label>
+                        <Input
+                          type="datetime-local"
+                          defaultValue="2025-11-01T09:00"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Discharge Date</Label>
+                        <Input
+                          type="datetime-local"
+                          defaultValue="2025-11-05T14:00"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Doctor In Charge</Label>
+                        <Input
+                          placeholder="Consulting doctor name"
+                          defaultValue="Dr. Sarah Johnson"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Diagnosis / Case</Label>
+                        <Textarea
+                          placeholder="Primary diagnosis and case details"
+                          defaultValue="Acute appendicitis with peritonitis - Emergency appendectomy performed"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                          rows={2}
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Treatment Summary</Label>
+                        <Textarea
+                          placeholder="Brief treatment summary"
+                          defaultValue="Patient admitted with acute abdomen. Emergency appendectomy performed under GA. Post-op recovery uneventful. Discharged on oral antibiotics."
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Financial Details */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Financial Details</div>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div>
+                        <Label>Total Bill Amount *</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue={selectedClaim.claimedAmount}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Claimed Amount *</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue={selectedClaim.claimedAmount}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Approved Amount</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue={selectedClaim.approvedAmount || ""}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Deductible Amount</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="5000"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Non-Payable Amount</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="0"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Co-Payment Amount</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="4000"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Patient Payable</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="9000"
+                          readOnly
+                          className="bg-muted font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <Label>TPA Payable</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="36000"
+                          readOnly
+                          className="bg-muted font-semibold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Documents */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold">Attached Documents</div>
+                      {isEditMode && (
+                        <Button variant="outline" size="sm">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Document
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      {["Discharge Summary", "Medical Bills", "Investigation Reports", "Pre-Auth Letter"].map(doc => (
+                        <div key={doc} className="border rounded-lg p-3 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium truncate">{doc}</div>
+                            <div className="text-[10px] text-muted-foreground">PDF • 2.3 MB</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Remarks */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Remarks & Notes</div>
+                    <div>
+                      <Label>Internal Notes</Label>
+                      <Textarea
+                        placeholder="Add any internal notes or remarks"
+                        defaultValue="Pre-authorization obtained. All documents submitted. Awaiting approval from TPA."
+                        readOnly={!isEditMode}
+                        className={!isEditMode ? "bg-muted" : ""}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter className="gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowViewClaimDialog(false)
+                        setIsEditMode(false)
+                      }}
+                    >
+                      Close
+                    </Button>
+                    {isEditMode ? (
+                      <>
+                        <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                          Cancel Edit
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            toast({
+                              title: "Claim Updated",
+                              description: "Insurance claim has been updated successfully",
+                            })
+                            setIsEditMode(false)
+                          }}
+                        >
+                          Save Changes
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowPrintPreview(true)
+                            toast({
+                              title: "Generating Bill",
+                              description: "Preparing bill for printing",
+                            })
+                          }}
+                        >
+                          <Printer className="h-4 w-4 mr-2" />
+                          Print Bill
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowPrintPreview(true)
+                            toast({
+                              title: "Bill Generated",
+                              description: "Insurance claim bill generated successfully",
+                            })
+                          }}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generate Bill
+                        </Button>
+                      </>
+                    )}
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Print Preview Dialog with Bill Layout */}
+          {showPrintPreview && selectedClaim && (
+            <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
+              <DialogContent className="max-w-[98vw] w-full h-[98vh] max-h-[98vh] p-0">
+                <DialogHeader className="p-6 pb-0">
+                  <DialogTitle className="flex items-center justify-between">
+                    <span>Bill Preview</span>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setShowPrintPreview(false)}>
+                        Close
+                      </Button>
+                      <Button onClick={handlePrint}>
+                        <Printer className="h-4 w-4 mr-2" />
+                        Print
+                      </Button>
+                    </div>
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="overflow-auto p-6">
+                  <BillPrintLayout
+                    ref={printRef}
+                    patientInfo={{
+                      name: selectedClaim.patient,
+                      uhid: "PAT001",
+                      age: "45 Years",
+                      gender: "Male",
+                      pan: "ABCDE1234F",
+                      cin: selectedClaim.policyNo,
+                      address: "123 Main Street, Kolkata - 700001",
+                    }}
+                    visitInfo={{
+                      admissionDate: "01/11/2025",
+                      dischargeDate: "05/11/2025",
+                      doctor: "Dr. Sarah Johnson",
+                      diagnosis: "Acute appendicitis with peritonitis - Emergency appendectomy performed",
+                    }}
+                    insuranceInfo={{
+                      tpa: selectedClaim.tpa,
+                      policyNo: selectedClaim.policyNo,
+                      policyValidity: "31/12/2026",
+                      preAuthNo: "PA123456",
+                      sumInsured: 500000,
+                      coPaymentPercent: 10,
+                    }}
+                    financialInfo={{
+                      totalBillAmount: Number(selectedClaim.claimedAmount),
+                      claimedAmount: Number(selectedClaim.claimedAmount),
+                      approvedAmount: Number(selectedClaim.approvedAmount || selectedClaim.claimedAmount),
+                      deductibleAmount: 5000,
+                      nonPayableAmount: 0,
+                      coPaymentAmount: 4000,
+                      patientPayable: 9000,
+                      tpaPayable: 36000,
+                    }}
+                    treatmentSummary="Patient admitted with acute abdomen. Emergency appendectomy performed under GA. Post-op recovery uneventful. Discharged on oral antibiotics with follow-up in 1 week."
+                    billingCategories={[
+                      {
+                        id: "medical-services",
+                        name: "MEDICAL SERVICES",
+                        items: [
+                          {
+                            id: "cons-1",
+                            description: "Doctor Consultation & Treatment",
+                            type: "consultation",
+                            rate: 12000,
+                            discount: 0,
+                            amount: 12000,
+                          },
+                          {
+                            id: "surg-1",
+                            description: "Surgical Procedure - Appendectomy",
+                            type: "surgery",
+                            rate: 15000,
+                            discount: 0,
+                            amount: 15000,
+                          },
+                        ],
+                      },
+                      {
+                        id: "hospitalization",
+                        name: "HOSPITALIZATION CHARGES",
+                        items: [
+                          {
+                            id: "room-1",
+                            description: "Room Rent - General Ward (4 days)",
+                            type: "days",
+                            rate: 2000,
+                            discount: 0,
+                            amount: 8000,
+                          },
+                          {
+                            id: "nursing-1",
+                            description: "Nursing & Attendant Charges",
+                            type: "days",
+                            rate: 500,
+                            discount: 0,
+                            amount: 2000,
+                          },
+                        ],
+                      },
+                      {
+                        id: "investigations",
+                        name: "INVESTIGATIONS & DIAGNOSTICS",
+                        items: [
+                          {
+                            id: "lab-1",
+                            description: "Blood Tests - CBC, LFT, RFT",
+                            type: "set",
+                            rate: 1500,
+                            discount: 0,
+                            amount: 1500,
+                          },
+                          {
+                            id: "rad-1",
+                            description: "USG Abdomen & X-Ray",
+                            type: "set",
+                            rate: 1500,
+                            discount: 0,
+                            amount: 1500,
+                          },
+                        ],
+                      },
+                      {
+                        id: "pharmacy",
+                        name: "PHARMACY & MEDICINES",
+                        items: [
+                          {
+                            id: "med-1",
+                            description: "IV Antibiotics & Injections",
+                            type: "lumpsum",
+                            rate: 3000,
+                            discount: 0,
+                            amount: 3000,
+                          },
+                          {
+                            id: "med-2",
+                            description: "Oral Medications & Discharge Medicines",
+                            type: "lumpsum",
+                            rate: 2000,
+                            discount: 0,
+                            amount: 2000,
+                          },
+                        ],
+                      },
+                      {
+                        id: "consumables",
+                        name: "CONSUMABLES & SUPPLIES",
+                        items: [
+                          {
+                            id: "cons-1",
+                            description: "IV Fluids, Syringes & Dressings",
+                            type: "lumpsum",
+                            rate: 1500,
+                            discount: 0,
+                            amount: 1500,
+                          },
+                          {
+                            id: "surg-supplies",
+                            description: "Surgical Consumables",
+                            type: "lumpsum",
+                            rate: 500,
+                            discount: 0,
+                            amount: 500,
+                          },
+                        ],
+                      },
+                    ]}
+                    billNumber={selectedClaim.claimId.replace("CLM", "BILL")}
+                    refNumber={selectedClaim.claimId}
+                    date={new Date().toLocaleDateString("en-GB")}
+                    total={selectedClaim.claimedAmount}
+                    totalDiscount={0}
+                    subtotal={selectedClaim.claimedAmount}
+                    serviceCharge={selectedClaim.claimedAmount * 0.15}
+                    billAmount={selectedClaim.claimedAmount + selectedClaim.claimedAmount * 0.15}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* View/Edit Claim Dialog */}
+          <Dialog open={showViewClaimDialog} onOpenChange={setShowViewClaimDialog}>
+            <DialogContent className="max-w-[98vw] w-full h-[98vh] max-h-[98vh] overflow-y-auto p-8">
+              <DialogHeader>
+                <DialogTitle className="text-2xl flex items-center justify-between">
+                  <span>{isEditMode ? "Edit Insurance Claim" : "View Insurance Claim"}</span>
+                  {!isEditMode && (
+                    <Button variant="outline" size="sm" onClick={() => setIsEditMode(true)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Enable Edit Mode
+                    </Button>
+                  )}
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  {selectedClaim && `Claim ID: ${selectedClaim.claimId} | Policy No: ${selectedClaim.policyNo}`}
+                </DialogDescription>
+              </DialogHeader>
+
+              {selectedClaim && (
+                <>
+                  {/* Claim Information */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Claim Information</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Claim ID</Label>
+                        <Input value={selectedClaim.claimId} readOnly className="bg-muted font-mono" />
+                      </div>
+                      <div>
+                        <Label>Claim Status *</Label>
+                        <Select
+                          value={claimInfo.status || selectedClaim.status}
+                          onValueChange={value => setClaimInfo({ ...claimInfo, status: value })}
+                          disabled={!isEditMode}
+                        >
+                          <SelectTrigger className={!isEditMode ? "bg-muted" : ""}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Pending">Pending</SelectItem>
+                            <SelectItem value="Approved">Approved</SelectItem>
+                            <SelectItem value="Rejected">Rejected</SelectItem>
+                            <SelectItem value="Under Review">Under Review</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Claim Date</Label>
+                        <Input
+                          type="date"
+                          defaultValue={new Date().toISOString().split("T")[0]}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Patient Information */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Patient Information</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Patient Name *</Label>
+                        <Input
+                          placeholder="Enter patient name"
+                          defaultValue={selectedClaim.patient}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Patient UHID</Label>
+                        <Input
+                          placeholder="e.g., PAT001"
+                          defaultValue="PAT001"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Age / Gender</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="Age"
+                            defaultValue="45"
+                            readOnly={!isEditMode}
+                            className={!isEditMode ? "bg-muted" : ""}
+                          />
+                          <Select disabled={!isEditMode} defaultValue="Male">
+                            <SelectTrigger className={!isEditMode ? "bg-muted" : ""}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Patient Address</Label>
+                        <Input
+                          placeholder="Enter complete address"
+                          defaultValue="123 Main Street, Kolkata - 700001"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Insurance Details */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Insurance/TPA Details</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>TPA/Insurance Provider *</Label>
+                        <Select defaultValue={selectedClaim.tpa} disabled={!isEditMode}>
+                          <SelectTrigger className={!isEditMode ? "bg-muted" : ""}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Star Health">Star Health</SelectItem>
+                            <SelectItem value="HDFC Ergo">HDFC Ergo</SelectItem>
+                            <SelectItem value="ICICI Lombard">ICICI Lombard</SelectItem>
+                            <SelectItem value="Max Bupa">Max Bupa</SelectItem>
+                            <SelectItem value="Reliance Health">Reliance Health</SelectItem>
+                            <SelectItem value="Care Health">Care Health</SelectItem>
+                            <SelectItem value="Bajaj Allianz">Bajaj Allianz</SelectItem>
+                            <SelectItem value="New India Assurance">New India Assurance</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Policy Number *</Label>
+                        <Input
+                          placeholder="Enter policy number"
+                          defaultValue={selectedClaim.policyNo}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Policy Validity</Label>
+                        <Input
+                          type="date"
+                          defaultValue="2026-12-31"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Pre-Auth Number</Label>
+                        <Input
+                          placeholder="Enter pre-authorization number"
+                          defaultValue="PA123456"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Sum Insured</Label>
+                        <Input
+                          type="number"
+                          placeholder="Total coverage amount"
+                          defaultValue="500000"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Co-Payment (%)</Label>
+                        <Input
+                          type="number"
+                          placeholder="Co-payment percentage"
+                          defaultValue="10"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Medical Details */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Medical Details</div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <Label>Admission Date</Label>
+                        <Input
+                          type="datetime-local"
+                          defaultValue="2025-11-01T09:00"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Discharge Date</Label>
+                        <Input
+                          type="datetime-local"
+                          defaultValue="2025-11-05T14:00"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Doctor In Charge</Label>
+                        <Input
+                          placeholder="Consulting doctor name"
+                          defaultValue="Dr. Sarah Johnson"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Diagnosis / Case</Label>
+                        <Textarea
+                          placeholder="Primary diagnosis and case details"
+                          defaultValue="Acute appendicitis with peritonitis - Emergency appendectomy performed"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                          rows={2}
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <Label>Treatment Summary</Label>
+                        <Textarea
+                          placeholder="Brief treatment summary"
+                          defaultValue="Patient admitted with acute abdomen. Emergency appendectomy performed under GA. Post-op recovery uneventful. Discharged on oral antibiotics."
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Financial Details */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Financial Details</div>
+                    <div className="grid grid-cols-4 gap-4">
+                      <div>
+                        <Label>Total Bill Amount *</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue={selectedClaim.claimedAmount}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Claimed Amount *</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue={selectedClaim.claimedAmount}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Approved Amount</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue={selectedClaim.approvedAmount || ""}
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Deductible Amount</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="5000"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Non-Payable Amount</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="0"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Co-Payment Amount</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="4000"
+                          readOnly={!isEditMode}
+                          className={!isEditMode ? "bg-muted" : ""}
+                        />
+                      </div>
+                      <div>
+                        <Label>Patient Payable</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="9000"
+                          readOnly
+                          className="bg-muted font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <Label>TPA Payable</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          defaultValue="36000"
+                          readOnly
+                          className="bg-muted font-semibold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Documents */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold">Attached Documents</div>
+                      {isEditMode && (
+                        <Button variant="outline" size="sm">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Document
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      {["Discharge Summary", "Medical Bills", "Investigation Reports", "Pre-Auth Letter"].map(doc => (
+                        <div key={doc} className="border rounded-lg p-3 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium truncate">{doc}</div>
+                            <div className="text-[10px] text-muted-foreground">PDF • 2.3 MB</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Remarks */}
+                  <div className="space-y-4">
+                    <div className="text-sm font-semibold">Remarks & Notes</div>
+                    <div>
+                      <Label>Internal Notes</Label>
+                      <Textarea
+                        placeholder="Add any internal notes or remarks"
+                        defaultValue="Pre-authorization obtained. All documents submitted. Awaiting approval from TPA."
+                        readOnly={!isEditMode}
+                        className={!isEditMode ? "bg-muted" : ""}
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter className="gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowViewClaimDialog(false)
+                        setIsEditMode(false)
+                      }}
+                    >
+                      Close
+                    </Button>
+                    {isEditMode ? (
+                      <>
+                        <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                          Cancel Edit
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            toast({
+                              title: "Claim Updated",
+                              description: "Insurance claim has been updated successfully",
+                            })
+                            setIsEditMode(false)
+                          }}
+                        >
+                          Save Changes
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowPrintPreview(true)
+                            toast({
+                              title: "Generating Bill",
+                              description: "Preparing bill for printing",
+                            })
+                          }}
+                        >
+                          <Printer className="h-4 w-4 mr-2" />
+                          Print Bill
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowPrintPreview(true)
+                            toast({
+                              title: "Bill Generated",
+                              description: "Insurance claim bill generated successfully",
+                            })
+                          }}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Generate Bill
+                        </Button>
+                      </>
+                    )}
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Print Preview Dialog with Bill Layout */}
+          {showPrintPreview && selectedClaim && (
+            <Dialog open={showPrintPreview} onOpenChange={setShowPrintPreview}>
+              <DialogContent className="max-w-[98vw] w-full h-[98vh] max-h-[98vh] p-0">
+                <DialogHeader className="p-6 pb-0">
+                  <DialogTitle className="flex items-center justify-between">
+                    <span>Bill Preview</span>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setShowPrintPreview(false)}>
+                        Close
+                      </Button>
+                      <Button onClick={handlePrint}>
+                        <Printer className="h-4 w-4 mr-2" />
+                        Print
+                      </Button>
+                    </div>
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="overflow-auto p-6">
+                  <BillPrintLayout
+                    ref={printRef}
+                    patientInfo={{
+                      name: selectedClaim.patient,
+                      uhid: "PAT001",
+                      age: "45 Years",
+                      gender: "Male",
+                      pan: "ABCDE1234F",
+                      cin: selectedClaim.policyNo,
+                      address: "123 Main Street, Kolkata - 700001",
+                    }}
+                    visitInfo={{
+                      admissionDate: "01/11/2025",
+                      dischargeDate: "05/11/2025",
+                      doctor: "Dr. Sarah Johnson",
+                      diagnosis: "Acute appendicitis with peritonitis - Emergency appendectomy performed",
+                    }}
+                    insuranceInfo={{
+                      tpa: selectedClaim.tpa,
+                      policyNo: selectedClaim.policyNo,
+                      policyValidity: "31/12/2026",
+                      preAuthNo: "PA123456",
+                      sumInsured: 500000,
+                      coPaymentPercent: 10,
+                    }}
+                    financialInfo={{
+                      totalBillAmount: Number(selectedClaim.claimedAmount),
+                      claimedAmount: Number(selectedClaim.claimedAmount),
+                      approvedAmount: Number(selectedClaim.approvedAmount || selectedClaim.claimedAmount),
+                      deductibleAmount: 5000,
+                      nonPayableAmount: 0,
+                      coPaymentAmount: 4000,
+                      patientPayable: 9000,
+                      tpaPayable: 36000,
+                    }}
+                    treatmentSummary="Patient admitted with acute abdomen. Emergency appendectomy performed under GA. Post-op recovery uneventful. Discharged on oral antibiotics with follow-up in 1 week."
+                    billingCategories={[
+                      {
+                        id: "medical-services",
+                        name: "MEDICAL SERVICES",
+                        items: [
+                          {
+                            id: "cons-1",
+                            description: "Doctor Consultation & Treatment",
+                            type: "consultation",
+                            rate: 12000,
+                            discount: 0,
+                            amount: 12000,
+                          },
+                          {
+                            id: "surg-1",
+                            description: "Surgical Procedure - Appendectomy",
+                            type: "surgery",
+                            rate: 15000,
+                            discount: 0,
+                            amount: 15000,
+                          },
+                        ],
+                      },
+                      {
+                        id: "hospitalization",
+                        name: "HOSPITALIZATION CHARGES",
+                        items: [
+                          {
+                            id: "room-1",
+                            description: "Room Rent - General Ward (4 days)",
+                            type: "days",
+                            rate: 2000,
+                            discount: 0,
+                            amount: 8000,
+                          },
+                          {
+                            id: "nursing-1",
+                            description: "Nursing & Attendant Charges",
+                            type: "days",
+                            rate: 500,
+                            discount: 0,
+                            amount: 2000,
+                          },
+                        ],
+                      },
+                      {
+                        id: "investigations",
+                        name: "INVESTIGATIONS & DIAGNOSTICS",
+                        items: [
+                          {
+                            id: "lab-1",
+                            description: "Blood Tests - CBC, LFT, RFT",
+                            type: "set",
+                            rate: 1500,
+                            discount: 0,
+                            amount: 1500,
+                          },
+                          {
+                            id: "rad-1",
+                            description: "USG Abdomen & X-Ray",
+                            type: "set",
+                            rate: 1500,
+                            discount: 0,
+                            amount: 1500,
+                          },
+                        ],
+                      },
+                      {
+                        id: "pharmacy",
+                        name: "PHARMACY & MEDICINES",
+                        items: [
+                          {
+                            id: "med-1",
+                            description: "IV Antibiotics & Injections",
+                            type: "lumpsum",
+                            rate: 3000,
+                            discount: 0,
+                            amount: 3000,
+                          },
+                          {
+                            id: "med-2",
+                            description: "Oral Medications & Discharge Medicines",
+                            type: "lumpsum",
+                            rate: 2000,
+                            discount: 0,
+                            amount: 2000,
+                          },
+                        ],
+                      },
+                      {
+                        id: "consumables",
+                        name: "CONSUMABLES & SUPPLIES",
+                        items: [
+                          {
+                            id: "cons-1",
+                            description: "IV Fluids, Syringes & Dressings",
+                            type: "lumpsum",
+                            rate: 1500,
+                            discount: 0,
+                            amount: 1500,
+                          },
+                          {
+                            id: "surg-supplies",
+                            description: "Surgical Consumables",
+                            type: "lumpsum",
+                            rate: 500,
+                            discount: 0,
+                            amount: 500,
+                          },
+                        ],
+                      },
+                    ]}
+                    billNumber={selectedClaim.claimId.replace("CLM", "BILL")}
+                    refNumber={selectedClaim.claimId}
+                    date={new Date().toLocaleDateString("en-GB")}
+                    total={selectedClaim.claimedAmount}
+                    totalDiscount={0}
+                    subtotal={selectedClaim.claimedAmount}
+                    serviceCharge={selectedClaim.claimedAmount * 0.15}
+                    billAmount={selectedClaim.claimedAmount + selectedClaim.claimedAmount * 0.15}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* Payment Recording Dialog */}
           <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
