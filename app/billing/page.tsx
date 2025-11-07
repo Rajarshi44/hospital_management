@@ -898,11 +898,7 @@ export default function BillingPage() {
                           <TableCell>{getStatusBadge(bill.status)}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => handleViewIPDBill(bill)}
-                              >
+                              <Button variant="ghost" size="sm" onClick={() => handleViewIPDBill(bill)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </div>
@@ -964,45 +960,53 @@ export default function BillingPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => {
-                                  toast({
-                                    title: "Viewing Claim",
-                                    description: `Displaying details for ${claim.claimId}`,
-                                  })
-                                }}>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    toast({
+                                      title: "Viewing Claim",
+                                      description: `Displaying details for ${claim.claimId}`,
+                                    })
+                                  }}
+                                >
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                  toast({
-                                    title: "Edit Claim",
-                                    description: `Opening editor for ${claim.claimId}`,
-                                  })
-                                }}>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    toast({
+                                      title: "Edit Claim",
+                                      description: `Opening editor for ${claim.claimId}`,
+                                    })
+                                  }}
+                                >
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit Claim
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => {
-                                  toast({
-                                    title: "Documents",
-                                    description: `Viewing documents for ${claim.claimId}`,
-                                  })
-                                }}>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    toast({
+                                      title: "Documents",
+                                      description: `Viewing documents for ${claim.claimId}`,
+                                    })
+                                  }}
+                                >
                                   <FileText className="h-4 w-4 mr-2" />
                                   View Documents
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                  toast({
-                                    title: "Upload Document",
-                                    description: `Upload document for ${claim.claimId}`,
-                                  })
-                                }}>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    toast({
+                                      title: "Upload Document",
+                                      description: `Upload document for ${claim.claimId}`,
+                                    })
+                                  }}
+                                >
                                   <Upload className="h-4 w-4 mr-2" />
                                   Upload Document
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => {
                                     toast({
                                       title: "Approve Claim",
@@ -1014,7 +1018,7 @@ export default function BillingPage() {
                                   <CheckCircle className="h-4 w-4 mr-2" />
                                   Approve Claim
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => {
                                     toast({
                                       title: "Reject Claim",
@@ -1029,21 +1033,25 @@ export default function BillingPage() {
                                   Reject Claim
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => {
-                                  toast({
-                                    title: "Printing Claim",
-                                    description: `Generating PDF for ${claim.claimId}`,
-                                  })
-                                }}>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    toast({
+                                      title: "Printing Claim",
+                                      description: `Generating PDF for ${claim.claimId}`,
+                                    })
+                                  }}
+                                >
                                   <Printer className="h-4 w-4 mr-2" />
                                   Print Claim
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                  toast({
-                                    title: "Download Claim",
-                                    description: `Downloading ${claim.claimId}`,
-                                  })
-                                }}>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    toast({
+                                      title: "Download Claim",
+                                      description: `Downloading ${claim.claimId}`,
+                                    })
+                                  }}
+                                >
                                   <Download className="h-4 w-4 mr-2" />
                                   Download
                                 </DropdownMenuItem>
