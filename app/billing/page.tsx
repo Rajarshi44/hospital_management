@@ -246,6 +246,7 @@ export default function BillingPage() {
   const [showOPDDialog, setShowOPDDialog] = useState(false)
   const [showAdvanceDialog, setShowAdvanceDialog] = useState(false)
   const [showRefundDialog, setShowRefundDialog] = useState(false)
+  const [showNewClaimDialog, setShowNewClaimDialog] = useState(false)
   const [dateFilter, setDateFilter] = useState("today")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [paymentModeFilter, setPaymentModeFilter] = useState("all")
@@ -357,6 +358,16 @@ export default function BillingPage() {
     dischargeDate: "",
     doctor: "",
     diagnosis: "",
+  })
+
+  // Claim form state
+  const [claimInfo, setClaimInfo] = useState({
+    patient: "",
+    tpa: "",
+    policyNo: "",
+    claimedAmount: "",
+    approvedAmount: "",
+    status: "Pending",
   })
 
   // Print ref
@@ -526,6 +537,23 @@ export default function BillingPage() {
       description: "Refund request has been submitted for approval",
     })
     setShowRefundDialog(false)
+  }
+
+  const handleCreateClaim = () => {
+    toast({
+      title: "Claim Created",
+      description: "Insurance claim has been created successfully",
+    })
+    setShowNewClaimDialog(false)
+    // Reset form
+    setClaimInfo({
+      patient: "",
+      tpa: "",
+      policyNo: "",
+      claimedAmount: "",
+      approvedAmount: "",
+      status: "Pending",
+    })
   }
 
   const getStatusBadge = (status: string) => {
@@ -869,6 +897,10 @@ export default function BillingPage() {
                       <CardTitle>Insurance & TPA Claims</CardTitle>
                       <CardDescription>Manage insurance claims and TPA authorizations</CardDescription>
                     </div>
+                    <Button onClick={() => setShowNewClaimDialog(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Claim
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -1394,6 +1426,96 @@ export default function BillingPage() {
                   Cancel
                 </Button>
                 <Button onClick={addCategory}>Add Category</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* New Claim Dialog */}
+          <Dialog open={showNewClaimDialog} onOpenChange={setShowNewClaimDialog}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Insurance Claim</DialogTitle>
+                <DialogDescription>Submit a new TPA/Insurance claim request</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Patient Name *</Label>
+                  <Input
+                    placeholder="Search or enter patient name"
+                    value={claimInfo.patient}
+                    onChange={e => setClaimInfo({ ...claimInfo, patient: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>TPA/Insurance Provider *</Label>
+                  <Select
+                    value={claimInfo.tpa}
+                    onValueChange={value => setClaimInfo({ ...claimInfo, tpa: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select TPA" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Star Health">Star Health</SelectItem>
+                      <SelectItem value="HDFC Ergo">HDFC Ergo</SelectItem>
+                      <SelectItem value="ICICI Lombard">ICICI Lombard</SelectItem>
+                      <SelectItem value="Max Bupa">Max Bupa</SelectItem>
+                      <SelectItem value="Reliance Health">Reliance Health</SelectItem>
+                      <SelectItem value="Care Health">Care Health</SelectItem>
+                      <SelectItem value="Bajaj Allianz">Bajaj Allianz</SelectItem>
+                      <SelectItem value="New India Assurance">New India Assurance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Policy Number *</Label>
+                  <Input
+                    placeholder="Enter policy number"
+                    value={claimInfo.policyNo}
+                    onChange={e => setClaimInfo({ ...claimInfo, policyNo: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Claimed Amount *</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={claimInfo.claimedAmount}
+                    onChange={e => setClaimInfo({ ...claimInfo, claimedAmount: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Approved Amount</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00 (leave blank if pending)"
+                    value={claimInfo.approvedAmount}
+                    onChange={e => setClaimInfo({ ...claimInfo, approvedAmount: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Status *</Label>
+                  <Select
+                    value={claimInfo.status}
+                    onValueChange={value => setClaimInfo({ ...claimInfo, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Approved">Approved</SelectItem>
+                      <SelectItem value="Rejected">Rejected</SelectItem>
+                      <SelectItem value="Under Review">Under Review</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowNewClaimDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateClaim}>Create Claim</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

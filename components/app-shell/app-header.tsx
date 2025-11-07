@@ -1,8 +1,7 @@
 "use client"
 
-import { Search, Plus, LogOut, Settings, User } from "lucide-react"
+import { Plus, LogOut, Settings, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -78,10 +77,7 @@ export function AppHeader() {
         <Separator orientation="vertical" className="mr-2 h-4" />
 
         <div className="flex flex-1 items-center gap-2">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search patients, appointments, records... (⌘K for commands)" className="pl-8" />
-          </div>
+          {/* Search removed */}
         </div>
 
         <div className="flex items-center gap-3">
