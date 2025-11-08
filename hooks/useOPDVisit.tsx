@@ -234,7 +234,7 @@ export function useOPDVisit(options: UseOPDVisitOptions = {}) {
         occupation: formData.registration.occupation,
         idProofType: formData.registration.idProofType,
         idProofNumber: formData.registration.idProofNumber,
-        patientType: formData.registration.patientType,
+        // patientType removed - backend doesn't accept this field
         emergencyContactName: '', // Add if available
         emergencyContactPhone: '', // Add if available
         emergencyContactRelationship: '', // Add if available
@@ -246,9 +246,9 @@ export function useOPDVisit(options: UseOPDVisitOptions = {}) {
       visitDate: formData.visit.visitDate,
       visitTime: formData.visit.appointmentSlot || new Date().toTimeString().slice(0, 5),
       visitType: formData.visit.visitType,
-      appointmentMode: formData.visit.appointmentMode,
-      referralSource: formData.visit.referralSource,
-      priority: formData.visit.visitPriority,
+      appointmentMode: formData.visit.appointmentMode.toUpperCase().replace(/-/g, '_'), // Convert "Walk-in" to "WALK_IN"
+      referralSource: formData.visit.referralSource?.toUpperCase() || 'SELF', // Convert "Self" to "SELF"
+      priority: formData.visit.visitPriority.toUpperCase(), // Convert "Normal" to "NORMAL"
       
       // Clinical data
       chiefComplaint: formData.clinical.chiefComplaint,
@@ -264,7 +264,7 @@ export function useOPDVisit(options: UseOPDVisitOptions = {}) {
       finalDiagnosis: formData.diagnosis.finalDiagnosis,
       
       // Follow-up
-      followUpDate: formData.followUp?.followUpDate,
+      followUpDate: formData.followUp?.followUpDate || undefined, // Don't send empty string
       followUpInstructions: formData.followUp?.followUpInstructions,
       
       // Vitals
@@ -278,11 +278,11 @@ export function useOPDVisit(options: UseOPDVisitOptions = {}) {
         height: formData.vitals.heightCm,
         bmi: formData.vitals.bmi,
         notes: formData.vitals.weightNote,
-        recordedBy: 'system', // This should come from current user
+        // Remove recordedBy - backend doesn't accept it
       },
       
       // Prescriptions
-      prescriptions: formData.treatment.prescriptionList.map(prescription => ({
+      prescriptions: (formData.treatment.prescriptionList || []).map(prescription => ({
         drugName: prescription.drugName,
         strength: prescription.strength,
         dosage: prescription.dose,
@@ -314,7 +314,7 @@ export function useOPDVisit(options: UseOPDVisitOptions = {}) {
         additionalCharges: formData.billing.investigationEstimate || 0,
         discount: formData.billing.discountAmount || 0,
         tax: 0, // Calculate if needed
-        paymentMethod: formData.billing.paymentMode,
+        paymentMethod: formData.billing.paymentMode?.toUpperCase().replace(/ /g, '_') || 'CASH', // Convert "Cash" to "CASH", "Bank Transfer" to "BANK_TRANSFER"
         paidAmount: formData.billing.paymentStatus === 'Paid' ? 
           (formData.billing.totalPayable - (formData.billing.discountAmount || 0)) : 0,
       },

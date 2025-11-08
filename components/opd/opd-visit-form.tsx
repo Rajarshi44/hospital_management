@@ -119,7 +119,8 @@ const opdVisitSchema = z
             prescribingDoctor: z.string().optional(),
           })
         )
-        .min(1, "At least one prescription is required"),
+        .optional()
+        .default([]),
       proceduresDone: z.array(z.string()).optional(),
       treatmentNotes: z.string().optional(),
     }),
@@ -1591,6 +1592,33 @@ export function OPDVisitForm({ onSuccess, onCancel, initialData }: OPDVisitFormP
             </CollapsibleContent>
           </Card>
         </Collapsible>
+
+        {/* Form Validation Errors Alert */}
+        {Object.keys(form.formState.errors).length > 0 && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="font-semibold mb-2">Please fix the following errors:</div>
+              <ul className="list-disc list-inside space-y-1">
+                {Object.entries(form.formState.errors).map(([key, value]) => {
+                  if (typeof value === 'object' && value !== null) {
+                    // Handle nested errors
+                    return Object.entries(value).map(([nestedKey, nestedValue]: [string, any]) => (
+                      <li key={`${key}.${nestedKey}`} className="text-sm">
+                        {key}.{nestedKey}: {nestedValue?.message || 'Invalid value'}
+                      </li>
+                    ))
+                  }
+                  return (
+                    <li key={key} className="text-sm">
+                      {key}: {(value as any)?.message || 'Invalid value'}
+                    </li>
+                  )
+                })}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Submit Buttons */}
         <div className="sticky bottom-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t pt-4 -mx-6 px-6">

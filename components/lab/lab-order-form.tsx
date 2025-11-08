@@ -99,7 +99,8 @@ export function LabOrderForm({ patientId, doctorId, onSubmit, onCancel }: LabOrd
         try {
           // Try direct API call first
           const token = localStorage.getItem('accessToken')
-          const response = await fetch('http://localhost:5000/patients', {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+          const response = await fetch(`${apiUrl}/patients`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'

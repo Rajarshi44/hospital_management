@@ -19,7 +19,9 @@ import {
 } from '../types/lab.types';
 
 class LabService {
-  private baseUrl = 'http://localhost:5000/lab';
+  private baseUrl = process.env.NEXT_PUBLIC_API_URL 
+    ? `${process.env.NEXT_PUBLIC_API_URL}/lab`
+    : 'http://localhost:3001/lab';
 
   private async makeRequest<T>(
     endpoint: string, 

@@ -235,13 +235,17 @@ export default function DischargePage() {
               <p className="text-muted-foreground">View discharge history and generate reports</p>
             </div>
             <div className="flex items-center space-x-2">
+              <Button variant="outline" onClick={fetchAllData} disabled={loading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
               <Button variant="outline" onClick={() => router.push("/ipd")}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Dashboard
               </Button>
               <Button variant="outline" size="sm" onClick={exportToExcel}>
                 <Download className="h-4 w-4 mr-2" />
-                Discharge Reports
+                Export CSV
               </Button>
             </div>
           </div>
@@ -355,91 +359,13 @@ export default function DischargePage() {
               <CardDescription>View discharge records and summaries</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[250px]">Patient Info</TableHead>
-                      <TableHead>Admission Details</TableHead>
-                      <TableHead>Discharge Info</TableHead>
-                      <TableHead>Stay Duration</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredDischarges.map((discharge: DischargedPatient) => {
-                      const patient = discharge.admission.patient
-                      const doctor = discharge.admission.doctor
-                      const bed = discharge.admission.bed
-                      const admissionDate = new Date(discharge.admission.admissionDate)
-                      const dischargeDate = new Date(discharge.dischargeDate)
-                      const stayDays = Math.ceil((dischargeDate.getTime() - admissionDate.getTime()) / (1000 * 60 * 60 * 24))
-
-                      return (
-                        <TableRow key={discharge.id} className="hover:bg-muted/50">
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium">{patient.firstName} {patient.lastName}</div>
-                              <div className="text-xs text-muted-foreground">
-                                Dr. {doctor.firstName} {doctor.lastName}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                UHID: {patient.id.slice(-6).toUpperCase()}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <div className="font-medium">{bed.ward.name}</div>
-                              <Badge variant="outline" className="text-xs">
-                                Bed {bed.bedNumber}
-                              </Badge>
-                              <div className="text-xs text-muted-foreground">
-                                Admitted: {format(admissionDate, 'MMM dd, yyyy')}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <Badge variant="secondary" className="flex items-center gap-1 w-fit">
-                                <UserCheck className="h-3 w-3" />
-                                Discharged
-                              </Badge>
-                              <div className="text-xs text-muted-foreground">
-                                {format(dischargeDate, 'MMM dd, yyyy HH:mm')}
-                              </div>
-                              {discharge.treatmentSummary && (
-                                <div className="text-xs text-muted-foreground line-clamp-2">
-                                  {discharge.treatmentSummary.substring(0, 50)}...
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{stayDays} days</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  // View discharge summary
-                                  router.push(`/patients/${patient.id}/discharge/${discharge.id}`)
-                                }}
-                              >
-                                View Details
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {filteredDischarges.length === 0 && (
+              {loading ? (
+                <div className="text-center py-12">
+                  <RefreshCw className="mx-auto h-12 w-12 text-muted-foreground/50 animate-spin" />
+                  <h3 className="mt-4 text-sm font-semibold">Loading discharge records...</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Please wait</p>
+                </div>
+              ) : filteredDischarges.length === 0 ? (
                 <div className="text-center py-8">
                   <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
                   <h3 className="mt-2 text-sm font-semibold">No discharge records found</h3>
@@ -448,6 +374,90 @@ export default function DischargePage() {
                       ? "Try adjusting your search criteria."
                       : "No patients have been discharged yet."}
                   </p>
+                </div>
+              ) : (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[250px]">Patient Info</TableHead>
+                        <TableHead>Admission Details</TableHead>
+                        <TableHead>Discharge Info</TableHead>
+                        <TableHead>Stay Duration</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDischarges.map((discharge: DischargedPatient) => {
+                        const patient = discharge.admission.patient
+                        const doctor = discharge.admission.doctor
+                        const bed = discharge.admission.bed
+                        const admissionDate = new Date(discharge.admission.admissionDate)
+                        const dischargeDate = new Date(discharge.dischargeDate)
+                        const stayDays = Math.ceil((dischargeDate.getTime() - admissionDate.getTime()) / (1000 * 60 * 60 * 24))
+
+                        return (
+                          <TableRow key={discharge.id} className="hover:bg-muted/50">
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="font-medium">{patient.firstName} {patient.lastName}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  Dr. {doctor.firstName} {doctor.lastName}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  UHID: {patient.id.slice(-6).toUpperCase()}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="font-medium">{bed.ward.name}</div>
+                                <Badge variant="outline" className="text-xs">
+                                  Bed {bed.bedNumber}
+                                </Badge>
+                                <div className="text-xs text-muted-foreground">
+                                  Admitted: {format(admissionDate, 'MMM dd, yyyy')}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <Badge variant="secondary" className="flex items-center gap-1 w-fit">
+                                  <UserCheck className="h-3 w-3" />
+                                  Discharged
+                                </Badge>
+                                <div className="text-xs text-muted-foreground">
+                                  {format(dischargeDate, 'MMM dd, yyyy HH:mm')}
+                                </div>
+                                {discharge.treatmentSummary && (
+                                  <div className="text-xs text-muted-foreground line-clamp-2">
+                                    {discharge.treatmentSummary.substring(0, 50)}...
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{stayDays} days</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    // View discharge summary
+                                    router.push(`/ipd/discharge/${discharge.id}`)
+                                  }}
+                                >
+                                  View Details
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>

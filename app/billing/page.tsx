@@ -1193,12 +1193,442 @@ export default function BillingPage() {
   }
 
   const handlePrintIPDBill = () => {
-    setShowPrintPreview(true)
+    if (!selectedIPDBill) {
+      toast({
+        title: "Print Error",
+        description: "No bill selected",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const bill = selectedIPDBill
+    const patient = bill.admission?.patient
+    const admission = bill.admission
+    const bed = admission?.bed
+    const ward = bed?.ward
+
+    // Create a print window
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast({
+        title: "Print Blocked",
+        description: "Please allow pop-ups to print",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Calculate totals
+    const roomCharges = bill.roomCharges || 0
+    const doctorFees = bill.doctorFees || 0
+    const nursingCharges = bill.nursingCharges || 0
+    const medicineCharges = bill.medicineCharges || 0
+    const labCharges = bill.labCharges || 0
+    const otCharges = bill.otCharges || 0
+    const miscCharges = bill.miscCharges || 0
+    const totalAmount = bill.totalAmount || 0
+    const discount = bill.discount || 0
+    const serviceCharge = totalAmount * 0.15 // 15% service charge
+    const billAmount = totalAmount - discount
+    const roundOff = 0
+    const finalTotal = billAmount + roundOff
+
+    // Convert number to words
+    const numberToWords = (num: number) => {
+      const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine']
+      const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+      const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+      
+      if (num === 0) return 'Zero'
+      
+      const crores = Math.floor(num / 10000000)
+      const lakhs = Math.floor((num % 10000000) / 100000)
+      const thousands = Math.floor((num % 100000) / 1000)
+      const hundreds = Math.floor((num % 1000) / 100)
+      const remainder = num % 100
+      
+      let words = ''
+      
+      if (crores > 0) words += ones[crores] + ' Crore '
+      if (lakhs > 0) words += (lakhs < 10 ? ones[lakhs] : (lakhs < 20 ? teens[lakhs - 10] : tens[Math.floor(lakhs / 10)] + ' ' + ones[lakhs % 10])) + ' Lakh '
+      if (thousands > 0) words += (thousands < 10 ? ones[thousands] : (thousands < 20 ? teens[thousands - 10] : tens[Math.floor(thousands / 10)] + ' ' + ones[thousands % 10])) + ' Thousand '
+      if (hundreds > 0) words += ones[hundreds] + ' Hundred '
+      if (remainder > 0) {
+        if (remainder < 10) words += ones[remainder]
+        else if (remainder < 20) words += teens[remainder - 10]
+        else words += tens[Math.floor(remainder / 10)] + ' ' + ones[remainder % 10]
+      }
+      
+      return words.trim() + ' Only'
+    }
+
+    const amountInWords = numberToWords(Math.floor(finalTotal))
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>IPD Bill - ${bill.billNumber || bill.id.slice(0, 8)}</title>
+          <style>
+            @page { 
+              size: A4; 
+              margin: 15mm; 
+            }
+            * { 
+              margin: 0; 
+              padding: 0; 
+              box-sizing: border-box; 
+            }
+            body { 
+              font-family: Arial, sans-serif; 
+              font-size: 11px;
+              line-height: 1.4;
+              color: #000;
+              padding: 20px;
+            }
+            .header-line {
+              text-align: right;
+              font-size: 10px;
+              margin-bottom: 2px;
+            }
+            .separator {
+              border-top: 1px solid #000;
+              margin: 5px 0;
+            }
+            .double-separator {
+              border-top: 3px double #000;
+              margin: 5px 0;
+            }
+            .bill-title {
+              text-align: center;
+              font-size: 16px;
+              font-weight: bold;
+              margin: 10px 0;
+              text-decoration: underline;
+            }
+            .info-section {
+              margin: 10px 0;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 3px 0;
+            }
+            .info-label {
+              font-weight: normal;
+              min-width: 120px;
+            }
+            .info-value {
+              flex: 1;
+              text-align: left;
+            }
+            .section-header {
+              background-color: #f0f0f0;
+              padding: 4px 8px;
+              font-weight: bold;
+              margin-top: 15px;
+              border: 1px solid #000;
+              text-transform: uppercase;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 5px 0;
+            }
+            th {
+              background-color: #fff;
+              border: 1px solid #000;
+              padding: 6px 8px;
+              text-align: left;
+              font-weight: bold;
+              font-size: 10px;
+            }
+            td {
+              border: 1px solid #000;
+              padding: 5px 8px;
+              font-size: 10px;
+            }
+            .text-right {
+              text-align: right;
+            }
+            .text-center {
+              text-align: center;
+            }
+            .total-row {
+              font-weight: bold;
+              background-color: #f9f9f9;
+            }
+            .final-total {
+              font-size: 11px;
+              font-weight: bold;
+            }
+            .amount-words {
+              margin: 10px 0;
+              padding: 8px;
+              background-color: #f5f5f5;
+              border: 1px solid #ccc;
+              font-style: italic;
+            }
+            .footer {
+              margin-top: 40px;
+              display: flex;
+              justify-content: space-between;
+            }
+            .signature-line {
+              border-top: 1px solid #000;
+              width: 200px;
+              margin-top: 60px;
+              padding-top: 5px;
+              text-align: center;
+            }
+            @media print {
+              body { padding: 10px; }
+            }
+          </style>
+        </head>
+        <body>
+          <!-- Header -->
+          <div class="header-line">Pan No. : AAUCS6437L</div>
+          <div class="header-line">Sv Tax No.: ABDPH9183MSD001</div>
+          <div class="double-separator"></div>
+          
+          <div class="bill-title">BILL</div>
+          
+          <!-- Patient and Insurance Info -->
+          <div class="info-section">
+            <div style="display: flex; justify-content: space-between;">
+              <div style="width: 48%;">
+                <div class="info-row">
+                  <span class="info-label">To</span>
+                </div>
+                <div class="info-row">
+                  <strong>INSURANCE COMPANY</strong>
+                </div>
+                <div class="info-row">
+                  <span>Name of Patient :</span>
+                  <span><strong>${patient?.firstName || ''} ${patient?.lastName || ''}</strong></span>
+                </div>
+                <div class="info-row">
+                  <span>CLAIM NO.</span>
+                  <span>: ${bill.id.slice(0, 8).toUpperCase()}</span>
+                </div>
+                <div class="info-row">
+                  <span>POLICY NO.</span>
+                  <span>: 000000001618420S-05 2025</span>
+                </div>
+                <div class="info-row">
+                  <span>Patient Address</span>
+                  <span>: ${patient?.address || 'N/A'}</span>
+                </div>
+                <div class="info-row">
+                  <span>Admission Date</span>
+                  <span>: ${admission?.admissionTime ? new Date(admission.admissionTime).toLocaleDateString('en-IN') : 'N/A'} Time: ${admission?.admissionTime ? new Date(admission.admissionTime).toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'}) : 'N/A'}</span>
+                </div>
+                <div class="info-row">
+                  <span>Discharge Date</span>
+                  <span>: ${admission?.dischargeTime ? new Date(admission.dischargeTime).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')} Time: ${admission?.dischargeTime ? new Date(admission.dischargeTime).toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'}) : new Date().toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'})}</span>
+                </div>
+                <div class="info-row">
+                  <span>Doctor In Charge :</span>
+                  <span>${admission?.doctor ? `DR.${admission.doctor.firstName} ${admission.doctor.lastName}`.toUpperCase() : 'DR.ATTENDING PHYSICIAN'}</span>
+                </div>
+              </div>
+              <div style="width: 48%; text-align: right;">
+                <div class="info-row">
+                  <span>Insurance Bill No. :</span>
+                </div>
+                <div class="info-row">
+                  <span>SI No.</span>
+                  <span>: ${bill.billNumber || bill.id.slice(0, 12).toUpperCase()}</span>
+                </div>
+                <div class="info-row">
+                  <span>Date</span>
+                  <span>: ${new Date().toLocaleDateString('en-IN')}</span>
+                </div>
+                <div class="info-row">
+                  <span>Regd. No.</span>
+                  <span>: ${patient?.patientId || 'N/A'}</span>
+                </div>
+                <div class="info-row">
+                  <span>Age</span>
+                  <span>: ${patient?.age || patient?.dateOfBirth ? Math.floor((new Date().getTime() - new Date(patient.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 'N/A'}</span>
+                </div>
+                <div class="info-row">
+                  <span>Sex</span>
+                  <span>: ${patient?.gender || 'N/A'}</span>
+                </div>
+                <div class="info-row">
+                  <span>Pan No.</span>
+                  <span>: AAUCS6437L</span>
+                </div>
+                <div class="info-row">
+                  <span>CIN No.</span>
+                  <span>: U85100WB2014PTC200561</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charges Table -->
+          <table style="margin-top: 15px;">
+            <thead>
+              <tr>
+                <th style="width: 45%;">Description</th>
+                <th style="width: 15%;" class="text-center">Unit</th>
+                <th style="width: 12%;" class="text-right">Rate</th>
+                <th style="width: 12%;" class="text-right">Amount</th>
+                <th style="width: 10%;" class="text-right">Serv. Ch.<br/>(15.00%)</th>
+                <th style="width: 12%;" class="text-right">Gross</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${roomCharges > 0 ? `
+              <tr>
+                <td colspan="6" style="background-color: #f0f0f0; font-weight: bold;">BED CHARGES ::</td>
+              </tr>
+              <tr>
+                <td>Delux General Ward Bed No. : ${bed?.bedNumber || 'N/A'}</td>
+                <td class="text-center">Days / ${Math.ceil((new Date().getTime() - new Date(admission?.admissionTime || new Date()).getTime()) / (1000 * 60 * 60 * 24))}</td>
+                <td class="text-right">${(roomCharges / Math.max(1, Math.ceil((new Date().getTime() - new Date(admission?.admissionTime || new Date()).getTime()) / (1000 * 60 * 60 * 24)))).toFixed(2)}</td>
+                <td class="text-right">${roomCharges.toFixed(2)}</td>
+                <td class="text-right">${(roomCharges * 0.15).toFixed(2)}</td>
+                <td class="text-right">${(roomCharges + roomCharges * 0.15).toFixed(2)}</td>
+              </tr>
+              ` : ''}
+              ${nursingCharges > 0 || true ? `
+              <tr>
+                <td colspan="6" style="background-color: #f0f0f0; font-weight: bold;">GENERAL CHARGES</td>
+              </tr>
+              <tr>
+                <td>ATTENDANT CHARGES</td>
+                <td class="text-center">DAY / 5</td>
+                <td class="text-right">200.00</td>
+                <td class="text-right">${(nursingCharges || 1000).toFixed(2)}</td>
+                <td class="text-right">Nil</td>
+                <td class="text-right">${(nursingCharges || 1000).toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td>RECORD KEEPING CHARGES</td>
+                <td class="text-center">CASE / 1</td>
+                <td class="text-right">200.00</td>
+                <td class="text-right">200.00</td>
+                <td class="text-right">Nil</td>
+                <td class="text-right">200.00</td>
+              </tr>
+              <tr>
+                <td>PATIENT IDENTIFICATION TAG</td>
+                <td class="text-center">CASE / 1</td>
+                <td class="text-right">30.00</td>
+                <td class="text-right">30.00</td>
+                <td class="text-right">Nil</td>
+                <td class="text-right">30.00</td>
+              </tr>
+              ` : ''}
+              ${bed ? `
+              <tr>
+                <td colspan="6" style="background-color: #f0f0f0; font-weight: bold;">WARD ITEMS</td>
+              </tr>
+              <tr>
+                <td>PATIENT C.B. (WARD)</td>
+                <td class="text-center">UNIT / 17</td>
+                <td class="text-right">100.00</td>
+                <td class="text-right">1,700.00</td>
+                <td class="text-right">Nil</td>
+                <td class="text-right">1,700.00</td>
+              </tr>
+              ` : ''}
+              ${doctorFees > 0 ? `
+              <tr>
+                <td colspan="6" style="background-color: #f0f0f0; font-weight: bold;">DOCTOR CHARGES ::</td>
+              </tr>
+              <tr>
+                <td>CONSULTANT - ${admission?.doctor ? `DR.${admission.doctor.firstName} ${admission.doctor.lastName}`.toUpperCase() : 'DR.ATTENDING PHYSICIAN'}</td>
+                <td class="text-center">VISIT / 6</td>
+                <td class="text-right">${(doctorFees / 6).toFixed(2)}</td>
+                <td class="text-right">${doctorFees.toFixed(2)}</td>
+                <td class="text-right">Nil</td>
+                <td class="text-right">${doctorFees.toFixed(2)}</td>
+              </tr>
+              ` : ''}
+              ${(labCharges > 0 || medicineCharges > 0) ? `
+              <tr>
+                <td colspan="6" style="background-color: #f0f0f0; font-weight: bold;">OTHER CHARGES ::</td>
+              </tr>
+              ${labCharges > 0 ? `
+              <tr>
+                <td>DIAGNOSTIC DIVISION</td>
+                <td class="text-center"></td>
+                <td class="text-right"></td>
+                <td class="text-right">${labCharges.toFixed(2)}</td>
+                <td class="text-right">Nil</td>
+                <td class="text-right">${labCharges.toFixed(2)}</td>
+              </tr>
+              ` : ''}
+              ${medicineCharges > 0 ? `
+              <tr>
+                <td>MEDICAL STORE</td>
+                <td class="text-center"></td>
+                <td class="text-right"></td>
+                <td class="text-right">${medicineCharges.toFixed(2)}</td>
+                <td class="text-right">Nil</td>
+                <td class="text-right">${medicineCharges.toFixed(2)}</td>
+              </tr>
+              ` : ''}
+              ` : ''}
+              <!-- Totals -->
+              <tr class="total-row">
+                <td colspan="3" class="text-right">Total ::</td>
+                <td class="text-right">${totalAmount.toFixed(2)}</td>
+                <td class="text-right">${serviceCharge.toFixed(2)}</td>
+                <td class="text-right">${(totalAmount + serviceCharge).toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="text-right">Less : Discount</td>
+                <td colspan="3" class="text-right">${discount.toFixed(2)}</td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="3" class="text-right">Bill Amount</td>
+                <td colspan="3" class="text-right final-total">${billAmount.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="text-right">Round Off</td>
+                <td colspan="3" class="text-right">(+) ${roundOff.toFixed(2)}</td>
+              </tr>
+              <tr class="total-row" style="background-color: #e0e0e0;">
+                <td colspan="3" class="text-right final-total">Total</td>
+                <td colspan="3" class="text-right final-total">${finalTotal.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Amount in Words -->
+          <div class="amount-words">
+            <strong>Bill Amount In Words :</strong><br/>
+            Rupees. ${amountInWords}
+          </div>
+
+          <!-- Footer -->
+          <div class="footer">
+            <div>
+              <div class="signature-line">Signature of Patient / Guardian</div>
+            </div>
+            <div style="text-align: right;">
+              <div><strong>For : SRIJANI HEALING HOME</strong></div>
+              <div class="signature-line" style="margin-left: auto;">Authorized Signatory</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+    
     setTimeout(() => {
-      handlePrint()
-    }, 100)
+      printWindow.print()
+    }, 300)
+
     toast({
-      title: "Printing IPD Bill",
+      title: "Print Ready",
       description: "Opening print dialog...",
     })
   }
@@ -4065,6 +4495,202 @@ export default function BillingPage() {
                   </Button>
                 </DialogFooter>
               </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* View IPD Bill Dialog */}
+          <Dialog open={showViewIPDBillDialog} onOpenChange={setShowViewIPDBillDialog}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>IPD Bill Details</DialogTitle>
+                <DialogDescription>
+                  {selectedIPDBill && `Bill ID: ${selectedIPDBill.billNumber || selectedIPDBill.id.slice(0, 8)}`}
+                </DialogDescription>
+              </DialogHeader>
+              
+              {selectedIPDBill && (
+                <div className="space-y-6" id="ipd-bill-print-content">
+                  {/* Bill Header */}
+                  <div className="border-b pb-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h3 className="font-semibold text-lg mb-2">Patient Information</h3>
+                        <div className="space-y-1 text-sm">
+                          <p><span className="font-medium">Name:</span> {selectedIPDBill.admission?.patient?.firstName} {selectedIPDBill.admission?.patient?.lastName}</p>
+                          <p><span className="font-medium">Patient ID:</span> {selectedIPDBill.admission?.patient?.patientId}</p>
+                          <p><span className="font-medium">Phone:</span> {selectedIPDBill.admission?.patient?.phone || 'N/A'}</p>
+                          <p><span className="font-medium">Age/Gender:</span> {selectedIPDBill.admission?.patient?.age || 'N/A'} / {selectedIPDBill.admission?.patient?.gender || 'N/A'}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg mb-2">Admission Information</h3>
+                        <div className="space-y-1 text-sm">
+                          <p><span className="font-medium">Admission ID:</span> {selectedIPDBill.admission?.admissionId || selectedIPDBill.admissionId.slice(0, 8)}</p>
+                          <p><span className="font-medium">Admission Date:</span> {selectedIPDBill.admission?.admissionTime ? new Date(selectedIPDBill.admission.admissionTime).toLocaleDateString() : 'N/A'}</p>
+                          <p><span className="font-medium">Ward/Bed:</span> {selectedIPDBill.admission?.bed?.ward?.name || 'N/A'} - {selectedIPDBill.admission?.bed?.bedNumber || 'N/A'}</p>
+                          <p><span className="font-medium">Attending Doctor:</span> {selectedIPDBill.admission?.doctor?.firstName || 'N/A'} {selectedIPDBill.admission?.doctor?.lastName || ''}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bill Charges Breakdown */}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3">Bill Breakdown</h3>
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Description</th>
+                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {selectedIPDBill.roomCharges > 0 && (
+                            <tr>
+                              <td className="px-4 py-3 text-sm">Room Charges</td>
+                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.roomCharges.toLocaleString()}</td>
+                            </tr>
+                          )}
+                          {selectedIPDBill.doctorFees > 0 && (
+                            <tr>
+                              <td className="px-4 py-3 text-sm">Doctor Fees</td>
+                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.doctorFees.toLocaleString()}</td>
+                            </tr>
+                          )}
+                          {selectedIPDBill.nursingCharges > 0 && (
+                            <tr>
+                              <td className="px-4 py-3 text-sm">Nursing Charges</td>
+                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.nursingCharges.toLocaleString()}</td>
+                            </tr>
+                          )}
+                          {selectedIPDBill.medicineCharges > 0 && (
+                            <tr>
+                              <td className="px-4 py-3 text-sm">Medicine Charges</td>
+                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.medicineCharges.toLocaleString()}</td>
+                            </tr>
+                          )}
+                          {selectedIPDBill.labCharges > 0 && (
+                            <tr>
+                              <td className="px-4 py-3 text-sm">Lab Charges</td>
+                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.labCharges.toLocaleString()}</td>
+                            </tr>
+                          )}
+                          {selectedIPDBill.otCharges > 0 && (
+                            <tr>
+                              <td className="px-4 py-3 text-sm">Operation Theatre Charges</td>
+                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.otCharges.toLocaleString()}</td>
+                            </tr>
+                          )}
+                          {selectedIPDBill.miscCharges > 0 && (
+                            <tr>
+                              <td className="px-4 py-3 text-sm">Miscellaneous Charges</td>
+                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.miscCharges.toLocaleString()}</td>
+                            </tr>
+                          )}
+                          <tr className="bg-gray-50 font-semibold">
+                            <td className="px-4 py-3 text-sm">Total Amount</td>
+                            <td className="px-4 py-3 text-sm text-right">₹{(selectedIPDBill.totalAmount || 0).toLocaleString()}</td>
+                          </tr>
+                          {selectedIPDBill.discount > 0 && (
+                            <tr className="text-green-600">
+                              <td className="px-4 py-3 text-sm">Discount</td>
+                              <td className="px-4 py-3 text-sm text-right">- ₹{selectedIPDBill.discount.toLocaleString()}</td>
+                            </tr>
+                          )}
+                          <tr className="bg-blue-50 font-bold text-lg">
+                            <td className="px-4 py-3">Net Amount</td>
+                            <td className="px-4 py-3 text-right">₹{((selectedIPDBill.totalAmount || 0) - (selectedIPDBill.discount || 0)).toLocaleString()}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Payment Summary */}
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3">Payment Summary</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Paid Amount</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-2xl font-bold text-green-600">₹{(selectedIPDBill.paidAmount || 0).toLocaleString()}</p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Balance Amount</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-2xl font-bold text-red-600">₹{(selectedIPDBill.balanceAmount || 0).toLocaleString()}</p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm">Status</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="pt-1">{getStatusBadge(selectedIPDBill.paymentStatus)}</div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+
+                  {/* Payment History (if available) */}
+                  {selectedIPDBill.payments && selectedIPDBill.payments.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-3">Payment History</h3>
+                      <div className="border rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-sm font-medium">Date</th>
+                              <th className="px-4 py-2 text-left text-sm font-medium">Amount</th>
+                              <th className="px-4 py-2 text-left text-sm font-medium">Method</th>
+                              <th className="px-4 py-2 text-left text-sm font-medium">Transaction ID</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {selectedIPDBill.payments.map((payment: any, idx: number) => (
+                              <tr key={idx}>
+                                <td className="px-4 py-2 text-sm">{new Date(payment.createdAt).toLocaleDateString()}</td>
+                                <td className="px-4 py-2 text-sm">₹{payment.amount.toLocaleString()}</td>
+                                <td className="px-4 py-2 text-sm">{payment.paymentMethod}</td>
+                                <td className="px-4 py-2 text-sm">{payment.transactionId || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter className="flex justify-between items-center">
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setShowViewIPDBillDialog(false)}>
+                    Close
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  {selectedIPDBill && selectedIPDBill.paymentStatus !== 'COMPLETED' && (
+                    <Button onClick={() => {
+                      setShowViewIPDBillDialog(false)
+                      openIPDPaymentDialog(selectedIPDBill)
+                    }}>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Record Payment
+                    </Button>
+                  )}
+                  <Button onClick={handlePrintIPDBill}>
+                    <Printer className="w-4 h-4 mr-2" />
+                    Print Bill
+                  </Button>
+                </div>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
 
