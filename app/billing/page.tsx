@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useOPDBilling } from "@/hooks/use-opd-billing"
 import { useOPDVisits } from "@/hooks/use-opd-visits"
+import { useIPDBilling } from "@/hooks/use-ipd-billing"
+import { useInsuranceClaims } from "@/hooks/use-insurance-claims"
 import type { CreateOPDBillingData } from "@/hooks/use-opd-billing"
 import {
   Search,
@@ -269,6 +271,27 @@ export default function BillingPage() {
     getTodaysVisits
   } = useOPDVisits()
   
+  const { 
+    loading: ipdBillingLoading, 
+    bills: ipdBills,
+    createIPDBill, 
+    getBillByAdmission, 
+    getPendingBills: getIPDPendingBills,
+    getCompletedBills: getIPDCompletedBills,
+    recordPayment: recordIPDPayment,
+    addCharge
+  } = useIPDBilling()
+
+  const {
+    loading: insuranceLoading,
+    claims: insuranceClaims,
+    createClaim,
+    getClaimsByAdmission,
+    getPendingClaims,
+    approveClaim,
+    rejectClaim
+  } = useInsuranceClaims()
+  
   const [activeTab, setActiveTab] = useState("dashboard")
   const [searchTerm, setSearchTerm] = useState("")
   const [showOPDDialog, setShowOPDDialog] = useState(false)
@@ -283,6 +306,29 @@ export default function BillingPage() {
   const [dateFilter, setDateFilter] = useState("today")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [paymentModeFilter, setPaymentModeFilter] = useState("all")
+
+  // IPD Billing State
+  const [ipdBillForm, setIpdBillForm] = useState({
+    admissionId: "",
+    patientSearch: "",
+    bedCharges: 0,
+    roomCharges: 0,
+    icuCharges: 0,
+    nursingCharges: 0,
+    doctorFees: 0,
+    additionalCharges: 0,
+    notes: ""
+  })
+  
+  const [showIPDBillingDialog, setShowIPDBillingDialog] = useState(false)
+  const [showIPDPaymentDialog, setShowIPDPaymentDialog] = useState(false)
+  const [selectedIPDBillForPayment, setSelectedIPDBillForPayment] = useState<any>(null)
+  const [ipdPaymentForm, setIpdPaymentForm] = useState({
+    amount: 0,
+    paymentMethod: 'CASH' as 'CASH' | 'CARD' | 'UPI' | 'CHEQUE' | 'ONLINE',
+    transactionId: '',
+    notes: ''
+  })
 
   // Billing categories state
   const [billingCategories, setBillingCategories] = useState<BillingCategory[]>([
@@ -445,6 +491,10 @@ export default function BillingPage() {
         }
         
         setPendingVisits(filteredVisits)
+        
+        // Load IPD data
+        await getIPDPendingBills()
+        await getPendingClaims()
       } catch (error) {
         console.error('Error loading initial data:', error)
       }
@@ -1038,6 +1088,83 @@ export default function BillingPage() {
     })
   }
 
+  // IPD Billing Handlers
+  const handleCreateIPDBill = async () => {
+    try {
+      if (!ipdBillForm.admissionId) {
+        toast({
+          title: "Error",
+          description: "Please select an admission",
+          variant: "destructive"
+        })
+        return
+      }
+
+      await createIPDBill(ipdBillForm.admissionId, {
+        bedCharges: ipdBillForm.bedCharges,
+        roomCharges: ipdBillForm.roomCharges,
+        icuCharges: ipdBillForm.icuCharges,
+        nursingCharges: ipdBillForm.nursingCharges,
+        doctorFees: ipdBillForm.doctorFees,
+        additionalCharges: ipdBillForm.additionalCharges,
+        notes: ipdBillForm.notes
+      })
+
+      setShowIPDBillingDialog(false)
+      setIpdBillForm({
+        admissionId: "",
+        patientSearch: "",
+        bedCharges: 0,
+        roomCharges: 0,
+        icuCharges: 0,
+        nursingCharges: 0,
+        doctorFees: 0,
+        additionalCharges: 0,
+        notes: ""
+      })
+
+      // Refresh bills
+      await getIPDPendingBills()
+    } catch (error) {
+      console.error('Error creating IPD bill:', error)
+    }
+  }
+
+  const openIPDPaymentDialog = (bill: any) => {
+    setSelectedIPDBillForPayment(bill)
+    setIpdPaymentForm({
+      amount: bill.balanceAmount,
+      paymentMethod: 'CASH',
+      transactionId: '',
+      notes: ''
+    })
+    setShowIPDPaymentDialog(true)
+  }
+
+  const handleRecordIPDPayment = async () => {
+    try {
+      if (!selectedIPDBillForPayment) return
+
+      await recordIPDPayment(selectedIPDBillForPayment.id, {
+        amount: ipdPaymentForm.amount,
+        paymentMethod: ipdPaymentForm.paymentMethod,
+        transactionId: ipdPaymentForm.transactionId,
+        notes: ipdPaymentForm.notes
+      })
+
+      setShowIPDPaymentDialog(false)
+      setSelectedIPDBillForPayment(null)
+      setIpdPaymentForm({
+        amount: 0,
+        paymentMethod: 'CASH',
+        transactionId: '',
+        notes: ''
+      })
+    } catch (error) {
+      console.error('Error recording payment:', error)
+    }
+  }
+
   const handleViewIPDBill = (bill: any) => {
     setSelectedIPDBill(bill)
     setIsEditMode(false)
@@ -1113,11 +1240,12 @@ export default function BillingPage() {
 
           {/* Main Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="opd">OPD Billing</TabsTrigger>
               <TabsTrigger value="ipd">IPD Billing</TabsTrigger>
               <TabsTrigger value="insurance">Insurance/TPA</TabsTrigger>
+              <TabsTrigger value="ledger">Ledger</TabsTrigger>
             </TabsList>
 
             {/* Dashboard Tab */}
@@ -1506,123 +1634,332 @@ export default function BillingPage() {
             </TabsContent>
 
             {/* IPD Billing Tab */}
-            <TabsContent value="ipd" className="space-y-4">
+            <TabsContent value="ipd" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">IPD Billing Management</h2>
+                <Button onClick={() => setShowIPDBillingDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create IPD Bill
+                </Button>
+              </div>
+
+              {/* IPD Bills Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Running Bills
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{ipdBills.filter(b => b.paymentStatus === 'PENDING').length}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Total Outstanding
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      ₹{ipdBills.reduce((sum, bill) => sum + (bill.balanceAmount || 0), 0).toLocaleString()}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Daily Collections
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">₹{ipdBills.reduce((sum, bill) => sum + (bill.paidAmount || 0), 0).toLocaleString()}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Insurance Claims
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{insuranceClaims.length}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* IPD Bills Table */}
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>IPD Billing (Real-time)</CardTitle>
-                      <CardDescription>Track running bills and manage inpatient billing</CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={() => setShowOPDDialog(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        New IPD Bill
-                      </Button>
-                      <Button variant="outline">
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Refresh Bills
-                      </Button>
-                    </div>
-                  </div>
+                  <CardTitle>IPD Bills</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Bill ID</TableHead>
-                        <TableHead>Admission ID</TableHead>
-                        <TableHead>Patient Name</TableHead>
-                        <TableHead>Bed Days</TableHead>
-                        <TableHead>Running Total</TableHead>
-                        <TableHead>TPA Status</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {mockIPDBills.map(bill => (
-                        <TableRow key={bill.id}>
-                          <TableCell className="font-mono">{bill.id}</TableCell>
-                          <TableCell>{bill.admissionId}</TableCell>
-                          <TableCell className="font-medium">{bill.patientName}</TableCell>
-                          <TableCell>{bill.bedDays}</TableCell>
-                          <TableCell className="font-medium">₹{bill.runningTotal.toLocaleString()}</TableCell>
-                          <TableCell>{getStatusBadge(bill.tpaStatus)}</TableCell>
-                          <TableCell>{getStatusBadge(bill.status)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => handleViewIPDBill(bill)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleEditIPDBill(bill)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Bill ID</TableHead>
+                          <TableHead>Patient</TableHead>
+                          <TableHead>Admission</TableHead>
+                          <TableHead>Ward/Bed</TableHead>
+                          <TableHead>Total Amount</TableHead>
+                          <TableHead>Paid Amount</TableHead>
+                          <TableHead>Balance</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {ipdBills.length > 0 ? (
+                          ipdBills.map((bill) => (
+                            <TableRow key={bill.id} className="border-b hover:bg-gray-50">
+                              <TableCell className="p-2 font-medium">{bill.id.substring(0, 8)}</TableCell>
+                              <TableCell className="p-2">
+                                <div>
+                                  <div className="font-medium">
+                                    {bill.admission?.patient?.firstName} {bill.admission?.patient?.lastName}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {bill.admission?.patient?.patientId}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="p-2">{bill.admissionId.substring(0, 8)}</TableCell>
+                              <TableCell className="p-2">
+                                {bill.admission?.bed?.ward?.name || 'N/A'} - {bill.admission?.bed?.bedNumber || 'N/A'}
+                              </TableCell>
+                              <TableCell className="p-2">₹{(bill.totalAmount || 0).toLocaleString()}</TableCell>
+                              <TableCell className="p-2">₹{(bill.paidAmount || 0).toLocaleString()}</TableCell>
+                              <TableCell className="p-2">₹{(bill.balanceAmount || 0).toLocaleString()}</TableCell>
+                              <TableCell className="p-2">{getStatusBadge(bill.paymentStatus)}</TableCell>
+                              <TableCell className="p-2">
+                                <div className="flex space-x-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleViewIPDBill(bill)}
+                                  >
+                                    View
+                                  </Button>
+                                  {bill.paymentStatus !== 'COMPLETED' && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => openIPDPaymentDialog(bill)}
+                                    >
+                                      Pay
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                              No IPD bills found. Create a new bill to get started.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
             {/* Insurance/TPA Tab */}
-            <TabsContent value="insurance" className="space-y-4">
+            <TabsContent value="insurance" className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Insurance Claims Management</h2>
+                <Button onClick={() => setShowNewClaimDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Claim
+                </Button>
+              </div>
+
+              {/* Claims Statistics */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Pending Claims
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {insuranceClaims.filter(c => c.status === 'PENDING').length}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Approved Claims
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {insuranceClaims.filter(c => c.status === 'APPROVED').length}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Claimed Amount
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      ₹{insuranceClaims.reduce((sum, claim) => sum + (claim.claimedAmount || 0), 0).toLocaleString()}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">
+                      Approved Amount
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      ₹{insuranceClaims.reduce((sum, claim) => sum + (claim.approvedAmount || 0), 0).toLocaleString()}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Claims Table */}
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Insurance & TPA Claims</CardTitle>
-                      <CardDescription>Manage insurance claims and TPA authorizations</CardDescription>
-                    </div>
-                    <Button onClick={() => setShowNewClaimDialog(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Claim
-                    </Button>
+                  <CardTitle>Insurance Claims</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Claim ID</TableHead>
+                          <TableHead>Patient</TableHead>
+                          <TableHead>Insurance Provider</TableHead>
+                          <TableHead>Policy Number</TableHead>
+                          <TableHead>Claimed Amount</TableHead>
+                          <TableHead>Approved Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {insuranceClaims.length > 0 ? (
+                          insuranceClaims.map((claim) => (
+                            <TableRow key={claim.id} className="border-b hover:bg-gray-50">
+                              <TableCell className="p-2 font-medium">{claim.id.substring(0, 8)}</TableCell>
+                              <TableCell className="p-2">
+                                <div>
+                                  <div className="font-medium">
+                                    {claim.admission?.patient?.firstName} {claim.admission?.patient?.lastName}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {claim.admission?.patient?.patientId}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="p-2">{claim.insuranceProvider}</TableCell>
+                              <TableCell className="p-2">{claim.policyNumber}</TableCell>
+                              <TableCell className="p-2">₹{(claim.claimedAmount || 0).toLocaleString()}</TableCell>
+                              <TableCell className="p-2">₹{(claim.approvedAmount || 0).toLocaleString()}</TableCell>
+                              <TableCell className="p-2">{getStatusBadge(claim.status)}</TableCell>
+                              <TableCell className="p-2">
+                                <div className="flex space-x-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedClaim(claim)
+                                      setShowViewClaimDialog(true)
+                                    }}
+                                  >
+                                    View
+                                  </Button>
+                                  {claim.status === 'PENDING' && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={async () => {
+                                          await approveClaim(claim.id, {
+                                            approvedAmount: claim.claimedAmount,
+                                            reviewedBy: "admin",
+                                            remarks: "Approved"
+                                          })
+                                        }}
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={async () => {
+                                          await rejectClaim(claim.id, {
+                                            rejectionReason: "Policy not valid",
+                                            reviewedBy: "admin"
+                                          })
+                                        }}
+                                      >
+                                        Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                              No insurance claims found. Create a new claim to get started.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Ledger Tab */}
+            <TabsContent value="ledger" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment Ledger</CardTitle>
+                  <CardDescription>All transactions and payment history</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Claim ID</TableHead>
+                        <TableHead>Transaction ID</TableHead>
+                        <TableHead>Date/Time</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead>Patient</TableHead>
-                        <TableHead>TPA</TableHead>
-                        <TableHead>Policy No</TableHead>
-                        <TableHead>Claimed Amount</TableHead>
-                        <TableHead>Approved Amount</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Mode</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>Bill ID</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockTPAClaims.map(claim => (
-                        <TableRow key={claim.claimId}>
-                          <TableCell className="font-mono">{claim.claimId}</TableCell>
-                          <TableCell className="font-medium">{claim.patient}</TableCell>
-                          <TableCell>{claim.tpa}</TableCell>
-                          <TableCell>{claim.policyNo}</TableCell>
-                          <TableCell>₹{claim.claimedAmount.toLocaleString()}</TableCell>
-                          <TableCell>
-                            {claim.approvedAmount > 0 ? `₹${claim.approvedAmount.toLocaleString()}` : "-"}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(claim.status)}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedClaim(claim)
-                                setShowViewClaimDialog(true)
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              <Edit className="h-4 w-4 mr-1" />
-                              View/Edit
-                            </Button>
-                          </TableCell>
+                      {mockLedgerTransactions.map(txn => (
+                        <TableRow key={txn.txnId}>
+                          <TableCell className="font-mono">{txn.txnId}</TableCell>
+                          <TableCell>{txn.date}</TableCell>
+                          <TableCell>{txn.type}</TableCell>
+                          <TableCell>{txn.patientUhid}</TableCell>
+                          <TableCell className="font-medium">₹{txn.amount.toLocaleString()}</TableCell>
+                          <TableCell>{txn.mode}</TableCell>
+                          <TableCell>{getStatusBadge(txn.status)}</TableCell>
+                          <TableCell>{txn.billId}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -3514,6 +3851,297 @@ export default function BillingPage() {
                   disabled={paymentForm.amount <= 0 || paymentForm.amount > (selectedBillForPayment?.balanceAmount || 0)}
                 >
                   Record Payment
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* IPD Bill Creation Dialog */}
+          <Dialog open={showIPDBillingDialog} onOpenChange={setShowIPDBillingDialog}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-2xl">Create IPD Bill</DialogTitle>
+                <DialogDescription className="text-base">Generate new inpatient billing invoice</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Admission Search */}
+                <div className="space-y-4">
+                  <div className="text-sm font-semibold">Admission Selection</div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <Label>Search Admission / Patient *</Label>
+                      <Input
+                        placeholder="Search by patient name, UHID, or admission ID..."
+                        value={ipdBillForm.patientSearch}
+                        onChange={e => setIpdBillForm({ ...ipdBillForm, patientSearch: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Search and select an active admission to create billing
+                      </p>
+                    </div>
+                    
+                    {/* For now, manual admission ID input until we implement admission search */}
+                    <div>
+                      <Label>Admission ID *</Label>
+                      <Input
+                        placeholder="Enter admission ID"
+                        value={ipdBillForm.admissionId}
+                        onChange={e => setIpdBillForm({ ...ipdBillForm, admissionId: e.target.value })}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Enter the admission ID for which to create the bill
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Billing Details */}
+                <div className="space-y-4">
+                  <div className="text-sm font-semibold">Billing Details</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Bed Charges</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        value={ipdBillForm.bedCharges || ""}
+                        onChange={e => setIpdBillForm({ 
+                          ...ipdBillForm, 
+                          bedCharges: parseFloat(e.target.value) || 0 
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Room Charges</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        value={ipdBillForm.roomCharges || ""}
+                        onChange={e => setIpdBillForm({ 
+                          ...ipdBillForm, 
+                          roomCharges: parseFloat(e.target.value) || 0 
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>ICU Charges</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        value={ipdBillForm.icuCharges || ""}
+                        onChange={e => setIpdBillForm({ 
+                          ...ipdBillForm, 
+                          icuCharges: parseFloat(e.target.value) || 0 
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Nursing Charges</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        value={ipdBillForm.nursingCharges || ""}
+                        onChange={e => setIpdBillForm({ 
+                          ...ipdBillForm, 
+                          nursingCharges: parseFloat(e.target.value) || 0 
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Doctor Fees</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        value={ipdBillForm.doctorFees || ""}
+                        onChange={e => setIpdBillForm({ 
+                          ...ipdBillForm, 
+                          doctorFees: parseFloat(e.target.value) || 0 
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Additional Charges</Label>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        value={ipdBillForm.additionalCharges || ""}
+                        onChange={e => setIpdBillForm({ 
+                          ...ipdBillForm, 
+                          additionalCharges: parseFloat(e.target.value) || 0 
+                        })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Notes */}
+                <div className="space-y-4">
+                  <div className="text-sm font-semibold">Additional Information</div>
+                  <div>
+                    <Label>Notes (Optional)</Label>
+                    <Textarea
+                      placeholder="Add any notes or remarks..."
+                      rows={3}
+                      value={ipdBillForm.notes}
+                      onChange={e => setIpdBillForm({ 
+                        ...ipdBillForm, 
+                        notes: e.target.value 
+                      })}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Bill Summary */}
+                <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
+                  <div className="text-sm font-semibold">Bill Summary</div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Bed Charges:</span>
+                      <span>₹{ipdBillForm.bedCharges.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Room Charges:</span>
+                      <span>₹{ipdBillForm.roomCharges.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>ICU Charges:</span>
+                      <span>₹{ipdBillForm.icuCharges.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Nursing Charges:</span>
+                      <span>₹{ipdBillForm.nursingCharges.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Doctor Fees:</span>
+                      <span>₹{ipdBillForm.doctorFees.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Additional Charges:</span>
+                      <span>₹{ipdBillForm.additionalCharges.toFixed(2)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-semibold">
+                      <span>Total Amount:</span>
+                      <span>₹{(
+                        ipdBillForm.bedCharges + 
+                        ipdBillForm.roomCharges + 
+                        ipdBillForm.icuCharges +
+                        ipdBillForm.nursingCharges +
+                        ipdBillForm.doctorFees +
+                        ipdBillForm.additionalCharges
+                      ).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowIPDBillingDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCreateIPDBill}
+                    disabled={ipdBillingLoading || !ipdBillForm.admissionId}
+                  >
+                    {ipdBillingLoading ? "Creating..." : "Create IPD Bill"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* IPD Payment Recording Dialog */}
+          <Dialog open={showIPDPaymentDialog} onOpenChange={setShowIPDPaymentDialog}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Record IPD Payment</DialogTitle>
+                <DialogDescription>
+                  {selectedIPDBillForPayment && (
+                    <div className="space-y-2 mt-2">
+                      <div>Patient: {`${selectedIPDBillForPayment.admission?.patient?.firstName} ${selectedIPDBillForPayment.admission?.patient?.lastName}`}</div>
+                      <div>Bill ID: {selectedIPDBillForPayment.id.slice(0, 8)}...</div>
+                      <div>Total Amount: ₹{selectedIPDBillForPayment.totalAmount?.toLocaleString()}</div>
+                      <div>Paid Amount: ₹{selectedIPDBillForPayment.paidAmount?.toLocaleString()}</div>
+                      <div className="font-medium">Balance Amount: ₹{selectedIPDBillForPayment.balanceAmount?.toLocaleString()}</div>
+                    </div>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Payment Amount *</Label>
+                  <Input
+                    type="number"
+                    placeholder="Enter payment amount"
+                    value={ipdPaymentForm.amount}
+                    onChange={e => setIpdPaymentForm({ ...ipdPaymentForm, amount: parseFloat(e.target.value) || 0 })}
+                    max={selectedIPDBillForPayment?.balanceAmount || 0}
+                  />
+                </div>
+                <div>
+                  <Label>Payment Method *</Label>
+                  <Select
+                    value={ipdPaymentForm.paymentMethod}
+                    onValueChange={(value: typeof ipdPaymentForm.paymentMethod) => setIpdPaymentForm({ ...ipdPaymentForm, paymentMethod: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CASH">Cash</SelectItem>
+                      <SelectItem value="CARD">Card</SelectItem>
+                      <SelectItem value="UPI">UPI</SelectItem>
+                      <SelectItem value="CHEQUE">Cheque</SelectItem>
+                      <SelectItem value="ONLINE">Online Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(ipdPaymentForm.paymentMethod === 'CARD' || ipdPaymentForm.paymentMethod === 'UPI' || ipdPaymentForm.paymentMethod === 'ONLINE') && (
+                  <div>
+                    <Label>Transaction ID</Label>
+                    <Input
+                      placeholder="Enter transaction ID"
+                      value={ipdPaymentForm.transactionId}
+                      onChange={e => setIpdPaymentForm({ ...ipdPaymentForm, transactionId: e.target.value })}
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label>Notes (Optional)</Label>
+                  <Textarea
+                    placeholder="Add any notes about this payment"
+                    value={ipdPaymentForm.notes}
+                    onChange={e => setIpdPaymentForm({ ...ipdPaymentForm, notes: e.target.value })}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowIPDPaymentDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleRecordIPDPayment}
+                  disabled={ipdBillingLoading || ipdPaymentForm.amount <= 0 || ipdPaymentForm.amount > (selectedIPDBillForPayment?.balanceAmount || 0)}
+                >
+                  {ipdBillingLoading ? "Processing..." : "Record Payment"}
                 </Button>
               </DialogFooter>
             </DialogContent>
