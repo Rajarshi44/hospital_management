@@ -81,6 +81,53 @@ export const useInsuranceClaims = () => {
     }
   }
 
+  const getApprovedClaims = async () => {
+    try {
+      const response = await fetch(`${baseUrl}/ipd/insurance/claims/approved`)
+      if (!response.ok) throw new Error('Failed to fetch approved claims')
+      const data = await response.json()
+      return data
+    } catch (error) {
+      console.error('Error fetching approved claims:', error)
+      return []
+    }
+  }
+
+  const searchClaims = async (searchQuery: string, status?: string) => {
+    try {
+      let url = `${baseUrl}/ipd/insurance/claims`
+      const params = new URLSearchParams()
+      if (status) params.append('status', status)
+      if (params.toString()) url += `?${params.toString()}`
+      
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Failed to search claims')
+      const data = await response.json()
+      
+      // Filter by patient name if search query provided
+      if (searchQuery.trim()) {
+        const filtered = data.filter((claim: any) => {
+          const patientName = `${claim.admission?.patient?.firstName || ''} ${claim.admission?.patient?.lastName || ''}`.toLowerCase()
+          const patientId = claim.admission?.patient?.patientId?.toLowerCase() || ''
+          const insuranceProvider = claim.insuranceProvider?.toLowerCase() || ''
+          const policyNumber = claim.policyNumber?.toLowerCase() || ''
+          const search = searchQuery.toLowerCase()
+          
+          return patientName.includes(search) || 
+                 patientId.includes(search) || 
+                 insuranceProvider.includes(search) || 
+                 policyNumber.includes(search)
+        })
+        return filtered
+      }
+      
+      return data
+    } catch (error) {
+      console.error('Error searching claims:', error)
+      return []
+    }
+  }
+
   const approveClaim = async (claimId: string, approvalData: any) => {
     setLoading(true)
     try {
@@ -155,6 +202,8 @@ export const useInsuranceClaims = () => {
     createClaim,
     getClaimsByAdmission,
     getPendingClaims,
+    getApprovedClaims,
+    searchClaims,
     approveClaim,
     rejectClaim
   }

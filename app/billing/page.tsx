@@ -290,6 +290,8 @@ export default function BillingPage() {
     createClaim,
     getClaimsByAdmission,
     getPendingClaims,
+    getApprovedClaims,
+    searchClaims,
     approveClaim,
     rejectClaim
   } = useInsuranceClaims()
@@ -308,6 +310,19 @@ export default function BillingPage() {
   const [dateFilter, setDateFilter] = useState("today")
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [paymentModeFilter, setPaymentModeFilter] = useState("all")
+  
+  // Insurance Claims State
+  const [approvedClaims, setApprovedClaims] = useState<any[]>([])
+  const [claimsSearchTerm, setClaimsSearchTerm] = useState("")
+  const [claimsStatusFilter, setClaimsStatusFilter] = useState("all")
+  const [showApprovedClaimsDialog, setShowApprovedClaimsDialog] = useState(false)
+  const [selectedClaimToPrint, setSelectedClaimToPrint] = useState<any>(null)
+  
+  // Claim Creation Patient Search State
+  const [claimSearchResults, setClaimSearchResults] = useState<any[]>([])
+  const [showClaimSearchResults, setShowClaimSearchResults] = useState(false)
+  const [selectedClaimPatient, setSelectedClaimPatient] = useState<any>(null)
+  const [claimSearchLoading, setClaimSearchLoading] = useState(false)
 
   // IPD Billing State
   const [ipdBillForm, setIpdBillForm] = useState({
@@ -533,6 +548,10 @@ export default function BillingPage() {
         // Load IPD data
         await getIPDPendingBills()
         await getPendingClaims()
+        
+        // Load approved claims
+        const approved = await getApprovedClaims()
+        setApprovedClaims(approved)
       } catch (error) {
         console.error('Error loading initial data:', error)
       }
@@ -1197,21 +1216,262 @@ export default function BillingPage() {
     return age
   }
 
-  const handleCreateClaim = () => {
-    toast({
-      title: "Claim Created",
-      description: "Insurance claim has been created successfully",
-    })
-    setShowNewClaimDialog(false)
-    // Reset form
+  const handleCreateClaim = async () => {
+    try {
+      if (!selectedClaimPatient) {
+        toast({
+          title: "Error",
+          description: "Please select a patient with active admission",
+          variant: "destructive"
+        })
+        return
+      }
+
+      if (!claimInfo.tpa || !claimInfo.policyNo || !claimInfo.claimedAmount) {
+        toast({
+          title: "Error", 
+          description: "Please fill in all required fields",
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Create the insurance claim
+      const claimData = {
+        admissionId: selectedClaimPatient.id,
+        policyNumber: claimInfo.policyNo,
+        insuranceProvider: claimInfo.tpa,
+        tpaName: claimInfo.tpa, // Using same value for both provider and TPA
+        claimType: 'CASHLESS', // Default to cashless
+        claimedAmount: parseFloat(claimInfo.claimedAmount),
+        isEmergency: false,
+        urgency: 'NORMAL'
+      }
+
+      await createClaim(claimData)
+      
+      // Reset form and state
+      setClaimInfo({
+        patient: "",
+        tpa: "",
+        policyNo: "",
+        claimedAmount: "",
+        approvedAmount: "",
+        status: "Pending",
+      })
+      setSelectedClaimPatient(null)
+      setClaimSearchResults([])
+      setShowClaimSearchResults(false)
+      setShowNewClaimDialog(false)
+      
+      // Refresh claims data
+      await getPendingClaims()
+      
+      toast({
+        title: "Success",
+        description: "Insurance claim has been created successfully",
+      })
+      
+    } catch (error) {
+      console.error('Error creating claim:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create insurance claim",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Insurance Claims Search Handler
+  const handleClaimsSearch = async () => {
+    try {
+      const searchResults = await searchClaims(claimsSearchTerm, claimsStatusFilter === 'all' ? '' : claimsStatusFilter)
+      // Update the claims data based on search results
+      // For now, we'll just log the results. In a full implementation, you might want to 
+      // update a separate state for filtered claims
+      console.log('Search results:', searchResults)
+    } catch (error) {
+      console.error('Error searching claims:', error)
+      toast({
+        title: "Error",
+        description: "Failed to search claims",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Search for patients with active admissions for claim creation
+  const handleClaimPatientSearch = async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setClaimSearchResults([])
+      setShowClaimSearchResults(false)
+      return
+    }
+
+    try {
+      setClaimSearchLoading(true)
+      
+      // Search active admissions for insurance claims
+      const admissionsResponse = await IPDService.getAdmissions({
+        status: 'ACTIVE',
+        limit: 20
+      }) as any
+      
+      const admissions = admissionsResponse.data || admissionsResponse || []
+      
+      // Filter admissions based on search query
+      const filteredResults = admissions.filter((admission: any) => {
+        const patient = admission?.patient
+        if (!patient) return false
+        
+        const patientName = `${patient.firstName || ''} ${patient.lastName || ''}`.toLowerCase()
+        const searchLower = searchQuery.toLowerCase()
+        
+        return (
+          patientName.includes(searchLower) ||
+          patient.patientId?.toLowerCase().includes(searchLower) ||
+          patient.phone?.includes(searchQuery) ||
+          admission.admissionId?.toLowerCase().includes(searchLower)
+        )
+      })
+      
+      setClaimSearchResults(filteredResults.slice(0, 10)) // Limit to 10 results
+      setShowClaimSearchResults(filteredResults.length > 0)
+      
+    } catch (error) {
+      console.error('Error searching patients for claims:', error)
+      toast({
+        title: "Error",
+        description: "Failed to search for patients",
+        variant: "destructive",
+      })
+    } finally {
+      setClaimSearchLoading(false)
+    }
+  }
+
+  // Select patient for claim creation
+  const handleClaimPatientSelect = (admission: any) => {
+    setSelectedClaimPatient(admission)
     setClaimInfo({
-      patient: "",
-      tpa: "",
-      policyNo: "",
-      claimedAmount: "",
-      approvedAmount: "",
-      status: "Pending",
+      ...claimInfo,
+      patient: `${admission.patient?.firstName || ''} ${admission.patient?.lastName || ''} (${admission.patient?.patientId || 'N/A'}) - Admission: ${admission.admissionId || 'N/A'}`
     })
+    setShowClaimSearchResults(false)
+  }
+
+  // Clear claim patient selection
+  const clearClaimPatientSelection = () => {
+    setSelectedClaimPatient(null)
+    setClaimInfo({
+      ...claimInfo,
+      patient: ""
+    })
+  }
+
+  // Print approved claim bill
+  const printApprovedClaimBill = (claim: any) => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Insurance Claim Bill - ${claim.claimNumber || claim.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+            .details { margin-bottom: 20px; }
+            .row { display: flex; justify-content: space-between; margin: 5px 0; }
+            .label { font-weight: bold; }
+            .amount { font-size: 1.2em; font-weight: bold; color: #2563eb; }
+            .status { padding: 4px 8px; border-radius: 4px; background-color: #dcfce7; color: #16a34a; }
+            .footer { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 10px; text-align: center; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Hospital Management System</h1>
+            <h2>Insurance Claim Settlement Bill</h2>
+            <p>Claim ID: ${claim.claimNumber || claim.id}</p>
+          </div>
+          
+          <div class="details">
+            <div class="row">
+              <span class="label">Patient Name:</span>
+              <span>${claim.admission?.patient?.firstName || ''} ${claim.admission?.patient?.lastName || ''}</span>
+            </div>
+            <div class="row">
+              <span class="label">Patient ID:</span>
+              <span>${claim.admission?.patient?.patientId || ''}</span>
+            </div>
+            <div class="row">
+              <span class="label">Insurance Provider:</span>
+              <span>${claim.insuranceProvider || ''}</span>
+            </div>
+            <div class="row">
+              <span class="label">Policy Number:</span>
+              <span>${claim.policyNumber || ''}</span>
+            </div>
+            <div class="row">
+              <span class="label">TPA Name:</span>
+              <span>${claim.tpaName || 'N/A'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Claim Date:</span>
+              <span>${new Date(claim.createdAt).toLocaleDateString()}</span>
+            </div>
+            <div class="row">
+              <span class="label">Settlement Date:</span>
+              <span>${claim.settlementDate ? new Date(claim.settlementDate).toLocaleDateString() : 'N/A'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Status:</span>
+              <span class="status">${claim.status}</span>
+            </div>
+          </div>
+          
+          <div class="details">
+            <h3>Financial Details</h3>
+            <div class="row">
+              <span class="label">Claimed Amount:</span>
+              <span class="amount">₹${(claim.claimedAmount || 0).toLocaleString()}</span>
+            </div>
+            <div class="row">
+              <span class="label">Approved Amount:</span>
+              <span class="amount">₹${(claim.approvedAmount || 0).toLocaleString()}</span>
+            </div>
+            <div class="row">
+              <span class="label">Settlement Amount:</span>
+              <span class="amount">₹${(claim.settlementAmount || claim.approvedAmount || 0).toLocaleString()}</span>
+            </div>
+            ${claim.rejectedAmount ? `
+            <div class="row">
+              <span class="label">Rejected Amount:</span>
+              <span style="color: #dc2626;">₹${claim.rejectedAmount.toLocaleString()}</span>
+            </div>` : ''}
+          </div>
+          
+          ${claim.reviewRemarks ? `
+          <div class="details">
+            <h3>Review Remarks</h3>
+            <p>${claim.reviewRemarks}</p>
+          </div>` : ''}
+          
+          <div class="footer">
+            <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            <p>This is a system generated document</p>
+          </div>
+        </body>
+      </html>
+    `
+    
+    printWindow.document.write(printContent)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
   }
 
   // IPD Billing Handlers
@@ -2396,10 +2656,19 @@ export default function BillingPage() {
             <TabsContent value="insurance" className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">Insurance Claims Management</h2>
-                <Button onClick={() => setShowNewClaimDialog(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Claim
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowApprovedClaimsDialog(true)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Approved Claims
+                  </Button>
+                  <Button onClick={() => setShowNewClaimDialog(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Claim
+                  </Button>
+                </div>
               </div>
 
               {/* Claims Statistics */}
@@ -2424,7 +2693,7 @@ export default function BillingPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {insuranceClaims.filter(c => c.status === 'APPROVED').length}
+                      {approvedClaims.length}
                     </div>
                   </CardContent>
                 </Card>
@@ -2448,11 +2717,52 @@ export default function BillingPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      ₹{insuranceClaims.reduce((sum, claim) => sum + (claim.approvedAmount || 0), 0).toLocaleString()}
+                      ₹{approvedClaims.reduce((sum, claim) => sum + (claim.approvedAmount || 0), 0).toLocaleString()}
                     </div>
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Search and Filter Section */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="flex gap-4 items-end">
+                    <div className="flex-1">
+                      <Label htmlFor="claims-search">Search Claims</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="claims-search"
+                          placeholder="Search by patient name, ID, insurance provider, or policy number..."
+                          value={claimsSearchTerm}
+                          onChange={(e) => setClaimsSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="status-filter">Status</Label>
+                      <Select value={claimsStatusFilter} onValueChange={setClaimsStatusFilter}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Status</SelectItem>
+                          <SelectItem value="PENDING">Pending</SelectItem>
+                          <SelectItem value="APPROVED">Approved</SelectItem>
+                          <SelectItem value="REJECTED">Rejected</SelectItem>
+                          <SelectItem value="SUBMITTED">Submitted</SelectItem>
+                          <SelectItem value="UNDER_REVIEW">Under Review</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleClaimsSearch}>
+                      <Search className="w-4 h-4 mr-2" />
+                      Search
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Claims Table */}
               <Card>
@@ -2460,7 +2770,7 @@ export default function BillingPage() {
                   <CardTitle>Insurance Claims</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto">"
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -2504,8 +2814,18 @@ export default function BillingPage() {
                                       setShowViewClaimDialog(true)
                                     }}
                                   >
+                                    <Eye className="w-4 h-4 mr-1" />
                                     View
                                   </Button>
+                                  {claim.status === 'APPROVED' && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => printApprovedClaimBill(claim)}
+                                    >
+                                      <Printer className="w-4 h-4 mr-1" />
+                                      Print Bill
+                                    </Button>
+                                  )}
                                   {claim.status === 'PENDING' && (
                                     <>
                                       <Button
@@ -2516,6 +2836,9 @@ export default function BillingPage() {
                                             reviewedBy: "admin",
                                             remarks: "Approved"
                                           })
+                                          // Refresh approved claims after approval
+                                          const refreshedApproved = await getApprovedClaims()
+                                          setApprovedClaims(refreshedApproved)
                                         }}
                                       >
                                         Approve
@@ -3084,12 +3407,90 @@ export default function BillingPage() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Patient Name *</Label>
-                  <Input
-                    placeholder="Search or enter patient name"
-                    value={claimInfo.patient}
-                    onChange={e => setClaimInfo({ ...claimInfo, patient: e.target.value })}
-                  />
+                  <Label>Search Patient *</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by patient name, ID, or phone..."
+                      value={claimInfo.patient}
+                      onChange={(e) => {
+                        setClaimInfo({ ...claimInfo, patient: e.target.value })
+                        
+                        // Trigger search for patients with active admissions
+                        if (e.target.value.trim().length > 2) {
+                          handleClaimPatientSearch(e.target.value)
+                        } else {
+                          setClaimSearchResults([])
+                          setShowClaimSearchResults(false)
+                        }
+                      }}
+                      className="pl-10"
+                    />
+                    {claimSearchLoading && (
+                      <div className="absolute right-3 top-3">
+                        <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Search Results Dropdown */}
+                  {showClaimSearchResults && claimSearchResults.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {claimSearchResults.map((admission) => (
+                        <div
+                          key={admission.id}
+                          className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                          onClick={() => handleClaimPatientSelect(admission)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">
+                                {admission.patient?.firstName} {admission.patient?.lastName}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                ID: {admission.patient?.patientId} | Phone: {admission.patient?.phone}
+                              </p>
+                              <p className="text-sm text-blue-600">
+                                Admission: {admission.admissionId} | Bed: {admission.bed?.bedNumber || 'N/A'}
+                              </p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {admission.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Selected Patient Display */}
+                  {selectedClaimPatient && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-medium text-blue-900">
+                            {selectedClaimPatient.patient?.firstName} {selectedClaimPatient.patient?.lastName}
+                          </p>
+                          <p className="text-sm text-blue-700">
+                            ID: {selectedClaimPatient.patient?.patientId} | 
+                            Admission: {selectedClaimPatient.admissionId} | 
+                            Bed: {selectedClaimPatient.bed?.bedNumber || 'N/A'}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={clearClaimPatientSelection}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Search for patients with active IPD admissions
+                  </p>
                 </div>
                 <div>
                   <Label>TPA/Insurance Provider *</Label>
@@ -3106,6 +3507,10 @@ export default function BillingPage() {
                       <SelectItem value="Care Health">Care Health</SelectItem>
                       <SelectItem value="Bajaj Allianz">Bajaj Allianz</SelectItem>
                       <SelectItem value="New India Assurance">New India Assurance</SelectItem>
+                      <SelectItem value="United India Insurance">United India Insurance</SelectItem>
+                      <SelectItem value="Oriental Insurance">Oriental Insurance</SelectItem>
+                      <SelectItem value="National Insurance">National Insurance</SelectItem>
+                      <SelectItem value="Tata AIG">Tata AIG</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -3117,23 +3522,37 @@ export default function BillingPage() {
                     onChange={e => setClaimInfo({ ...claimInfo, policyNo: e.target.value })}
                   />
                 </div>
-                <div>
-                  <Label>Claimed Amount *</Label>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={claimInfo.claimedAmount}
-                    onChange={e => setClaimInfo({ ...claimInfo, claimedAmount: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Claimed Amount *</Label>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      value={claimInfo.claimedAmount}
+                      onChange={e => setClaimInfo({ ...claimInfo, claimedAmount: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Approved Amount</Label>
+                    <Input
+                      type="number"
+                      placeholder="0.00 (if already approved)"
+                      value={claimInfo.approvedAmount}
+                      onChange={e => setClaimInfo({ ...claimInfo, approvedAmount: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div>
-                  <Label>Approved Amount</Label>
-                  <Input
-                    type="number"
-                    placeholder="0.00 (leave blank if pending)"
-                    value={claimInfo.approvedAmount}
-                    onChange={e => setClaimInfo({ ...claimInfo, approvedAmount: e.target.value })}
-                  />
+                  <Label>Claim Type</Label>
+                  <Select defaultValue="REIMBURSEMENT">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select claim type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CASHLESS">Cashless</SelectItem>
+                      <SelectItem value="REIMBURSEMENT">Reimbursement</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>Status *</Label>
@@ -3149,15 +3568,24 @@ export default function BillingPage() {
                       <SelectItem value="Approved">Approved</SelectItem>
                       <SelectItem value="Rejected">Rejected</SelectItem>
                       <SelectItem value="Under Review">Under Review</SelectItem>
+                      <SelectItem value="Submitted">Submitted</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setShowNewClaimDialog(false)}>
+                <Button variant="outline" onClick={() => {
+                  setShowNewClaimDialog(false)
+                  clearClaimPatientSelection()
+                }}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateClaim}>Create Claim</Button>
+                <Button 
+                  onClick={handleCreateClaim}
+                  disabled={!selectedClaimPatient || !claimInfo.tpa || !claimInfo.policyNo || !claimInfo.claimedAmount || insuranceLoading}
+                >
+                  {insuranceLoading ? "Creating..." : "Create Claim"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -5299,6 +5727,163 @@ export default function BillingPage() {
                   disabled={ipdBillingLoading || ipdPaymentForm.amount <= 0 || ipdPaymentForm.amount > (selectedIPDBillForPayment?.balanceAmount || 0)}
                 >
                   {ipdBillingLoading ? "Processing..." : "Record Payment"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Approved Claims Dialog */}
+          <Dialog open={showApprovedClaimsDialog} onOpenChange={setShowApprovedClaimsDialog}>
+            <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Approved Insurance Claims</DialogTitle>
+                <DialogDescription>
+                  View and print bills for approved insurance claims
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {/* Search for approved claims */}
+                <div className="flex gap-4 items-center">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search approved claims by patient name, ID, or policy..."
+                        value={claimsSearchTerm}
+                        onChange={(e) => setClaimsSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={async () => {
+                      const refreshedApproved = await getApprovedClaims()
+                      setApprovedClaims(refreshedApproved)
+                    }}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+
+                {/* Approved Claims Table */}
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Claim ID</TableHead>
+                        <TableHead>Patient</TableHead>
+                        <TableHead>Insurance Provider</TableHead>
+                        <TableHead>Policy No.</TableHead>
+                        <TableHead>Approved Amount</TableHead>
+                        <TableHead>Settlement Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {approvedClaims
+                        .filter(claim => {
+                          if (!claimsSearchTerm.trim()) return true
+                          const searchTerm = claimsSearchTerm.toLowerCase()
+                          const patientName = `${claim.admission?.patient?.firstName || ''} ${claim.admission?.patient?.lastName || ''}`.toLowerCase()
+                          const patientId = claim.admission?.patient?.patientId?.toLowerCase() || ''
+                          const insuranceProvider = claim.insuranceProvider?.toLowerCase() || ''
+                          const policyNumber = claim.policyNumber?.toLowerCase() || ''
+                          
+                          return patientName.includes(searchTerm) || 
+                                 patientId.includes(searchTerm) || 
+                                 insuranceProvider.includes(searchTerm) || 
+                                 policyNumber.includes(searchTerm)
+                        })
+                        .map((claim) => (
+                        <TableRow key={claim.id}>
+                          <TableCell className="font-medium">
+                            {claim.claimNumber || claim.id.substring(0, 8)}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">
+                                {claim.admission?.patient?.firstName} {claim.admission?.patient?.lastName}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {claim.admission?.patient?.patientId}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{claim.insuranceProvider}</TableCell>
+                          <TableCell>{claim.policyNumber}</TableCell>
+                          <TableCell>₹{(claim.approvedAmount || 0).toLocaleString()}</TableCell>
+                          <TableCell>
+                            {claim.settlementDate 
+                              ? new Date(claim.settlementDate).toLocaleDateString() 
+                              : 'Pending'
+                            }
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedClaim(claim)
+                                  setShowViewClaimDialog(true)
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => printApprovedClaimBill(claim)}
+                              >
+                                <Printer className="w-4 h-4 mr-1" />
+                                Print Bill
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {approvedClaims.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            No approved claims found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Summary */}
+                {approvedClaims.length > 0 && (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {approvedClaims.length}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Approved Claims</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          ₹{approvedClaims.reduce((sum, claim) => sum + (claim.approvedAmount || 0), 0).toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Approved Amount</div>
+                      </div>
+                      <div>
+                        <div className="text-2xl font-bold text-purple-600">
+                          ₹{approvedClaims.reduce((sum, claim) => sum + (claim.settlementAmount || claim.approvedAmount || 0), 0).toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-600">Total Settlement Amount</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowApprovedClaimsDialog(false)}>
+                  Close
                 </Button>
               </DialogFooter>
             </DialogContent>
