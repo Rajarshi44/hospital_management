@@ -503,6 +503,9 @@ export default function BillingPage() {
     notes: ''
   })
 
+  // IPD Patient Search State
+  const [ipdSearchLoading, setIpdSearchLoading] = useState(false)
+
   // Load pending bills and visits on component mount
   useEffect(() => {
     const loadInitialData = async () => {
@@ -537,6 +540,22 @@ export default function BillingPage() {
 
     loadInitialData()
   }, [])
+
+  // Debounced IPD patient search
+  useEffect(() => {
+    const searchQuery = ipdBillForm.patientSearch.trim()
+    if (!searchQuery) {
+      setIpdSearchResults([])
+      setShowIpdSearchResults(false)
+      return
+    }
+
+    const debounceTimer = setTimeout(async () => {
+      await handleIpdPatientSearch(searchQuery)
+    }, 300)
+
+    return () => clearTimeout(debounceTimer)
+  }, [ipdBillForm.patientSearch])
 
   // Search for patients/visits
   const handlePatientSearch = async (searchQuery: string) => {
@@ -596,6 +615,56 @@ export default function BillingPage() {
         description: "Failed to search patients. Please try again.",
         variant: "destructive"
       })
+    }
+  }
+
+  // Search for IPD patients/admissions
+  const handleIpdPatientSearch = async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setIpdSearchResults([])
+      setShowIpdSearchResults(false)
+      return
+    }
+
+    try {
+      setIpdSearchLoading(true)
+      
+      // Search active admissions
+      const admissionsResponse = await IPDService.getAdmissions({
+        status: 'ACTIVE',
+        limit: 20
+      }) as any
+      
+      const admissions = admissionsResponse.data || admissionsResponse || []
+      
+      // Filter admissions based on search query
+      const filteredResults = admissions.filter((admission: any) => {
+        const patient = admission?.patient
+        if (!patient) return false
+        
+        const patientName = `${patient.firstName || ''} ${patient.lastName || ''}`.toLowerCase()
+        const searchLower = searchQuery.toLowerCase()
+        
+        return (
+          patientName.includes(searchLower) ||
+          patient.patientId?.toLowerCase().includes(searchLower) ||
+          patient.phone?.includes(searchQuery) ||
+          admission.admissionId?.toLowerCase().includes(searchLower)
+        )
+      })
+      
+      setIpdSearchResults(filteredResults.slice(0, 10)) // Limit to 10 results
+      setShowIpdSearchResults(filteredResults.length > 0)
+      
+    } catch (error) {
+      console.error('Error searching IPD patients:', error)
+      toast({
+        title: "Error",
+        description: "Failed to search for patients",
+        variant: "destructive",
+      })
+    } finally {
+      setIpdSearchLoading(false)
     }
   }
 
@@ -681,6 +750,27 @@ export default function BillingPage() {
     setOpdBillingForm({
       ...opdBillingForm,
       opdVisitId: "",
+      patientSearch: ""
+    })
+  }
+
+  // Select an admission for IPD billing
+  const handleAdmissionSelect = (admission: any) => {
+    setSelectedAdmission(admission)
+    setIpdBillForm({
+      ...ipdBillForm,
+      admissionId: admission.id,
+      patientSearch: `${admission.patient?.firstName || ''} ${admission.patient?.lastName || ''} (${admission.patient?.patientId || 'N/A'}) - Admission: ${admission.admissionId || 'N/A'}`
+    })
+    setShowIpdSearchResults(false)
+  }
+
+  // Clear IPD admission selection
+  const clearAdmissionSelection = () => {
+    setSelectedAdmission(null)
+    setIpdBillForm({
+      ...ipdBillForm,
+      admissionId: "",
       patientSearch: ""
     })
   }
@@ -892,6 +982,7 @@ export default function BillingPage() {
         paidAmount: 0,
         transactionId: "",
         notes: "",
+        additionalChargesList: [{ heading: "", amount: 0 }]
       })
       
       // Clear selected visit
@@ -1165,10 +1256,6 @@ export default function BillingPage() {
         notes: "",
         additionalChargesList: [{ heading: "", amount: 0 }]
       })
-      const [ipdSearchResults, setIpdSearchResults] = useState<any[]>([])
-      const [showIpdSearchResults, setShowIpdSearchResults] = useState(false)
-      const [selectedAdmission, setSelectedAdmission] = useState<any>(null)
-      const ipdSearchTimer = useRef<number | null>(null)
 
       // Refresh bills
       await getIPDPendingBills()
@@ -2836,6 +2923,7 @@ export default function BillingPage() {
               </div>
             </DialogContent>
           </Dialog>
+        
 
           {/* Print Preview Component */}
           {showPrintPreview && (
@@ -3680,14 +3768,14 @@ export default function BillingPage() {
                         ],
                       },
                     ]}
-                    billNumber={selectedClaim.claimId.replace("CLM", "BILL")}
-                    refNumber={selectedClaim.claimId}
+                    billNumber={selectedClaim?.claimId?.replace("CLM", "BILL") || "BILL-001"}
+                    refNumber={selectedClaim?.claimId || "REF-001"}
                     date={new Date().toLocaleDateString("en-GB")}
-                    total={selectedClaim.claimedAmount}
+                    total={selectedClaim?.claimedAmount || 0}
                     totalDiscount={0}
-                    subtotal={selectedClaim.claimedAmount}
-                    serviceCharge={selectedClaim.claimedAmount * 0.15}
-                    billAmount={selectedClaim.claimedAmount + selectedClaim.claimedAmount * 0.15}
+                    subtotal={selectedClaim?.claimedAmount || 0}
+                    serviceCharge={(selectedClaim?.claimedAmount || 0) * 0.15}
+                    billAmount={(selectedClaim?.claimedAmount || 0) + (selectedClaim?.claimedAmount || 0) * 0.15}
                   />
                 </div>
               </DialogContent>
@@ -4300,14 +4388,14 @@ export default function BillingPage() {
                         ],
                       },
                     ]}
-                    billNumber={selectedClaim.claimId.replace("CLM", "BILL")}
-                    refNumber={selectedClaim.claimId}
+                    billNumber={selectedClaim?.claimId?.replace("CLM", "BILL") || "BILL-001"}
+                    refNumber={selectedClaim?.claimId || "REF-001"}
                     date={new Date().toLocaleDateString("en-GB")}
-                    total={selectedClaim.claimedAmount}
+                    total={selectedClaim?.claimedAmount || 0}
                     totalDiscount={0}
-                    subtotal={selectedClaim.claimedAmount}
-                    serviceCharge={selectedClaim.claimedAmount * 0.15}
-                    billAmount={selectedClaim.claimedAmount + selectedClaim.claimedAmount * 0.15}
+                    subtotal={selectedClaim?.claimedAmount || 0}
+                    serviceCharge={(selectedClaim?.claimedAmount || 0) * 0.15}
+                    billAmount={(selectedClaim?.claimedAmount || 0) + (selectedClaim?.claimedAmount || 0) * 0.15}
                   />
                 </div>
               </DialogContent>
@@ -4406,90 +4494,87 @@ export default function BillingPage() {
                 <div className="space-y-4">
                   <div className="text-sm font-semibold">Admission Selection</div>
                   <div className="grid grid-cols-1 gap-4">
-                    <div className="relative">
+                    <div className="space-y-2">
                       <Label>Search Admission / Patient *</Label>
-                      <Input
-                        placeholder="Search by patient name, UHID, or admission ID..."
-                        value={ipdBillForm.patientSearch}
-                        onChange={e => {
-                          const val = e.target.value
-                          setIpdBillForm({ ...ipdBillForm, patientSearch: val })
-                          // debounce search
-                          if (ipdSearchTimer.current) window.clearTimeout(ipdSearchTimer.current)
-                          ipdSearchTimer.current = window.setTimeout(async () => {
-                            if (!val || val.length < 2) {
-                              setIpdSearchResults([])
-                              setShowIpdSearchResults(false)
-                              return
-                            }
-                            try {
-                              const resp: any = await IPDService.getAdmissions({ status: 'ACTIVE', limit: 20 })
-                              const list = resp.data || resp || []
-                              const q = val.toLowerCase()
-                              const filtered = list.filter((a: any) => {
-                                const patient = a.patient || a.patientData || {}
-                                const admissionId = a.admissionId || a.id || ''
-                                const fullName = `${patient.firstName || ''} ${patient.lastName || ''}`.toLowerCase()
-                                const phone = patient.phone || ''
-                                return (
-                                  fullName.includes(q) ||
-                                  admissionId.toLowerCase().includes(q) ||
-                                  (patient.patientId && patient.patientId.toLowerCase().includes(q)) ||
-                                  phone.includes(q)
-                                )
-                              })
-                              setIpdSearchResults(filtered)
-                              setShowIpdSearchResults(filtered.length > 0)
-                            } catch (err) {
-                              console.error('IPD search error', err)
-                              setIpdSearchResults([])
-                              setShowIpdSearchResults(false)
-                            }
-                          }, 250)
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search by patient name, UHID, or admission ID..."
+                          value={ipdBillForm.patientSearch}
+                          onChange={e => setIpdBillForm({ ...ipdBillForm, patientSearch: e.target.value })}
+                          className="pl-10"
+                        />
+                        {ipdSearchLoading && (
+                          <RefreshCw className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
+                      
+                      {/* Search Results */}
+                      {showIpdSearchResults && (
+                        <Card className="absolute z-10 w-full max-h-60 overflow-y-auto">
+                          <CardContent className="p-0">
+                            {ipdSearchResults.map((admission) => (
+                              <div
+                                key={admission.id}
+                                className="p-3 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                                onClick={() => handleAdmissionSelect(admission)}
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="space-y-1">
+                                    <div className="font-medium">
+                                      {admission.patient.firstName} {admission.patient.lastName}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      UHID: {admission.patient.patientId} • Phone: {admission.patient.phone}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      Admission: {admission.admissionId} • {admission.bed?.ward?.name} - Bed {admission.bed?.bedNumber}
+                                    </div>
+                                  </div>
+                                  <Badge variant="outline" className="text-xs">
+                                    {admission.status}
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
+                            {ipdSearchResults.length === 0 && (
+                              <div className="p-3 text-center text-muted-foreground">
+                                No admissions found
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      <p className="text-xs text-muted-foreground">
                         Search and select an active admission to create billing
                       </p>
-
-                      {showIpdSearchResults && ipdSearchResults.length > 0 && (
-                        <div className="absolute left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1">
-                          {ipdSearchResults.map((ad: any) => {
-                            const patient = ad.patient || ad.patientData || {}
-                            // prefer database primary key id for backend operations
-                            const admId = ad.id || ad.admissionId || ''
-                            return (
-                              <div
-                                key={admId}
-                                className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                onClick={() => {
-                                  // set admissionId to DB id so backend can find the admission
-                                  setIpdBillForm({ ...ipdBillForm, admissionId: admId, patientSearch: `${patient.firstName || ''} ${patient.lastName || ''}` })
-                                  setSelectedAdmission(ad)
-                                  setShowIpdSearchResults(false)
-                                }}
-                              >
-                                <div className="font-medium">{patient.fullName || `${patient.firstName || ''} ${patient.lastName || ''}`}</div>
-                                <div className="text-sm text-gray-600">UHID: {patient.patientId || patient.id || 'N/A'} | Admission: {ad.admissionId || admId}</div>
-                                <div className="text-sm text-gray-600">Admitted: {ad.admissionDate ? new Date(ad.admissionDate).toLocaleDateString() : 'N/A'}</div>
+                      
+                      {/* Selected Admission Display */}
+                      {selectedAdmission && (
+                        <Card className="p-3 bg-muted/50">
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1">
+                              <div className="font-medium">
+                                {selectedAdmission.patient.firstName} {selectedAdmission.patient.lastName}
                               </div>
-                            )
-                          })}
-                        </div>
+                              <div className="text-sm text-muted-foreground">
+                                UHID: {selectedAdmission.patient.patientId} • Admission: {selectedAdmission.admissionId}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {selectedAdmission.bed?.ward?.name} - Bed {selectedAdmission.bed?.bedNumber}
+                              </div>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={clearAdmissionSelection}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </Card>
                       )}
-                    </div>
-                    
-                    {/* For now, manual admission ID input until we implement admission search */}
-                    <div>
-                      <Label>Admission ID *</Label>
-                      <Input
-                        placeholder="Enter admission ID"
-                        value={ipdBillForm.admissionId}
-                        onChange={e => setIpdBillForm({ ...ipdBillForm, admissionId: e.target.value })}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Enter the admission ID for which to create the bill
-                      </p>
                     </div>
                     {selectedAdmission && (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
