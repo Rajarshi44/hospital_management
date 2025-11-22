@@ -35,6 +35,7 @@ import { useOPDBilling } from "@/hooks/use-opd-billing"
 import { useOPDVisits } from "@/hooks/use-opd-visits"
 import { useIPDBilling } from "@/hooks/use-ipd-billing"
 import { useInsuranceClaims } from "@/hooks/use-insurance-claims"
+import { IPDService } from "@/lib/ipd-service"
 import type { CreateOPDBillingData } from "@/hooks/use-opd-billing"
 import {
   Search,
@@ -279,7 +280,8 @@ export default function BillingPage() {
     getPendingBills: getIPDPendingBills,
     getCompletedBills: getIPDCompletedBills,
     recordPayment: recordIPDPayment,
-    addCharge
+    addCharge,
+    updateBill: updateIPDBill
   } = useIPDBilling()
 
   const {
@@ -317,7 +319,8 @@ export default function BillingPage() {
     nursingCharges: 0,
     doctorFees: 0,
     additionalCharges: 0,
-    notes: ""
+    notes: "",
+    additionalChargesList: [{ heading: "", amount: 0 }] as Array<{ heading: string; amount: number }>
   })
   
   const [showIPDBillingDialog, setShowIPDBillingDialog] = useState(false)
@@ -328,6 +331,24 @@ export default function BillingPage() {
     paymentMethod: 'CASH' as 'CASH' | 'CARD' | 'UPI' | 'CHEQUE' | 'ONLINE',
     transactionId: '',
     notes: ''
+  })
+
+  // IPD admission search state (moved to component level)
+  const [ipdSearchResults, setIpdSearchResults] = useState<any[]>([])
+  const [showIpdSearchResults, setShowIpdSearchResults] = useState(false)
+  const [selectedAdmission, setSelectedAdmission] = useState<any>(null)
+  const ipdSearchTimer = useRef<number | null>(null)
+
+  // Edit bill state
+  const [editBillForm, setEditBillForm] = useState({
+    bedCharges: 0,
+    roomCharges: 0,
+    icuCharges: 0,
+    nursingCharges: 0,
+    doctorFees: 0,
+    additionalCharges: 0,
+    additionalChargesList: [] as Array<{ heading: string; amount: number }>,
+    notes: ""
   })
 
   // Billing categories state
@@ -451,7 +472,21 @@ export default function BillingPage() {
     paidAmount: 0,
     transactionId: "",
     notes: "",
+    additionalChargesList: [{ heading: "", amount: 0 }] as Array<{ heading: string; amount: number }>
   })
+
+  // Edit OPD Bill state
+  const [editOPDBillForm, setEditOPDBillForm] = useState({
+    consultationFee: 0,
+    additionalCharges: 0,
+    discount: 0,
+    tax: 0,
+    additionalChargesList: [] as Array<{ heading: string; amount: number }>,
+    notes: ""
+  })
+  const [showViewOPDBillDialog, setShowViewOPDBillDialog] = useState(false)
+  const [selectedOPDBill, setSelectedOPDBill] = useState<any>(null)
+  const [isOPDEditMode, setIsOPDEditMode] = useState(false)
 
   // Real data state
   const [pendingVisits, setPendingVisits] = useState<any[]>([])
@@ -1100,14 +1135,21 @@ export default function BillingPage() {
         return
       }
 
+      // Calculate total additional charges from the list
+      const totalAdditionalCharges = ipdBillForm.additionalChargesList.reduce(
+        (sum, charge) => sum + (charge.amount || 0), 
+        0
+      )
+
       await createIPDBill(ipdBillForm.admissionId, {
         bedCharges: ipdBillForm.bedCharges,
         roomCharges: ipdBillForm.roomCharges,
         icuCharges: ipdBillForm.icuCharges,
         nursingCharges: ipdBillForm.nursingCharges,
         doctorFees: ipdBillForm.doctorFees,
-        additionalCharges: ipdBillForm.additionalCharges,
-        notes: ipdBillForm.notes
+        additionalCharges: ipdBillForm.additionalCharges + totalAdditionalCharges,
+        notes: ipdBillForm.notes,
+        additionalChargesList: JSON.stringify(ipdBillForm.additionalChargesList.filter(c => c.heading && c.amount > 0))
       })
 
       setShowIPDBillingDialog(false)
@@ -1120,8 +1162,13 @@ export default function BillingPage() {
         nursingCharges: 0,
         doctorFees: 0,
         additionalCharges: 0,
-        notes: ""
+        notes: "",
+        additionalChargesList: [{ heading: "", amount: 0 }]
       })
+      const [ipdSearchResults, setIpdSearchResults] = useState<any[]>([])
+      const [showIpdSearchResults, setShowIpdSearchResults] = useState(false)
+      const [selectedAdmission, setSelectedAdmission] = useState<any>(null)
+      const ipdSearchTimer = useRef<number | null>(null)
 
       // Refresh bills
       await getIPDPendingBills()
@@ -1173,16 +1220,64 @@ export default function BillingPage() {
 
   const handleEditIPDBill = (bill: any) => {
     setSelectedIPDBill(bill)
+    
+    // Parse additional charges list from notes
+    let additionalChargesList = []
+    try {
+      if (bill.notes && bill.notes.includes('[{')) {
+        additionalChargesList = JSON.parse(bill.notes)
+      }
+    } catch (e) {
+      console.error('Error parsing additional charges:', e)
+    }
+    
+    if (!Array.isArray(additionalChargesList) || additionalChargesList.length === 0) {
+      additionalChargesList = [{ heading: "", amount: 0 }]
+    }
+    
+    setEditBillForm({
+      bedCharges: bill.bedCharges || 0,
+      roomCharges: bill.roomCharges || 0,
+      icuCharges: bill.icuCharges || 0,
+      nursingCharges: bill.nursingCharges || 0,
+      doctorFees: bill.doctorFees || 0,
+      additionalCharges: 0,
+      additionalChargesList: additionalChargesList,
+      notes: typeof bill.notes === 'string' && !bill.notes.includes('[{') ? bill.notes : ""
+    })
+    
     setIsEditMode(true)
     setShowViewIPDBillDialog(true)
   }
 
-  const handleSaveIPDBill = () => {
-    toast({
-      title: "IPD Bill Updated",
-      description: "Bill has been updated successfully",
-    })
-    setIsEditMode(false)
+  const handleSaveIPDBill = async () => {
+    if (!selectedIPDBill) return
+    
+    try {
+      // Calculate total additional charges from the list
+      const totalAdditionalCharges = editBillForm.additionalChargesList.reduce(
+        (sum, charge) => sum + (charge.amount || 0), 
+        0
+      )
+      
+      await updateIPDBill(selectedIPDBill.id, {
+        bedCharges: editBillForm.bedCharges,
+        roomCharges: editBillForm.roomCharges,
+        icuCharges: editBillForm.icuCharges,
+        nursingCharges: editBillForm.nursingCharges,
+        doctorFees: editBillForm.doctorFees,
+        additionalCharges: editBillForm.additionalCharges + totalAdditionalCharges,
+        notes: JSON.stringify(editBillForm.additionalChargesList.filter(c => c.heading && c.amount > 0))
+      })
+      
+      setIsEditMode(false)
+      setShowViewIPDBillDialog(false)
+      
+      // Refresh bills
+      await getIPDPendingBills()
+    } catch (error) {
+      console.error('Error updating bill:', error)
+    }
   }
 
   const handleGenerateIPDBill = () => {
@@ -2170,15 +2265,27 @@ export default function BillingPage() {
                                     variant="outline"
                                     onClick={() => handleViewIPDBill(bill)}
                                   >
+                                    <Eye className="w-4 h-4 mr-1" />
                                     View
                                   </Button>
                                   {bill.paymentStatus !== 'COMPLETED' && (
-                                    <Button
-                                      size="sm"
-                                      onClick={() => openIPDPaymentDialog(bill)}
-                                    >
-                                      Pay
-                                    </Button>
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleEditIPDBill(bill)}
+                                      >
+                                        <Edit className="w-4 h-4 mr-1" />
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => openIPDPaymentDialog(bill)}
+                                      >
+                                        <CreditCard className="w-4 h-4 mr-1" />
+                                        Pay
+                                      </Button>
+                                    </>
                                   )}
                                 </div>
                               </TableCell>
@@ -4299,16 +4406,77 @@ export default function BillingPage() {
                 <div className="space-y-4">
                   <div className="text-sm font-semibold">Admission Selection</div>
                   <div className="grid grid-cols-1 gap-4">
-                    <div>
+                    <div className="relative">
                       <Label>Search Admission / Patient *</Label>
                       <Input
                         placeholder="Search by patient name, UHID, or admission ID..."
                         value={ipdBillForm.patientSearch}
-                        onChange={e => setIpdBillForm({ ...ipdBillForm, patientSearch: e.target.value })}
+                        onChange={e => {
+                          const val = e.target.value
+                          setIpdBillForm({ ...ipdBillForm, patientSearch: val })
+                          // debounce search
+                          if (ipdSearchTimer.current) window.clearTimeout(ipdSearchTimer.current)
+                          ipdSearchTimer.current = window.setTimeout(async () => {
+                            if (!val || val.length < 2) {
+                              setIpdSearchResults([])
+                              setShowIpdSearchResults(false)
+                              return
+                            }
+                            try {
+                              const resp: any = await IPDService.getAdmissions({ status: 'ACTIVE', limit: 20 })
+                              const list = resp.data || resp || []
+                              const q = val.toLowerCase()
+                              const filtered = list.filter((a: any) => {
+                                const patient = a.patient || a.patientData || {}
+                                const admissionId = a.admissionId || a.id || ''
+                                const fullName = `${patient.firstName || ''} ${patient.lastName || ''}`.toLowerCase()
+                                const phone = patient.phone || ''
+                                return (
+                                  fullName.includes(q) ||
+                                  admissionId.toLowerCase().includes(q) ||
+                                  (patient.patientId && patient.patientId.toLowerCase().includes(q)) ||
+                                  phone.includes(q)
+                                )
+                              })
+                              setIpdSearchResults(filtered)
+                              setShowIpdSearchResults(filtered.length > 0)
+                            } catch (err) {
+                              console.error('IPD search error', err)
+                              setIpdSearchResults([])
+                              setShowIpdSearchResults(false)
+                            }
+                          }, 250)
+                        }}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
                         Search and select an active admission to create billing
                       </p>
+
+                      {showIpdSearchResults && ipdSearchResults.length > 0 && (
+                        <div className="absolute left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto mt-1">
+                          {ipdSearchResults.map((ad: any) => {
+                            const patient = ad.patient || ad.patientData || {}
+                            // prefer database primary key id for backend operations
+                            const admId = ad.id || ad.admissionId || ''
+                            return (
+                              <div
+                                key={admId}
+                                className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                onClick={() => {
+                                  // set admissionId to DB id so backend can find the admission
+                                  setIpdBillForm({ ...ipdBillForm, admissionId: admId, patientSearch: `${patient.firstName || ''} ${patient.lastName || ''}` })
+                                  setSelectedAdmission(ad)
+                                  setShowIpdSearchResults(false)
+                                }}
+                              >
+                                <div className="font-medium">{patient.fullName || `${patient.firstName || ''} ${patient.lastName || ''}`}</div>
+                                <div className="text-sm text-gray-600">UHID: {patient.patientId || patient.id || 'N/A'} | Admission: {ad.admissionId || admId}</div>
+                                <div className="text-sm text-gray-600">Admitted: {ad.admissionDate ? new Date(ad.admissionDate).toLocaleDateString() : 'N/A'}</div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                     
                     {/* For now, manual admission ID input until we implement admission search */}
@@ -4323,6 +4491,14 @@ export default function BillingPage() {
                         Enter the admission ID for which to create the bill
                       </p>
                     </div>
+                    {selectedAdmission && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="font-medium">Selected Admission</div>
+                        <div className="text-sm text-blue-700">{(selectedAdmission.patient?.firstName || selectedAdmission.patientData?.firstName) + ' ' + (selectedAdmission.patient?.lastName || selectedAdmission.patientData?.lastName)}</div>
+                        <div className="text-sm text-muted-foreground">Admission ID: {selectedAdmission.admissionId || selectedAdmission.id}</div>
+                        <div className="text-sm text-muted-foreground">Bed: {selectedAdmission.bed?.bedNumber || selectedAdmission.bed?.id || 'N/A'} • Ward: {selectedAdmission.bed?.ward?.name || 'N/A'}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -4402,20 +4578,81 @@ export default function BillingPage() {
                         })}
                       />
                     </div>
-                    <div>
-                      <Label>Additional Charges</Label>
-                      <Input
-                        type="number"
-                        placeholder="0.00"
-                        min="0"
-                        step="0.01"
-                        value={ipdBillForm.additionalCharges || ""}
-                        onChange={e => setIpdBillForm({ 
-                          ...ipdBillForm, 
-                          additionalCharges: parseFloat(e.target.value) || 0 
-                        })}
-                      />
-                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Additional Charges Section */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm font-semibold">Additional Charges</div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIpdBillForm({
+                          ...ipdBillForm,
+                          additionalChargesList: [
+                            ...ipdBillForm.additionalChargesList,
+                            { heading: "", amount: 0 }
+                          ]
+                        })
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Charge
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {ipdBillForm.additionalChargesList.map((charge, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-3 items-end">
+                        <div className="col-span-6">
+                          <Label>Charge Description</Label>
+                          <Input
+                            placeholder="e.g., Medical Supplies, Special Equipment"
+                            value={charge.heading}
+                            onChange={e => {
+                              const updated = [...ipdBillForm.additionalChargesList]
+                              updated[index].heading = e.target.value
+                              setIpdBillForm({ ...ipdBillForm, additionalChargesList: updated })
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-4">
+                          <Label>Amount</Label>
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                            value={charge.amount || ""}
+                            onChange={e => {
+                              const updated = [...ipdBillForm.additionalChargesList]
+                              updated[index].amount = parseFloat(e.target.value) || 0
+                              setIpdBillForm({ ...ipdBillForm, additionalChargesList: updated })
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          {ipdBillForm.additionalChargesList.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const updated = ipdBillForm.additionalChargesList.filter((_, i) => i !== index)
+                                setIpdBillForm({ ...ipdBillForm, additionalChargesList: updated })
+                              }}
+                            >
+                              <X className="h-4 w-4 text-red-500" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -4464,8 +4701,22 @@ export default function BillingPage() {
                       <span>Doctor Fees:</span>
                       <span>₹{ipdBillForm.doctorFees.toFixed(2)}</span>
                     </div>
+                    {ipdBillForm.additionalChargesList.some(c => c.heading && c.amount > 0) && (
+                      <>
+                        <Separator className="my-2" />
+                        <div className="text-xs font-medium text-muted-foreground mb-1">Additional Charges:</div>
+                        {ipdBillForm.additionalChargesList
+                          .filter(c => c.heading && c.amount > 0)
+                          .map((charge, idx) => (
+                            <div key={idx} className="flex justify-between text-sm pl-2">
+                              <span className="text-muted-foreground">{charge.heading}:</span>
+                              <span>₹{charge.amount.toFixed(2)}</span>
+                            </div>
+                          ))}
+                      </>
+                    )}
                     <div className="flex justify-between text-sm">
-                      <span>Additional Charges:</span>
+                      <span>Additional Charges (Old):</span>
                       <span>₹{ipdBillForm.additionalCharges.toFixed(2)}</span>
                     </div>
                     <Separator />
@@ -4477,7 +4728,8 @@ export default function BillingPage() {
                         ipdBillForm.icuCharges +
                         ipdBillForm.nursingCharges +
                         ipdBillForm.doctorFees +
-                        ipdBillForm.additionalCharges
+                        ipdBillForm.additionalCharges +
+                        ipdBillForm.additionalChargesList.reduce((sum, c) => sum + (c.amount || 0), 0)
                       ).toFixed(2)}</span>
                     </div>
                   </div>
@@ -4537,74 +4789,247 @@ export default function BillingPage() {
                   {/* Bill Charges Breakdown */}
                   <div>
                     <h3 className="font-semibold text-lg mb-3">Bill Breakdown</h3>
-                    <div className="border rounded-lg overflow-hidden">
-                      <table className="w-full">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Description</th>
-                            <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {selectedIPDBill.roomCharges > 0 && (
+                    
+                    {isEditMode ? (
+                      // Edit Mode - Show Input Fields
+                      <div className="space-y-4 border rounded-lg p-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Bed Charges</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editBillForm.bedCharges || ""}
+                              onChange={e => setEditBillForm({ ...editBillForm, bedCharges: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Room Charges</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editBillForm.roomCharges || ""}
+                              onChange={e => setEditBillForm({ ...editBillForm, roomCharges: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div>
+                            <Label>ICU Charges</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editBillForm.icuCharges || ""}
+                              onChange={e => setEditBillForm({ ...editBillForm, icuCharges: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Nursing Charges</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editBillForm.nursingCharges || ""}
+                              onChange={e => setEditBillForm({ ...editBillForm, nursingCharges: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Doctor Fees</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={editBillForm.doctorFees || ""}
+                              onChange={e => setEditBillForm({ ...editBillForm, doctorFees: parseFloat(e.target.value) || 0 })}
+                            />
+                          </div>
+                        </div>
+                        
+                        <Separator />
+                        
+                        {/* Edit Additional Charges */}
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <Label className="font-semibold">Additional Charges</Label>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditBillForm({
+                                  ...editBillForm,
+                                  additionalChargesList: [
+                                    ...editBillForm.additionalChargesList,
+                                    { heading: "", amount: 0 }
+                                  ]
+                                })
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                          
+                          {editBillForm.additionalChargesList.map((charge, index) => (
+                            <div key={index} className="grid grid-cols-12 gap-2 items-end">
+                              <div className="col-span-6">
+                                <Input
+                                  placeholder="Charge description"
+                                  value={charge.heading}
+                                  onChange={e => {
+                                    const updated = [...editBillForm.additionalChargesList]
+                                    updated[index].heading = e.target.value
+                                    setEditBillForm({ ...editBillForm, additionalChargesList: updated })
+                                  }}
+                                />
+                              </div>
+                              <div className="col-span-4">
+                                <Input
+                                  type="number"
+                                  placeholder="Amount"
+                                  min="0"
+                                  step="0.01"
+                                  value={charge.amount || ""}
+                                  onChange={e => {
+                                    const updated = [...editBillForm.additionalChargesList]
+                                    updated[index].amount = parseFloat(e.target.value) || 0
+                                    setEditBillForm({ ...editBillForm, additionalChargesList: updated })
+                                  }}
+                                />
+                              </div>
+                              <div className="col-span-2">
+                                {editBillForm.additionalChargesList.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = editBillForm.additionalChargesList.filter((_, i) => i !== index)
+                                      setEditBillForm({ ...editBillForm, additionalChargesList: updated })
+                                    }}
+                                  >
+                                    <X className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div className="bg-blue-50 p-3 rounded">
+                          <div className="flex justify-between font-semibold text-lg">
+                            <span>Total Amount:</span>
+                            <span>₹{(
+                              editBillForm.bedCharges + 
+                              editBillForm.roomCharges + 
+                              editBillForm.icuCharges +
+                              editBillForm.nursingCharges +
+                              editBillForm.doctorFees +
+                              editBillForm.additionalChargesList.reduce((sum, c) => sum + (c.amount || 0), 0)
+                            ).toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // View Mode - Show Table
+                      <div className="border rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
                             <tr>
-                              <td className="px-4 py-3 text-sm">Room Charges</td>
-                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.roomCharges.toLocaleString()}</td>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Description</th>
+                              <th className="px-4 py-3 text-right text-sm font-medium text-gray-700">Amount</th>
                             </tr>
-                          )}
-                          {selectedIPDBill.doctorFees > 0 && (
-                            <tr>
-                              <td className="px-4 py-3 text-sm">Doctor Fees</td>
-                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.doctorFees.toLocaleString()}</td>
+                          </thead>
+                          <tbody className="divide-y">
+                            {selectedIPDBill.roomCharges > 0 && (
+                              <tr>
+                                <td className="px-4 py-3 text-sm">Room Charges</td>
+                                <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.roomCharges.toLocaleString()}</td>
+                              </tr>
+                            )}
+                            {selectedIPDBill.doctorFees > 0 && (
+                              <tr>
+                                <td className="px-4 py-3 text-sm">Doctor Fees</td>
+                                <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.doctorFees.toLocaleString()}</td>
+                              </tr>
+                            )}
+                            {selectedIPDBill.nursingCharges > 0 && (
+                              <tr>
+                                <td className="px-4 py-3 text-sm">Nursing Charges</td>
+                                <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.nursingCharges.toLocaleString()}</td>
+                              </tr>
+                            )}
+                            {selectedIPDBill.medicineCharges > 0 && (
+                              <tr>
+                                <td className="px-4 py-3 text-sm">Medicine Charges</td>
+                                <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.medicineCharges.toLocaleString()}</td>
+                              </tr>
+                            )}
+                            {selectedIPDBill.labCharges > 0 && (
+                              <tr>
+                                <td className="px-4 py-3 text-sm">Lab Charges</td>
+                                <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.labCharges.toLocaleString()}</td>
+                              </tr>
+                            )}
+                            {selectedIPDBill.otCharges > 0 && (
+                              <tr>
+                                <td className="px-4 py-3 text-sm">Operation Theatre Charges</td>
+                                <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.otCharges.toLocaleString()}</td>
+                              </tr>
+                            )}
+                            {selectedIPDBill.miscCharges > 0 && (
+                              <tr>
+                                <td className="px-4 py-3 text-sm">Miscellaneous Charges</td>
+                                <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.miscCharges.toLocaleString()}</td>
+                              </tr>
+                            )}
+                            {/* Additional Charges Section */}
+                            {selectedIPDBill.notes && (() => {
+                              try {
+                                const additionalChargesList = JSON.parse(selectedIPDBill.notes.includes('[{') ? selectedIPDBill.notes : '[]')
+                                if (Array.isArray(additionalChargesList) && additionalChargesList.length > 0) {
+                                  return (
+                                    <>
+                                      <tr className="bg-purple-50">
+                                        <td colSpan={2} className="px-4 py-2 text-sm font-semibold text-purple-900">
+                                          Additional Charges
+                                        </td>
+                                      </tr>
+                                      {additionalChargesList.map((charge: any, idx: number) => (
+                                        <tr key={idx} className="bg-purple-25">
+                                          <td className="px-4 py-2 text-sm pl-8 text-purple-800">{charge.heading}</td>
+                                          <td className="px-4 py-2 text-sm text-right text-purple-800">₹{(charge.amount || 0).toLocaleString()}</td>
+                                        </tr>
+                                      ))}
+                                    </>
+                                  )
+                                }
+                              } catch (e) {
+                                return null
+                              }
+                              return null
+                            })()}
+                            <tr className="bg-gray-50 font-semibold">
+                              <td className="px-4 py-3 text-sm">Total Amount</td>
+                              <td className="px-4 py-3 text-sm text-right">₹{(selectedIPDBill.totalAmount || 0).toLocaleString()}</td>
                             </tr>
-                          )}
-                          {selectedIPDBill.nursingCharges > 0 && (
-                            <tr>
-                              <td className="px-4 py-3 text-sm">Nursing Charges</td>
-                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.nursingCharges.toLocaleString()}</td>
+                            {selectedIPDBill.discount > 0 && (
+                              <tr className="text-green-600">
+                                <td className="px-4 py-3 text-sm">Discount</td>
+                                <td className="px-4 py-3 text-sm text-right">- ₹{selectedIPDBill.discount.toLocaleString()}</td>
+                              </tr>
+                            )}
+                            <tr className="bg-blue-50 font-bold text-lg">
+                              <td className="px-4 py-3">Net Amount</td>
+                              <td className="px-4 py-3 text-right">₹{((selectedIPDBill.totalAmount || 0) - (selectedIPDBill.discount || 0)).toLocaleString()}</td>
                             </tr>
-                          )}
-                          {selectedIPDBill.medicineCharges > 0 && (
-                            <tr>
-                              <td className="px-4 py-3 text-sm">Medicine Charges</td>
-                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.medicineCharges.toLocaleString()}</td>
-                            </tr>
-                          )}
-                          {selectedIPDBill.labCharges > 0 && (
-                            <tr>
-                              <td className="px-4 py-3 text-sm">Lab Charges</td>
-                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.labCharges.toLocaleString()}</td>
-                            </tr>
-                          )}
-                          {selectedIPDBill.otCharges > 0 && (
-                            <tr>
-                              <td className="px-4 py-3 text-sm">Operation Theatre Charges</td>
-                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.otCharges.toLocaleString()}</td>
-                            </tr>
-                          )}
-                          {selectedIPDBill.miscCharges > 0 && (
-                            <tr>
-                              <td className="px-4 py-3 text-sm">Miscellaneous Charges</td>
-                              <td className="px-4 py-3 text-sm text-right">₹{selectedIPDBill.miscCharges.toLocaleString()}</td>
-                            </tr>
-                          )}
-                          <tr className="bg-gray-50 font-semibold">
-                            <td className="px-4 py-3 text-sm">Total Amount</td>
-                            <td className="px-4 py-3 text-sm text-right">₹{(selectedIPDBill.totalAmount || 0).toLocaleString()}</td>
-                          </tr>
-                          {selectedIPDBill.discount > 0 && (
-                            <tr className="text-green-600">
-                              <td className="px-4 py-3 text-sm">Discount</td>
-                              <td className="px-4 py-3 text-sm text-right">- ₹{selectedIPDBill.discount.toLocaleString()}</td>
-                            </tr>
-                          )}
-                          <tr className="bg-blue-50 font-bold text-lg">
-                            <td className="px-4 py-3">Net Amount</td>
-                            <td className="px-4 py-3 text-right">₹{((selectedIPDBill.totalAmount || 0) - (selectedIPDBill.discount || 0)).toLocaleString()}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
 
                   {/* Payment Summary */}
@@ -4671,25 +5096,46 @@ export default function BillingPage() {
 
               <DialogFooter className="flex justify-between items-center">
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setShowViewIPDBillDialog(false)}>
-                    Close
-                  </Button>
-                </div>
-                <div className="flex gap-2">
-                  {selectedIPDBill && selectedIPDBill.paymentStatus !== 'COMPLETED' && (
-                    <Button onClick={() => {
-                      setShowViewIPDBillDialog(false)
-                      openIPDPaymentDialog(selectedIPDBill)
-                    }}>
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Record Payment
-                    </Button>
+                  {!isEditMode ? (
+                    <>
+                      <Button variant="outline" onClick={() => setShowViewIPDBillDialog(false)}>
+                        Close
+                      </Button>
+                      {selectedIPDBill && selectedIPDBill.paymentStatus !== 'COMPLETED' && (
+                        <Button variant="outline" onClick={() => handleEditIPDBill(selectedIPDBill)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit Bill
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSaveIPDBill}>
+                        Save Changes
+                      </Button>
+                    </>
                   )}
-                  <Button onClick={handlePrintIPDBill}>
-                    <Printer className="w-4 h-4 mr-2" />
-                    Print Bill
-                  </Button>
                 </div>
+                {!isEditMode && (
+                  <div className="flex gap-2">
+                    {selectedIPDBill && selectedIPDBill.paymentStatus !== 'COMPLETED' && (
+                      <Button onClick={() => {
+                        setShowViewIPDBillDialog(false)
+                        openIPDPaymentDialog(selectedIPDBill)
+                      }}>
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Record Payment
+                      </Button>
+                    )}
+                    <Button onClick={handlePrintIPDBill}>
+                      <Printer className="w-4 h-4 mr-2" />
+                      Print Bill
+                    </Button>
+                  </div>
+                )}
               </DialogFooter>
             </DialogContent>
           </Dialog>

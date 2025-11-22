@@ -340,6 +340,43 @@ export function useOPDBilling() {
     }
   }, [getAuthHeaders, toast])
 
+  // Update OPD billing
+  const updateBill = useCallback(async (billingId: string, updateData: any): Promise<OPDBilling> => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_BASE_URL}/opd/billing/${billingId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updateData)
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }))
+        throw new Error(errorData.message || `HTTP ${response.status}`)
+      }
+
+      const billing = await response.json()
+      toast({
+        title: 'Success',
+        description: 'OPD billing updated successfully'
+      })
+      
+      // Refresh pending bills
+      await getPendingPayments()
+      return billing
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update billing'
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive'
+      })
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }, [getAuthHeaders, toast, getPendingPayments])
+
   return {
     loading,
     bills,
@@ -349,6 +386,7 @@ export function useOPDBilling() {
     getCompletedPayments,
     recordPayment,
     getDailyCollections,
-    getPaymentMethodSummary
+    getPaymentMethodSummary,
+    updateBill
   }
 }

@@ -175,6 +175,40 @@ export const useIPDBilling = () => {
     }
   }
 
+  const updateBill = async (billId: string, updateData: any) => {
+    setLoading(true)
+    try {
+      const response = await fetch(`${baseUrl}/ipd/billing/${billId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to update bill')
+      }
+      
+      const result = await response.json()
+      toast({
+        title: "Success",
+        description: "Bill updated successfully"
+      })
+      
+      // Refresh bills
+      await getPendingBills()
+      return result
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update bill",
+        variant: "destructive"
+      })
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
     loading,
     bills,
@@ -183,6 +217,7 @@ export const useIPDBilling = () => {
     getPendingBills,
     getCompletedBills,
     recordPayment,
-    addCharge
+    addCharge,
+    updateBill
   }
 }
